@@ -1,0 +1,5 @@
+[submodule "raw/esp-zigbee-sdk"]
+	path = .sub/esp-zigbee-sdk
+	url = https://github.com/espressif/esp-zigbee-sdk.git
+[submodule "esp-idf"]
+	shallow = true

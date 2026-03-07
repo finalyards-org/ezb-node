@@ -1,0 +1,10 @@
+#
+# References:
+#   - Cargo Book > Configuration
+#       -> https://doc.rust-lang.org/cargo/reference/config.html
+#
+[build]
+target = "riscv32imac-unknown-none-elf"      # matches ESP32-C6
+
+[target.'cfg(true)']
+runner = "probe-rs run" # tbd. untested

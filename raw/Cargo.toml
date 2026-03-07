@@ -1,0 +1,94 @@
+[package]
+name = "esp_zb_raw"
+    # name used in 'examples' and the 'main' project
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+[dependencies]
+defmt           = { version = "1.0.1", optional = true }
+strum           = { version = "0.27.2", default-features = false, features = ["derive"] }
+
+esp-hal         = { version = "1.0.0-rc.0", features = ["esp32c6"], optional = true }  # "defmt"
+    # needed for its 'Rate' (with 'esp_hal_api' feature); also under 'dev-dependencies'
+
+#[dev-dependencies]
+# Rust provides no mechanism for conditional 'dev-dependencies'. Thus, we introduce them here. THIS IS UNFORTUNATE:
+# it does make these part of the package's external interface (doesn't it?); any better way is welcome. #rust
+#
+# We could make wholly separate packages ('vl_uld_println' etc.) but that's too complex.
+#
+defmt-rtt       = { version = "1.0.0", optional = true }
+#?? esp-bootloader-esp-idf = { version = "0.2.0", features = ["esp32c6"], optional = true }
+esp-println     = { version = "0.15.0", features = ["esp32c6", "timestamp"], optional = true }   # "defmt-espflash"
+
+[dev-dependencies]
+esp-backtrace   = { version = "0.17.0", features = ["panic-handler", "esp32c6", "semihosting"] }  # "defmt"
+
+esp-hal         = { version = "1.0.0-rc.0", features = ["esp32c6", "unstable"] }  # "defmt"
+    # "unstable" needed for 'delay' module
+
+semihosting     = { version = "0.1.20" }
+
+[build-dependencies]
+anyhow          = "1.0.99"
+itertools       = "0.14"
+serde           = { version = "1.0", features = ["derive"] }
+toml            = "0.9"
+
+# ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
+#
+# (The same will likely apply to "HA Automation Device Types" |2| as well.)
+#
+#   |1|: https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html#zcl-clusters
+#   |2|: https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html#ha-automation-device-types
+#
+[features]
+default = ["zcl_basic", "zcl_identify"]
+
+zcl_basic = []
+zcl_identify = []
+
+
+#---
+# C '#ifdef's to consider porting as Rust features:
+#
+#   - CONFIG_ZB_ZED             { tbd. explain }
+#   - CONFIG_ZB_GP_ENABLED      { tbd. explain }
+#   - ZB_ENABLE_ZGB             Whether "green power" is enabled {...tbd. better explanation; is this a top-level ifdef?}
+#   - ZB_DISTRIBUTED_SECURITY_ON { tbd. explain }
+#
+#   - CONFIG_ZB_ZCZR            "compile light (Router) source code"
+#   - CONFIG_ESP_ZB_TRACE_ENABLE
+#   - CONFIG_PM_ENABLE=y
+#
+zb_zed = []     # 'CONFIG_ZB_ZED'   todo is?
+# ...
+
+# Though we envision always having 'defmt' enabled, it's good to provide an option.
+defmt = ["dep:defmt",
+    "esp-hal/defmt",
+    "esp-backtrace/defmt",
+    #?? "esp-bootloader-esp-idf?/defmt",
+    "esp-println?/defmt-espflash"
+]
+
+#esp_hal_next = []
+
+#R? Features for the examples only! Rust gives no mechanism to have features that would apply only to 'examples/' (but
+#R? not be exposed to downstream projects). In downstream projects, just IGNORE THESE: THE LIBRARY DOES NOT USE THEM!!
+#R?
+#? run_with_espflash = ["defmt", "dep:esp-println"]    # ?? "dep:esp-bootloader-esp-idf" ??
+#? run_with_probe_rs = ["defmt", "dep:defmt-rtt"]
+
+# Enable to use latest 'main' (also enable 'esp-hal-next' feature, if fails to build, otherwise)
+#|[patch.crates-io]
+#|esp-backtrace   = { git = "https://github.com/esp-rs/esp-hal.git" }
+#|esp-hal         = { git = "https://github.com/esp-rs/esp-hal.git" }
+#|esp-println     = { git = "https://github.com/esp-rs/esp-hal.git" }
+
+[profile.release]
+debug = true
+debug-assertions = true
+#lto = "fat"
+codegen-units = 1
