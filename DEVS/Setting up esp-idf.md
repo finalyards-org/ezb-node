@@ -1,16 +1,24 @@
-# Setting up `esp-idf`
+# Setting up ESP-IDF globally
 
-The `esp-zigbee-sdk` (C code base) needs the `esp-idf` toolchain to be installed. Here are short instructions.
+---
+
+You don't need to install ESP-IDF on your system - the `esp-idf-svc` crate takes care of installing a copy and using it, when necessary.
+
+This file is notes by the author. Just in case you need to (e.g. running the C samples).
+
+---
+
+The `esp-zigbee-sdk` C code base needs the `esp-idf` toolchain to be installed. Here are short instructions.
 
 Based on:
 
 - [Developing with ESP Zigbee SDK](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/developing.html) (Espressif docs)
 
-Changes:
+Changes to above:
 
 - We use a shallow git clone
 
->Note: Espressif leads you to "ESP-IDF Installation Manager (EIM)", but that's not really needed.
+>Note: Espressif leads you to "ESP-IDF Installation Manager (EIM)", but that's not needed.
 
 ---
 
@@ -19,7 +27,11 @@ Changes:
 - Ubuntu Linux
 
 	```
-	$ sudo apt install python3.12-venv
+	$ sudo apt install python3-venv
+	```
+
+	```
+	$ sudo apt install cmake
 	```
 
 - Around 4GB of free disk space
@@ -93,13 +105,7 @@ ESP-IDF v5.5
 
 ## What next?
 
-You now have `esp-idf` headers and libraries available under `~/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/`:
-
-```
-bin  include  lib  libexec  package.json  picolibc  riscv32-esp-elf  share
-```
-
-These are needed for building Rust bindings.
+You now have `esp-idf` headers and libraries available under `~/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/`.
 
 
 ### Within a project folder
@@ -111,13 +117,7 @@ $ idf.py set-target esp32c6
 Although we only installed one target, this seems to be necessary.
 
 
-### CMake builds (optional)
-
-Most ESP C projects use `cmake` to manage the builds. *For building the Rust bindings you do not need this*, but it is needed if you wish e.g. to try the C examples.
-
-```
-$ sudo apt install cmake
-```
+### Builds
 
 ```
 $ idf.py build

@@ -28,6 +28,8 @@ esp-backtrace   = { version = "0.17.0", features = ["panic-handler", "esp32c6", 
 esp-hal         = { version = "1.0.0-rc.0", features = ["esp32c6", "unstable"] }  # "defmt"
     # "unstable" needed for 'delay' module
 
+esp-idf-sys     = { version = "0.36.1" }
+
 semihosting     = { version = "0.1.20" }
 
 [build-dependencies]

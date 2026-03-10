@@ -10,11 +10,6 @@
 */
 use anyhow::*;
 
-//R#[allow(non_snake_case)]
-//Rconst CONFIG_H_NEXT: &str = "tmp/config58.h.next";
-//R
-//Rconst PINS_OUT_FN: &str = "tmp/pins_snippet.in";
-
 use std::{
     env,
     process::Command

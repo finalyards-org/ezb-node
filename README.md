@@ -2,7 +2,7 @@
 
 ## Motivation
 
-While Wifi and BLE are nicely covered in Rust, Zigbee is not (Mar'26).
+While Wifi and BLE are nicely covered in Rust <sub>`|1|` `|2|`</sub>, Zigbee is not (Mar'26).
 
 This repo aims to provide the possibility to create:
 
@@ -11,6 +11,11 @@ This repo aims to provide the possibility to create:
 - Zigbee custom end device
 
 ..using Embassy Rust code.
+
+<small>
+`|1|`: https://github.com/esp-rs/esp-hal/tree/main/esp-radio <br />
+`|2|`: https://github.com/embassy-rs/trouble
+</small>
 
 ## Folder structure
 
@@ -25,10 +30,6 @@ This repo aims to provide the possibility to create:
 
 - ESP32-C6 devkit
 
-- `esp-idf` installed (v. 5.2+)
-
-	Follow [docs/Setting up esp-idf.md](DEVS/Setting%20up%20esp-idf.md).
-	
 - Rust installed
 
 	>*tbd. give instructions here that show the right toolchain etc.*
