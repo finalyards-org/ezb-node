@@ -8,8 +8,6 @@
 * We call GNU 'make' from within the 'build.rs'. This allows us to build in the normal Cargo way,
 * yet benefit from file system dependency trees.
 */
-use anyhow::*;
-
 use std::{
     env,
     process::Command
@@ -17,32 +15,28 @@ use std::{
 
 /*
 */
-fn main() -> Result<()> {
+fn main() {
+    // Needed by IDF machinery.
+    //  E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
+    embuild::espidf::sysenv::output();
 
     // Detect when IDE is running us:
     //  - Rust Rover:
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
-    //
-    #[allow(non_snake_case)]
-    let IDE_RUN = env::var("__CFBundleIdentifier").is_ok();
-
-    // If IDE runs, terminate early.
-    if IDE_RUN { return Ok(()) };
+    {
+        if env::var("__CFBundleIdentifier").is_ok() {
+            return;  // skip the rest
+        }
+    }
 
     // DEBUG: Show what we know about the compilation.
-    //
-    // <<
-    //   CARGO_CFG_TARGET_FEATURE=c,m
-    //   CARGO_FEATURE_{..feature..}=1
-    //   LD_LIBRARY_PATH=/home/ubuntu/VL53L5CX_rs.cifs/vl53l5cx_uld/target/release/deps:/home/ubuntu/VL53L5CX_rs.cifs/vl53l5cx_uld/target/release:/home/ubuntu/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib:/home/ubuntu/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib
-    //   RUSTUP_TOOLCHAIN=stable-x86_64-unknown-linux-gnu
-    //   TARGET=riscv32imc-unknown-none-elf
-    // <<
     #[cfg(false)]
     {
         env::vars().for_each(|(a, b)| { eprintln!("{a}={b}"); });
         panic!();
     }
+
+    idf_stuff();
 
     //---
     // Config sanity checks
@@ -95,10 +89,16 @@ fn main() -> Result<()> {
 
     println!("cargo:rustc-link-search=tmp");
     //_! println!("cargo:rustc-link-lib=static=vendor_uld{}", X);
+}
 
-    // Change in Makefile or 'build.rs' itself re-triggers a build
-    println!("cargo::rerun-if-changed={}", "Makefile");
-    println!("cargo::rerun-if-changed={}", "build.rs");
+fn idf_stuff() {
+    // Do NOT allow build if a system-wide ESP-IDF is active.
+    {
+        if env::var("IDF_PATH").is_ok() {
+            panic!("❗️Please build with a shell that doesn't know of system-wide esp-idf. 'IDF_PATH' env.var. detected.");
+        }
+    }
 
-    Ok(())
+    println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version_major, values("5"))"#);
+    println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version, values("5.3", "5.4", "5.5"))"#);
 }

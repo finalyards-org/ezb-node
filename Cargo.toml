@@ -1,0 +1,10 @@
+[workspace]
+members = [
+  #"examples",  #later
+  #"main",
+  "raw",
+]
+resolver = "3" # release 2024 in the members
+
+[profile.release]
+opt-level = "s"

@@ -1,21 +1,49 @@
-# Zigbee for ESP32 in Rust
+# Zigbee on ESP32 with Rust
 
 ## Motivation
 
-While Wifi and BLE are nicely covered in Rust <sub>`|1|` `|2|`</sub>, Zigbee is not (Mar'26).
-
-This repo aims to provide the possibility to create:
+This repo aims to provide the possibility to create, in Rust, for ESP32 MCUs:
 
 - Zigbee controller
 - Zigbee router
 - Zigbee custom end device
 
-..using Embassy Rust code.
+Wifi ([`esp-radio`](https://github.com/esp-rs/esp-hal/tree/main/esp-radio)) and BLE ([`trouBLE`](https://github.com/embassy-rs/trouble)) are already Rust friendly comms platforms.
 
-<small>
-`|1|`: https://github.com/esp-rs/esp-hal/tree/main/esp-radio <br />
-`|2|`: https://github.com/embassy-rs/trouble
-</small>
+
+## About ESP-IDF
+
+ESP-IDF is an ecosystem, based on the C language SDK of the same name. We need it because the `esp-zigbee-sdk` is made using ESP-IDF. What it means for a Rust project is:
+
+- FreeRTOS running underneath; the Rust code runs as one of its tasks. This is not "bare metal".
+- for peripherals, use `esp-idf-hal`. `esp-hal` cannot be used, since it manages peripherals directly (not having FreeRTOS in the loop).
+
+>This should be doable. *Eventually* it would be neat to have a non-idf Zigbee Rust implementation. That would need a Rust native Zigbee stack to be created, e.g. on top of the `esp-radio` IEEE 802.15.4 low layers.
+
+### esp-idf-svc
+
+Pulls in the whole ESP-IDF SDK, as part of the Rust compilation. It takes time and disk space (some 4GB) but is a one-time effort. It provides headers and libraries that `esp-zigbee-sdk` relies upon.
+
+### Which ESP-IDF to use?
+
+We will <strike>likely opt for the one used by `esp-zigbee-sdk`</strike> take the latest supported by both `esp-zigbee-sdk` and `esp-idf-svc`.
+
+|||
+|---|---|
+|6.0|not supported by `esp-idf-svc`|
+|5.5.3|default of `esp-idf-svc`<sub>[source](https://github.com/esp-rs/esp-idf-svc/blob/master/.cargo/config.toml#L10)</sub>|
+|5.4.x||
+|5.3.2|recommended by `esp-zigbee-sdk` (11-Mar-26)|
+
+### `esp-idf-svc` is a community effort
+
+Yes.
+
+<!-- whisper
+And they [misspell "Community"](https://github.com/esp-rs/esp-idf-svc?tab=readme-ov-file#commuity-effort) - intentionally or not...
+-->
+
+That is a concern, if we bet the whole project on it. But on the other side, let's just drive and see whether the road takes anywhere!! <font size=+3>🛣️</font>
 
 ## Folder structure
 
@@ -29,10 +57,14 @@ This repo aims to provide the possibility to create:
 ## Requirements
 
 - ESP32-C6 devkit
-
 - Rust installed
+	<!-- tbd. give instructions here that show the right toolchain etc.-->
+- 6 GB disk space
 
-	>*tbd. give instructions here that show the right toolchain etc.*
+	The ESP-IDF environment will get downloaded to:
+	
+	- `~/.espressif`
+	- `~/...`
 
 - `bindgen` CLI
 
@@ -41,11 +73,19 @@ This repo aims to provide the possibility to create:
 	```
 	
 	>Note: There is also an apt package (`sudo apt install bindgen`) but that seems to lag behind (0.66 vs. 0.72.1 at the time of writing).
-	
+
+- Some of these:
+
+	```
+	$ sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
+	```
+
+	>Note: Don't install all of the above! If something were to fail, add from that list and retry.
+
+Note that ESP-IDF **may not be globally installed** - it might mess with the `esp-idf-svc`.
 
 <!--
 Developed with:
-- esp-idf v.5.5
 - bindgen 0.72.1
 -->
 
@@ -57,7 +97,7 @@ Load git submodules - we get the C sources that way.
 $ git submodule update --init
 ```
 
-## Steps
+## What next?
 
 See either the `examples` folder - for practical projects - or the others for implementation details.
 

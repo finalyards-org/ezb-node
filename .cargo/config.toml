@@ -1,10 +1,24 @@
-#
-# References:
-#   - Cargo Book > Configuration
-#       -> https://doc.rust-lang.org/cargo/reference/config.html
-#
 [build]
-target = "riscv32imac-unknown-none-elf"      # matches ESP32-C6
+target = "riscv32imac-esp-espidf"
 
-[target.'cfg(true)']
-runner = "probe-rs run" # tbd. untested
+[unstable]
+build-std = ["std", "panic_abort"]
+
+[env]
+MCU="esp32c6"
+ESP_IDF_VERSION = "v5.5.3"
+#R ESP_IDF_SYS_ROOT_CRATE = "raw"
+  # the crate that depends on 'esp-idf-sys'
+
+# Multipass VM: avoid '.embuild' (large, small files; slow) from being in a shared source mount.
+#
+ESP_IDF_TOOLS_INSTALL_DIR = "out"
+#ESP_IDF_TOOLS_INSTALL_DIR = "global" # ~/.espressif
+
+# Have this if you use Multipass VM, and a global 'target' folder.
+CARGO_WORKSPACE_DIR = { value = "", relative = true }
+  #
+  # "[...] you have set 'CARGO_TARGET_DIR' and moved your target directory out of the crate root, then
+  #   embuild is not able to locate the crate root. This will result in it among other things ignoring
+  #   your local sdkconfig.defaults. In this case you must declare: [...]
+  #     -> https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration

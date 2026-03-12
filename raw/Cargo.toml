@@ -6,11 +6,28 @@ rust-version = "1.89"
 publish = false
 
 [dependencies]
-defmt           = { version = "1.0.1", optional = true }
-strum           = { version = "0.27.2", default-features = false, features = ["derive"] }
+#esp-idf-svc     = { version = "0.52" }
+esp-idf-sys = { version = "0.37.2" }
+log = "0.4"
 
-esp-hal         = { version = "1.0.0-rc.0", features = ["esp32c6"], optional = true }  # "defmt"
-    # needed for its 'Rate' (with 'esp_hal_api' feature); also under 'dev-dependencies'
+# --- Optional Embassy Integration ---
+# esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
+
+# If you enable embassy-time-driver, you MUST also add one of:
+
+# a) Standalone Embassy libs ( embassy-time, embassy-sync etc.) with a foreign async runtime:
+# embassy-time = { version = "0.4.0", features = ["generic-queue-8"] } # NOTE: any generic-queue variant will work
+
+# b) With embassy-executor:
+# embassy-executor = { version = "0.7", features = ["executor-thread", "arch-std"] }
+
+# NOTE: if you use embassy-time with embassy-executor you don't need the generic-queue-8 feature
+
+# --- Temporary workaround for embassy-executor < 0.8 ---
+# esp-idf-svc = { version = "0.51", features = ["embassy-time-driver", "embassy-sync"] }
+# critical-section = { version = "1.1", features = ["std"], default-features = false }
+
+#defmt           = { version = "1.0.1", optional = true }
 
 #[dev-dependencies]
 # Rust provides no mechanism for conditional 'dev-dependencies'. Thus, we introduce them here. THIS IS UNFORTUNATE:
@@ -18,25 +35,16 @@ esp-hal         = { version = "1.0.0-rc.0", features = ["esp32c6"], optional = t
 #
 # We could make wholly separate packages ('vl_uld_println' etc.) but that's too complex.
 #
-defmt-rtt       = { version = "1.0.0", optional = true }
-#?? esp-bootloader-esp-idf = { version = "0.2.0", features = ["esp32c6"], optional = true }
-esp-println     = { version = "0.15.0", features = ["esp32c6", "timestamp"], optional = true }   # "defmt-espflash"
-
-[dev-dependencies]
-esp-backtrace   = { version = "0.17.0", features = ["panic-handler", "esp32c6", "semihosting"] }  # "defmt"
-
-esp-hal         = { version = "1.0.0-rc.0", features = ["esp32c6", "unstable"] }  # "defmt"
-    # "unstable" needed for 'delay' module
-
-esp-idf-sys     = { version = "0.36.1" }
-
-semihosting     = { version = "0.1.20" }
+#defmt-rtt       = { version = "1.0.0", optional = true }
 
 [build-dependencies]
-anyhow          = "1.0.99"
-itertools       = "0.14"
-serde           = { version = "1.0", features = ["derive"] }
-toml            = "0.9"
+embuild = "0.33"
+
+#[build-dependencies]
+#anyhow          = "1.0.99"
+#itertools       = "0.14"
+#serde           = { version = "1.0", features = ["derive"] }
+#toml            = "0.9"
 
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #
@@ -64,33 +72,19 @@ zcl_identify = []
 #   - CONFIG_ESP_ZB_TRACE_ENABLE
 #   - CONFIG_PM_ENABLE=y
 #
-zb_zed = []     # 'CONFIG_ZB_ZED'   todo is?
+#zb_zed = []     # 'CONFIG_ZB_ZED'   todo is?
 # ...
 
 # Though we envision always having 'defmt' enabled, it's good to provide an option.
-defmt = ["dep:defmt",
-    "esp-hal/defmt",
-    "esp-backtrace/defmt",
-    #?? "esp-bootloader-esp-idf?/defmt",
-    "esp-println?/defmt-espflash"
-]
-
-#esp_hal_next = []
+#defmt = ["dep:defmt",
+#    "esp-hal/defmt",
+#    "esp-backtrace/defmt",
+#    #?? "esp-bootloader-esp-idf?/defmt",
+#    "esp-println?/defmt-espflash"
+#]
 
 #R? Features for the examples only! Rust gives no mechanism to have features that would apply only to 'examples/' (but
 #R? not be exposed to downstream projects). In downstream projects, just IGNORE THESE: THE LIBRARY DOES NOT USE THEM!!
 #R?
 #? run_with_espflash = ["defmt", "dep:esp-println"]    # ?? "dep:esp-bootloader-esp-idf" ??
 #? run_with_probe_rs = ["defmt", "dep:defmt-rtt"]
-
-# Enable to use latest 'main' (also enable 'esp-hal-next' feature, if fails to build, otherwise)
-#|[patch.crates-io]
-#|esp-backtrace   = { git = "https://github.com/esp-rs/esp-hal.git" }
-#|esp-hal         = { git = "https://github.com/esp-rs/esp-hal.git" }
-#|esp-println     = { git = "https://github.com/esp-rs/esp-hal.git" }
-
-[profile.release]
-debug = true
-debug-assertions = true
-#lto = "fat"
-codegen-units = 1
