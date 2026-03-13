@@ -7,13 +7,20 @@ build-std = ["std", "panic_abort"]
 [env]
 MCU="esp32c6"
 ESP_IDF_VERSION = "v5.5.3"
-#R ESP_IDF_SYS_ROOT_CRATE = "raw"
-  # the crate that depends on 'esp-idf-sys'
+#ESP_IDF_SYS_ROOT_CRATE = "esb-zb-raw"
+  # the crate that depends on 'esp-idf-sys' (!!! IS IT, THOUGH??? THAT'S JUST COPILOT'S CLAIM); compare with: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration
+
+# https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults
+#   "If such a path is relative, it will be relative to the workspace directory."
+#   "Defaults to 'sdkconfig.defaults'."
+#
+ESP_IDF_SDKCONFIG_DEFAULTS = "raw/sdkconfig.defaults"
 
 # Multipass VM: avoid '.embuild' (large, small files; slow) from being in a shared source mount.
 #
 ESP_IDF_TOOLS_INSTALL_DIR = "out"
-#ESP_IDF_TOOLS_INSTALL_DIR = "global" # ~/.espressif
+#ESP_IDF_TOOLS_INSTALL_DIR = "global"
+  # ~/.espressif
 
 # Have this if you use Multipass VM, and a global 'target' folder.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }

@@ -82,7 +82,9 @@ That is a concern, if we bet the whole project on it. But on the other side, let
 
 	>Note: Don't install all of the above! If something were to fail, add from that list and retry.
 
-Note that ESP-IDF **may not be globally installed** - it might mess with the `esp-idf-svc`.
+- GNU `make`
+
+Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
 
 <!--
 Developed with:

@@ -1,7 +1,7 @@
 #
 # Makefile
 #
-# Launched by 'build.rs' but also usable stand-alone.
+# Launched by 'build.rs' but also usable stand-alone (debugging, development).
 #
 # Handles:
 #	- compiling the 'esp-zigbee-sdk' C code
@@ -9,27 +9,33 @@
 #
 # Requires:
 #	- bindgen
-#	- (patch)	# not needed
-#	- clang
+#	- esp-idf-sys headers, libs
 #
-# Note: 'bindgen' docs show using that as a Rust library. We use 'bindgen' as a CLI.
-#
-# Note: 'clang' only recognizes the 'riscv32-unknown-elf' target, not the chip specific ones seen e.g. in
-#		'../.cargo/config.toml'. This seems normal - and works, so..
-#
-# Note: Unconditional (manual) make with 'make -B' MAY BE CURRENTLY BROKEN. Just run 'make _clean', instead. #tbd.
-#
-#R ESP_ZIGBEE_SDK=.sub/esp-zigbee-sdk
-ESP_ZIGBEE_LIB=../.sub/esp-zigbee-sdk/components/esp-zigbee-lib
+
+include .BUILD_ENV
+	# DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/tmp/rust-target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif/esp-idf/v5.5.3
+	# ~DEP_ESP_IDF_ROOT=/tmp/rust-target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out
+  # ~ESP_IDF_VERSION=v5.5.3
+  # MCU=esp32c6
+
+_ESP_IDF_PATH=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
+#R _SDKCONFIG_H:=$(shell echo "${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}" | sed 's^espressif/esp-idf/v[0-9.]+$$^^')/sdkconfig.h
+#R_SDKCONFIG_H:=$(patsubst %/espressif/%,%,${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH})
+_SDKCONFIG:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/../../../sdkconfig
+_SDKCONFIG_H:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/../../../build/config/sdkconfig.h
+
+_TARGET:=${MCU}
+
+	# We need these:
+	#		- ${_ESP_IDF_PATH}/components/esp_common/include/esp_err.h
+	#		- ${_ESP_IDF_PATH}/components/esp_coex/lib/esp32c6/libcoexist.a
+	#		- path to 'sdkconfig.h'
+
+_ESP_ZIGBEE_SDK=../.sub/esp-zigbee-sdk
+ESP_ZIGBEE_LIB=${_ESP_ZIGBEE_SDK}/components/esp-zigbee-lib
 
 _INCLUDE:=${ESP_ZIGBEE_LIB}/include
 _TMP:=./tmp
-
-_TARGET:=esp32c6
-
-#R_OBJ_PATH:=$(_TMP)/$(TARGET)
-
-_OTHER_INCS:=fake/*.h
 
 all:
 	@false
@@ -38,42 +44,49 @@ all:
 manual: ${_TMP}/bindings.rs
 	@echo "\nManual build succeeded."
 
-#R#---
-#R# Patch sources from './VL53L{58}CX_ULD_API/**' to 'tmp/c_src/'
-#R#
-#R# 	- places e.g. headers and C files in the same folder, for convenience
-#R#	- removes a nasty! reference to a field in a structure that's supposed to be customer-made and opaque
-#R#
-#R$(_C_SRC)/%.h: $(VL53L$(X)CX_ULD_API)/inc/%.h \
-#R	| tmp_c_exists
-#R	@cp $< $@
+${_TMP}/sdkconfig: ${_SDKCONFIG}
+	@cp $< $@
+
+# Eventually (?) 'zb_vendor.h' should be generated based on configuration from the *Rust program* using us, but
+# that's later.
+#
+# Example (courtesy Copilot):
+#		<<
+#		#define ZB_MANUFACTURER_CODE 0x1234
+#   #define ZB_VENDOR_CLUSTER_ID 0xFC00
+#   #define ZB_VENDOR_ENDPOINT   1
+#		<<
+#
+${_TMP}/zb_vendor.h:
+	@echo "#pragma once" > $@
+	@echo "#define ZB_MANUFACTURER_CODE 0x1234" >> $@
+	@echo "#define ZB_VENDOR_CLUSTER_ID 0xFC00" >> $@
+	@echo "#define ZB_VENDOR_ENDPOINT   1" >> $@
 
 #---
 # Generate Rust
 #
 # Generate ’tmp/bindings.rs’. MANUAL CHANGES TO IT WILL BE LOST; modify this instead.
 #
-# About 'bindgen' (v.0.69.4):		<-- tbd. might have changed?  Now in 0.72.1
-#	- prints errors to stdout, which is .... a bit unkind.
-#	- does not process lines like:
-#		<<
-#			define SOME_ANY_THING ((uint8_t) 16U)
-#		<<
-#		As a countermeasure, we declare 'consts' in 'master.h'.
-#
-${_TMP}/bindings.rs: master.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile \
+${_TMP}/bindings.rs: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ${_TMP}/zb_vendor.h \
 	| bindgen
 	bindgen $< \
-	  -- -I. -Ifake -I${_INCLUDE} \
-		-I ${IDF_PATH}/components/esp_common/include \
-		-I ${IDF_PATH}/components/esp_system/include \
-		-I ${IDF_PATH}/components/esp_hw_support/include \
-		-I ${IDF_PATH}/components/hal/include \
-		-I ${IDF_PATH}/components/esp_rom/include \
-		-I ${IDF_PATH}/components/esp_rom/include \
-		-I ${IDF_PATH}/components/esp_rom/include \
-		-I ${IDF_PATH}/components/soc/${_TARGET}/include \
-		-I ${IDF_PATH}/components/soc/${_TARGET}/include/soc \
+	  -- -I. -I${_INCLUDE} -I${_TMP} -Ifake \
+		-I $(dir ${_SDKCONFIG_H}) \
+		-I ${_ESP_IDF_PATH}/components/esp_common/include \
+		-I ${_ESP_IDF_PATH}/components/esp_system/include \
+		-I ${_ESP_IDF_PATH}/components/esp_hw_support/include \
+		-I ${_ESP_IDF_PATH}/components/esp_driver_uart/include \
+		-I ${_ESP_IDF_PATH}/components/hal/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/config/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/config/riscv/include \
+		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
+		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
+		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
+		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
+		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include/soc \
 	  > $@
 
 #	  RUST_LOG='warn,bindgen::ir=error' \
@@ -131,22 +144,12 @@ bindgen:
 	  echo >&2 "ERROR: 'bindgen' CLI not detected. Please install via 'cargo install --locked bindgen-cli'."; false \
 	)
 
-#?clang:
-#?	@which clang >/dev/null || ( \
-#?	  echo >&2 "ERROR: 'clang' CLI not detected. Please install via 'sudo apt install llvm-dev libclang-dev clang'."; false \
-#?	)
-
-#patch:
-#	@which $@ >/dev/null || ( \
-#	  echo >&2 "ERROR: '$@' is not detected. Please install via 'sudo apt install $@'."; false \
-#	)
-
 #---
 _clean:
 	-rm ${_TMP}/bindings.rs
 
 echo:
-	@echo AA
+	@echo ${_SDKCONFIG}
 
 # Remove any targets created if a build fails.
 .DELETE_ON_ERROR:

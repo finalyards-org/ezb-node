@@ -6,7 +6,7 @@
 *
 * Usage:
 *   <<
-*   $ bindgen master.h
+*   $ bindgen wrap.h
 *   <<
 */
 #pragma once

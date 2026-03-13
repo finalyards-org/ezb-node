@@ -1,5 +1,5 @@
 [package]
-name = "esp_zb_raw"
+name = "esp-zb-raw"
     # name used in 'examples' and the 'main' project
 edition = "2024"
 rust-version = "1.89"

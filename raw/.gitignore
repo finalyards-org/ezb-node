@@ -1,6 +1,6 @@
 /target/
 
 /tmp/
-/.OUT_DIR
+/.BUILD_ENV
 
 Cargo.lock

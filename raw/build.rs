@@ -25,11 +25,17 @@ fn main() {
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
     {
         if env::var("__CFBundleIdentifier").is_ok() {
+            panic!();   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
             return;  // skip the rest
         }
     }
 
     // DEBUG: Show what we know about the compilation.
+    //  <<
+    //    DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out
+    //    DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif/esp-idf/v5.5.3
+    //    OUT_DIR=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp_zb_raw-8250c09cd209b0ce/out
+    //  <<
     #[cfg(false)]
     {
         env::vars().for_each(|(a, b)| { eprintln!("{a}={b}"); });
@@ -44,17 +50,30 @@ fn main() {
         // nada. If there are conflicting feature combinations, give an error here.
     }
 
-    // Expose 'OUT_DIR' to an external (Makefile.dev) build system
-    #[cfg(false)]
+    // Expose some env.vars to 'Makefile'.
+    // Note: Writing them into a file means we can more freely develop the make itself.
     {
         use std::{env,fs};
-        const TMP: &str = ".OUT_DIR";
+        const FN: &str = ".BUILD_ENV";
 
-        let out_dir = env::var("OUT_DIR")
-            .expect("OUT_DIR to have a value");
+        let arr = [
+          "DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH",
+          //"DEP_ESP_IDF_ROOT",
+          "ESP_IDF_VERSION",
+          "MCU"
+        ].map(|x| {
+          let val = env::var(x).expect( format!("{x} to have a value").as_str() );
+          format!("{x}={val}")
+        });
 
-        fs::write(TMP, out_dir)
-            .expect(format!("Unable to write {TMP}").into());
+        // Values in a format GNU Makefile can gulp in.
+        let text = format!("#\
+# Created by 'cargo build --release'. CHANGES WILL BE LOST!\
+#\
+{}", arr.join("\n"));
+
+        fs::write(FN, text)
+          .expect(format!("Unable to write {FN}").as_str());
     }
 
     // make stuff
