@@ -26,7 +26,7 @@ fn main() {
     {
         if env::var("__CFBundleIdentifier").is_ok() {
             panic!();   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
-            return;  // skip the rest
+            //return;  // skip the rest
         }
     }
 

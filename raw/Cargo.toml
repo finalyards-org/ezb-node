@@ -65,6 +65,9 @@ default = ["zcl_basic", "zcl_identify"]
 zcl_basic = []
 zcl_identify = []
 
+# ESP32 devices with Zigbee support (currently targeting only C6).
+# tbd. Can we drive 'esp-idf-sys' and the ESP-IDF toolchain with this, i.e. choose MCU from above?
+esp32c6 = []
 
 #---
 # C '#ifdef's to consider porting as Rust features:
@@ -94,3 +97,4 @@ zcl_identify = []
 #R?
 #? run_with_espflash = ["defmt", "dep:esp-println"]    # ?? "dep:esp-bootloader-esp-idf" ??
 #? run_with_probe_rs = ["defmt", "dep:defmt-rtt"]
+

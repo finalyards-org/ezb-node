@@ -1,22 +1,19 @@
 [workspace]
 members = [
-  #"examples",  #later
-  #"main",
+  "main",
   "raw",
 ]
 resolver = "3" # release 2024 in the members
 
-#|[metadata.esp-idf-sys]
-#|esp_idf_tools_install_dir = "out"
-#|  # "out": within the Cargo target ('cargo clean' cleans also the tools)
-#|  # "global": ~/.espressif/
-#|
+# Instead of '.crate/config.toml', 'esp-idf-sys' configs could be provided here
+#|[workspace.metadata.esp-idf-sys]
+#|esp_idf_tools_install_dir = "global"
 #|mcu = "esp32c6"
-#|#R esp_idf_sdkconfig = "sdkconfig"
 #|esp_idf_sdkconfig_defaults = ["sdkconfig.defaults"]
-#|# native builder only
 #|esp_idf_version = "5.5.3"
-#|esp_idf_components = ["pthread"]
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5_5_3)'] }
 
 [profile.release]
 opt-level = "s"

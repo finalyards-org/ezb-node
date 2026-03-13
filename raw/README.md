@@ -14,19 +14,17 @@ See above.
 ## Steps
 
 ```
-$ ESP_IDF_SYS_ROOT_CRATE=$(pwd) \
-  cargo build --release -vv
-```
-
-This is needed (only) if you are using a global target folder - which is necessary for performance when running under Multipass VM <sub>[it's a long story](...)</sub>.
-
-```
-$ 
+$ cargo build --release -vv
 ```
 
 >Note: This command is good when you are developing the `raw` side. To just use this, let the upper level Cargo handle it. ☀️
 
+<!-- 
 ## Testing
+
+tbd. Do local tests? Is there a need..?
+-->
 
 ## References
 
+- nada

@@ -1,14 +1,18 @@
 [build]
 target = "riscv32imac-esp-espidf"
 
+[target.'cfg(target_os = "espidf")']
+linker = "ldproxy"
+rustflags = ["--cfg",  "espidf_time64"] # must be set for ESP-IDF 5.0 and above
+
 [unstable]
 build-std = ["std", "panic_abort"]
 
 [env]
-# 'edf-idf-sys' can also be steered in the '[package.metadata.esp-idf-sys]' section of the "root crate"'s
-# Cargo.toml. We have decided to keep some major settings here - those having to do with Multipass VM, and those
-# just "feeling" global to the project.
-ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw"
+# 'edf-idf-sys' can also be steered in the '[package.metadata.esp-idf-sys]' (of raw module) or
+# '[workspace.metadata.esp-idf-sys]' (of workspace Cargo.toml). We have decided to keep some major settings here -
+# those having to do with Multipass VM, and those just "feeling" global to the project.
+ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw" # tbd. is this really needed?
 ESP_IDF_VERSION = "v5.5.3"
 MCU="esp32c6"
 
@@ -20,6 +24,10 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
   #           /tmp/rust-target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif
   # "global": clearly the faster approach: retains ESP-IDF itself over 'cargo clean'
   #           ~/.espressif/
+  #
+  # NOTE!!! For 'global', YOU ARE RESPONSIBLE FOR INSTALLING 'ldproxy' (cargo install ldproxy) as a CLI tool!!!
+  #     - For (binding) development, use "global" and have the tool.
+  #     - For maintenance (i.e. published version), "out" seems a better choice.
 
 # Have this if you use Multipass VM, and a global 'target' folder.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }

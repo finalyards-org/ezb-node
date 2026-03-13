@@ -70,7 +70,8 @@ ${_TMP}/zb_vendor.h:
 #
 ${_TMP}/bindings.rs: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ${_TMP}/zb_vendor.h \
 	| bindgen # _check_sdkconfig	todo: enabled '_check_sdkconfig' to see that the config is actually acted upon
-	bindgen $< -- \
+	bindgen $< \
+		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_ESP_IDF_TOOLCHAIN_PATH} \
 		\
 	  -I. -I${_INCLUDE} -I${_TMP} -Ifake \
@@ -93,39 +94,6 @@ ${_TMP}/bindings.rs: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG
 		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
 		-I ${_ESP_IDF_TOOLCHAIN_PATH}/riscv32-esp-elf/include \
 	  > $@
-
-#	  RUST_LOG='warn,bindgen::ir=error' \
-#	  BINDGEN_EXTRA_CLANG_ARGS="--target=$(_CLANG_TARGET)" \
-#		bindgen $< \
-#	    --allowlist-file wrap58.h \
-#	    --allowlist-type 'VL_.+' \
-#	    --allowlist-function 'vl_check_data_ready' \
-#	    --allowlist-function 'vl_set_external_sync_pin_enable' \
-#	    --allowlist-function 'vl_(?:(get)|(set))_power_mode' \
-#	    --allowlist-function 'vl_get_ranging_data' \
-#	    --allowlist-function 'vl_init' \
-#	    --allowlist-function 'vl_set_(?:(resolution)|(ranging_frequency_hz)|(integration_time_ms)|(sharpener_percent)|(target_order)|(ranging_mode))' \
-#	    --allowlist-function 'vl_st(?:(art)|(op))_ranging' \
-#	    --allowlist-item 'API_REVISION' \
-#	    \
-#	    --use-core \
-#	    --default-enum-style rust \
-#	    --raw-line '#![allow(non_camel_case_types)]' \
-#	    --raw-line '#![allow(non_snake_case)]' \
-#		--raw-line 'use strum::FromRepr;' \
-#		--no-copy 'VL_(?:(Configuration)|(Platform))' \
-#		\
-#	    -- -I. -I$(_C_SRC) \
-#	  | sed 's/#[[]repr(u32)[]]/#[repr(u8)]/' \
-#	  | sed 's/#[[]derive(Debug, Copy, Clone, Hash, PartialEq, Eq)/#[derive(FromRepr, Copy, Clone, Hash, PartialEq, Eq)/' \
-#	  | sed 's/these field, except for the sensor address."/these fields."/' \
-#	  | sed -E 's/^(pub enum PowerMode)/#[allow(dead_code)]\n\1/' \
-#	  | sed -E 's/(vl_set_power_mode)/_\1/' \
-#	  > $@
-
-	# Note: 'sed' removes 'Debug' from the derived behaviours. This is intentional; 'defmt' uses 'Format'.
-
-	# Note: 'vl_external_sync_pin_enable' is L8CX specific.
 
 # Test for the above (for manual development, only); CAN BE LET GO
 EXP_x5: tmp/uld_raw5.rs

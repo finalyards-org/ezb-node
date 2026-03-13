@@ -114,6 +114,20 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
 >These are needed because - with Multipass - using a normal `target` folder within a shared project folder (a handy setup for editing in IDE but building in a VM) is *tremendously slow*. However, `esp-idf-sys` needs to be told about this arrangement. If you do not use Multipass, it's probably best to remove the above lines.
 
 
+### Developing or just wanting to use?
+
+Check the `.cargo/config.toml` contents:
+
+```
+#ESP_IDF_TOOLS_INSTALL_DIR = "out"
+ESP_IDF_TOOLS_INSTALL_DIR = "global"
+```
+
+For development, `global` is recommended (read the comments!!!).
+
+For plain use, make sure it's set to `out`. This will e.g. automatically download also `ldproxy`, so you don't need to. :)
+
+
 ## Steps
 
 ### Build the `raw`
@@ -128,10 +142,11 @@ This should get built automatically, as a dependency (of `main` and/or examples)
 
 The build takes longer than normally, and downloads e.g. a full ESP-IDF (C language) toolchain. If things go wrong, you want to know. Adding the `-vv` ("very verbose") flag allows you to see things are progressing.
 
+### Run an example
 
-### What next?
-
-See either the `examples` folder - for practical projects - or `main` and `raw` for implementation details.
+```
+...tbd...
+```
 
 <!-- #later
 ## Using in your own projects

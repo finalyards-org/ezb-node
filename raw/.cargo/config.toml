@@ -1,5 +1,0 @@
-[target.'cfg(target_os = "espidf")']
-linker = "ldproxy"
-#runner = "espflash flash --monitor"
-#runner = "probe-rs run" # tbd. untested
-rustflags = ["--cfg",  "espidf_time64"] # must be set for ESP-IDF 5.0 and above
