@@ -24,4 +24,4 @@
 
 const char* ESP_ZB_VER = _TO_STR(ESP_ZB_VER_MAJOR) "." \
                         _TO_STR(ESP_ZB_VER_MINOR) "." \
-                        _TO_STR(ESP_ZB_VER_PATCH)     // "1.6.8"
+                        _TO_STR(ESP_ZB_VER_PATCH); // "1.6.8"

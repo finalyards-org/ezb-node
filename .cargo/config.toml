@@ -5,22 +5,21 @@ target = "riscv32imac-esp-espidf"
 build-std = ["std", "panic_abort"]
 
 [env]
-MCU="esp32c6"
+# 'edf-idf-sys' can also be steered in the '[package.metadata.esp-idf-sys]' section of the "root crate"'s
+# Cargo.toml. We have decided to keep some major settings here - those having to do with Multipass VM, and those
+# just "feeling" global to the project.
+ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw"
 ESP_IDF_VERSION = "v5.5.3"
-#ESP_IDF_SYS_ROOT_CRATE = "esb-zb-raw"
-  # the crate that depends on 'esp-idf-sys' (!!! IS IT, THOUGH??? THAT'S JUST COPILOT'S CLAIM); compare with: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration
+MCU="esp32c6"
 
-# https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults
-#   "If such a path is relative, it will be relative to the workspace directory."
-#   "Defaults to 'sdkconfig.defaults'."
+# Multipass VM: avoid '.embuild' (large, small files = slow) from being in a shared source mount.
 #
-ESP_IDF_SDKCONFIG_DEFAULTS = "raw/sdkconfig.defaults"
-
-# Multipass VM: avoid '.embuild' (large, small files; slow) from being in a shared source mount.
-#
-ESP_IDF_TOOLS_INSTALL_DIR = "out"
-#ESP_IDF_TOOLS_INSTALL_DIR = "global"
-  # ~/.espressif
+#ESP_IDF_TOOLS_INSTALL_DIR = "out"
+ESP_IDF_TOOLS_INSTALL_DIR = "global"
+  # "out": within the Cargo target ('cargo clean' cleans also the tools):
+  #           /tmp/rust-target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif
+  # "global": clearly the faster approach: retains ESP-IDF itself over 'cargo clean'
+  #           ~/.espressif/
 
 # Have this if you use Multipass VM, and a global 'target' folder.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }

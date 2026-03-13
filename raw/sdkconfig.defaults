@@ -13,6 +13,9 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 #---
 # Below, components seen as unimportant for Zigbee applications are disabled.
 #
+# NOTE: THESE DO NOT NECESSARILY WORK!!!  e.g. 'CONFIG_ESP_WIFI_ENABLED=y' is what you see in the eventual
+#     'sdkconfig'.
+#
 # WiFi
 CONFIG_ESP_WIFI_ENABLED=n
 CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
@@ -36,8 +39,8 @@ CONFIG_OPENTHREAD_ENABLED=n
 # HTTP server
 CONFIG_HTTPD_ENABLED=n
 
-# MQTT - KEEP maybe...? #later
-#CONFIG_MQTT_ENABLED=n
+# MQTT - not needed right now. #later
+CONFIG_MQTT_ENABLED=n
 
 # FatFS
 CONFIG_FATFS_ENABLED=n

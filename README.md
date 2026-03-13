@@ -59,7 +59,7 @@ That is a concern, if we bet the whole project on it. But on the other side, let
 - ESP32-C6 devkit
 - Rust installed
 	<!-- tbd. give instructions here that show the right toolchain etc.-->
-- 6 GB disk space
+- &gt;7 GB disk space
 
 	The ESP-IDF environment will get downloaded to:
 	
@@ -93,16 +93,51 @@ Developed with:
 
 ## Preparation
 
+### Submodules
+
 Load git submodules - we get the C sources that way.
 
 ```
 $ git submodule update --init
 ```
 
-## What next?
+### Do you use Multipass?
 
-See either the `examples` folder - for practical projects - or the others for implementation details.
+If not, please comment out - or remove - these lines in `.cargo/config.toml`:
 
+```
+ESP_IDF_TOOLS_INSTALL_DIR = "out"
+[...]
+CARGO_WORKSPACE_DIR = { value = "", relative = true }
+```
+
+>These are needed because - with Multipass - using a normal `target` folder within a shared project folder (a handy setup for editing in IDE but building in a VM) is *tremendously slow*. However, `esp-idf-sys` needs to be told about this arrangement. If you do not use Multipass, it's probably best to remove the above lines.
+
+
+## Steps
+
+### Build the `raw`
+
+```
+$ cd raw
+$ cargo build --release -vv
+[...]
+```
+
+This should get built automatically, as a dependency (of `main` and/or examples), but it's a good idea to do it manually.
+
+The build takes longer than normally, and downloads e.g. a full ESP-IDF (C language) toolchain. If things go wrong, you want to know. Adding the `-vv` ("very verbose") flag allows you to see things are progressing.
+
+
+### What next?
+
+See either the `examples` folder - for practical projects - or `main` and `raw` for implementation details.
+
+<!-- #later
+## Using in your own projects
+
+*tbd.*
+-->
 
 ## References
 

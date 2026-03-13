@@ -5,8 +5,20 @@ edition = "2024"
 rust-version = "1.89"
 publish = false
 
+# Complements the env.vars in '.cargo/config.toml'. Implementation specific parts of 'esp-idf-sys' config are here.
+[package.metadata.esp-idf-sys]
+#esp_idf_sdkconfig_defaults = ["sdkconfig.defaults"]
+  # ^-- builds, uses '{target}/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/gen-sdkconfig.defaults'
+esp_idf_sdkconfig_defaults = ["raw/sdkconfig.defaults"] # builds, but does not use the file
+
+# Note: 'esp_idf_components' is not the same as using 'sdkconfig.defaults' (according to Copilot).
+#   - 'sdkconfig.defaults' "steers ESP-IDF *internal* components"
+#   - 'esp_idf_components' is for *external* ESP-IDF components (one's own code)
+#
+#esp_idf_components = ["pthread"]
+esp_idf_components = []
+
 [dependencies]
-#esp-idf-svc     = { version = "0.52" }
 esp-idf-sys = { version = "0.37.2" }
 log = "0.4"
 
@@ -39,12 +51,6 @@ log = "0.4"
 
 [build-dependencies]
 embuild = "0.33"
-
-#[build-dependencies]
-#anyhow          = "1.0.99"
-#itertools       = "0.14"
-#serde           = { version = "1.0", features = ["derive"] }
-#toml            = "0.9"
 
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #

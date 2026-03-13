@@ -56,24 +56,29 @@ fn main() {
         use std::{env,fs};
         const FN: &str = ".BUILD_ENV";
 
+        // Note: 'DEP_ESP_IDF_...' have much shared path. We *could* deduce the latter from
+        //      the first, but it's unnecessary work.
         let arr = [
           "DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH",
-          //"DEP_ESP_IDF_ROOT",
-          "ESP_IDF_VERSION",
+          "DEP_ESP_IDF_ROOT",
+          "ESP_IDF_TOOLS_INSTALL_DIR",
+          //"ESP_IDF_VERSION",
           "MCU"
         ].map(|x| {
-          let val = env::var(x).expect( format!("{x} to have a value").as_str() );
+          let val = env::var(x)
+            .unwrap_or_else(|_| panic!("{x} to have a value") );
           format!("{x}={val}")
         });
 
         // Values in a format GNU Makefile can gulp in.
-        let text = format!("#\
-# Created by 'cargo build --release'. CHANGES WILL BE LOST!\
-#\
+        let text = format!("\
+#
+# Created by 'cargo build --release'. CHANGES WILL BE LOST!
+#
 {}", arr.join("\n"));
 
         fs::write(FN, text)
-          .expect(format!("Unable to write {FN}").as_str());
+          .unwrap_or_else(|e| panic!("Unable to write {FN}: {e}"));
     }
 
     // make stuff
@@ -118,6 +123,6 @@ fn idf_stuff() {
         }
     }
 
-    println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version_major, values("5"))"#);
-    println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version, values("5.3", "5.4", "5.5"))"#);
+    //println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version_major, values("5"))"#);
+    //println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version, values("5.3", "5.4", "5.5"))"#);
 }
