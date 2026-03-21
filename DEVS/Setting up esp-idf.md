@@ -34,7 +34,15 @@ Changes to above:
 	$ sudo apt install cmake
 	```
 
-- Around 4GB of free disk space
+- `espflash` either directly or [via remoting](https://github.com/finalyards/probe-rs-remote)
+
+	```
+	$ cargo install espflash --locked
+	```
+	
+	You can use `idf.py flash` if the device in question is directly connected to your development machine.
+
+Installing takes around 4..5GB of disk space.
 
 <!--
 	|||
@@ -43,9 +51,14 @@ Changes to above:
 	|`~/.espressif` (toolchains)|1.4GB|
 -->
 
-## Steps
 
-### Set up `esp-idf` 5.5
+## Installation
+
+### Set up `esp-idf` 5.5.3
+
+<!-- tbd.
+As of March 2026, 6.0 is just released. 
+-->
 
 ```
 $ install -d ~/bin
@@ -54,8 +67,12 @@ $ install -d ~/bin
 The author likes placing `esp-idf` under `~/bin`, but that's just a personal preference. Use any path you like, but realize you'll keep the clone around as long as you are using the tool.
 
 ```
-$ git clone --branch v5.5 --depth 1 --recursive https://github.com/espressif/esp-idf.git ~/bin/esp-idf
+$ git clone --branch v5.5.3 --depth 1 --recursive https://github.com/espressif/esp-idf.git ~/bin/esp-idf
 ```
+
+>Warn: ESP-IDF tag `v5.5` does NOT mean "latest 5.5.x" but 5.5.0. Do not use it.
+
+<p />
 
 >Taking a shallow clone uses up some 1.9GB (full likely lots more).
 
@@ -65,7 +82,9 @@ $ git clone --branch v5.5 --depth 1 --recursive https://github.com/espressif/esp
 $ ~/bin/esp-idf/install.sh esp32c6
 ```
 
-This creates `~/.espressif` and downloads tools underneath there. Naming the target explicitly saves you disk space.
+This creates `~/.espressif` and downloads tools underneath there. 
+
+>NOTE: Naming the target(s) explicitly saves plenty of disk space. The default is `all` Espressif MCUs.
 
 ### Set up the shell environment
 
@@ -100,12 +119,26 @@ This needs to be done *separately* each time you intend to use `idf.py`. It sets
 
 ```
 $ idf.py --version
-ESP-IDF v5.5
+ESP-IDF v5.5.3
 ```
 
-## What next?
 
-You now have `esp-idf` headers and libraries available under `~/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/`.
+## Using
+
+You now have `esp-idf` headers and libraries available under:
+
+```
+$ tree -L 1 ~/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/ 
+/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/
+├── bin
+├── include
+├── lib
+├── libexec
+├── package.json
+├── picolibc
+├── riscv32-esp-elf
+└── share
+```
 
 
 ### Within a project folder
@@ -120,21 +153,68 @@ Although we only installed one target, this seems to be necessary.
 ### Builds
 
 ```
-$ idf.py build
+$ IDF_MINIMAL_BUILD=1 \
+  CMAKE_BUILD_TYPE=Release idf.py build
+[...]
+[ 98%] Linking CXX executable color_light_bulb.elf
 [...]
 ```
 
-The output is in `build/*.elf`. You can flash it with standard tools like `probe-rs`:
+>Note: Asking for the minimal build (and release build) are not working. We'd like to. `#help! 🛟`
+
+<p />
+
+>Note: A release build likely happens faster than a debug one. <!-- tbd. measurements? -->
 
 ```
-$ probe-rs run build/green.elf
+$ file build/*.elf
+build/color_light_bulb.elf: ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, with debug_info, not stripped
+```
+
+### Erasing NVRAM
+
+Some READMEs request you to clear the NVRAM before running a sample. If you are using Multipass VM (and not something like USBIP), you cannot simply `idf.py erase-flash`.
+
+The author uses [`probe-rs-remote`](https://github.com/finalyards/probe-rs-remote) - that also remotes the `espflash` command. Use this:
+
+```
+$ espflash erase-flash
+```
+
+
+### Flashing
+
+With a locally connected device (ESP32-C6 devkit), you proceed with: 
+
+```
+$ idf.py flash monitor
+```
+
+If you do this, skip to next section.
+
+---
+
+If you are using Multipass VM (and not USBIP), you can use `espflash` (remoted, as mentioned above, see `probe-rs-remote`) to flash and run the output.
+
+```
+$ espflash write-bin 0x0      build/bootloader/bootloader.bin
+$ espflash write-bin 0x8000   build/partition_table/partition-table.bin
+$ espflash write-bin 0x10000  --monitor build/color_light_bulb.bin
+[...]
+I (338) main_task: Started on CPU0
+I (338) main_task: Calling app_main()
+I (338) phy_init: phy_version 331,5b89037,Mar  3 2025,16:01:12
+I (388) phy: libbtbb version: ec2ecba, Mar  3 2025, 16:01:27
+I (398) main_task: Returned from app_main()
 [...]
 ```
+
 
 ### Uninstall (optional)
 
 Just wipe the folders:
 
-- `bin/esp-idf`
-- `~/.espressif`
-
+```
+$ cd
+$ rm -rf bin/esp-idf .espressif
+```
