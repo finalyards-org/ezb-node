@@ -1,2 +1,0 @@
-[target.'cfg(true)']
-runner = "espflash flash --monitor"
