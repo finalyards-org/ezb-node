@@ -153,18 +153,13 @@ Although we only installed one target, this seems to be necessary.
 ### Builds
 
 ```
-$ IDF_MINIMAL_BUILD=1 \
-  CMAKE_BUILD_TYPE=Release idf.py build
+$ CMAKE_BUILD_TYPE=Release idf.py build
 [...]
 [ 98%] Linking CXX executable color_light_bulb.elf
 [...]
 ```
 
 >Note: Asking for the minimal build (and release build) are not working. We'd like to. `#help! 🛟`
-
-<p />
-
->Note: A release build likely happens faster than a debug one. <!-- tbd. measurements? -->
 
 ```
 $ file build/*.elf
@@ -209,10 +204,16 @@ I (398) main_task: Returned from app_main()
 [...]
 ```
 
+## Next steps
 
-### Uninstall (optional)
+See [Demo with two boards ESP-IDF.md](./Demo%20with%20two%20boards%20ESP-IDF.md) for executing a practical demo.
 
-Just wipe the folders:
+
+
+
+## Uninstall
+
+To remove ESP-IDF, just remove its folders:
 
 ```
 $ cd
