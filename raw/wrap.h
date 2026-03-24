@@ -14,6 +14,14 @@
 #include "esp_zigbee_core.h"
     // brings in the rest
 
+#include "esp_zigbee_attribute.h"
+#include "esp_zigbee_cluster.h"
+#include "esp_zigbee_endpoint.h"
+//#include "esp_zigbee_ota.h"
+//#include "esp_zigbee_secur.h"
+//#include "esp_zigbee_trace.h"
+#include "esp_zigbee_type.h"
+
 #include "esp_zigbee_version.h"
     // #define ESP_ZB_VER_MAJOR 1
     // #define ESP_ZB_VER_MINOR 6

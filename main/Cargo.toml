@@ -10,13 +10,14 @@ esp-zb-raw = { path = "../raw" }
 esp-idf-svc = { version = "0.52" }
 log = "0.4"
 
-#esp-println = { version = "0.16.1", features = ["log-04"] }
+#esp-println = { version = "0.16.1", features = [] } # "log-04", "defmt"
 
-#defmt           = { version = "1.0", optional = true }
+#defmt       = { version = "1.0", optional = true }
+
+# 'dev-dependencies' cannot be optional; this would be a dev-dependency (only binaries use it; library does not)
+#defmt-rtt       = { version = "1.0", optional = true }
 
 #[dev-dependencies]
-#defmt-rtt       = { version = "1.0" }
-
 #embassy-executor = { version = "0.7.0", features = ["task-arena-size-12288"] }
 #embassy-futures = { version = "0.1.2" }
 #embassy-sync    = { version = "0.7.2" }
@@ -30,7 +31,7 @@ embuild = "0.33"
 [features]
 default = ["esp32c6"]
 
-#defmt = ["dep:defmt", "esp-zb-raw/defmt", "esp-hal/defmt"]
+#defmt = ["dep:defmt", "dep:defmt-rtt"]
 
 esp32c6 = ["esp-zb-raw/esp32c6"]
 

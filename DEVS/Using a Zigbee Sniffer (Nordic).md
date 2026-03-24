@@ -132,6 +132,22 @@ Bus 001 Device 003: ID 1915:154b Nordic Semiconductor ASA nRF 802154 Sniffer
 
 	>Not sure if those are needed.
 
+**Allow data collection by a user account**
+
+As per [here](https://askubuntu.com/a/748946):
+
+```
+$ sudo dpkg-reconfigure wireshark-common
+```
+
+Select `Yes`.
+
+```
+$ sudo chmod +x /usr/bin/dumpcap
+```
+
+This - as the instructions clearly tell - allows you to run Wireshark without `sudo`.
+
 
 ## Conclusion
 

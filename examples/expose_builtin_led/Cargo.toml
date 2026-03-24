@@ -1,5 +1,5 @@
 [package]
-name = "esp_zb_expose_builtin_led"
+name = "example_expose_builtin_led"
 edition = "2024"
 rust-version = "1.89"
 publish = false
@@ -7,6 +7,8 @@ publish = false
 [dependencies]
 esp-idf-svc = { version = "0.52" }
 log = "0.4"
+
+esp-zb = { path = "../../main" }
 
 # --- Optional Embassy Integration ---
 # esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
@@ -26,7 +28,6 @@ log = "0.4"
 # critical-section = { version = "1.1", features = ["std"], default-features = false }
 
 #defmt           = { version = "1.0", optional = true }
-esp-zb      = { path = "../main", features = [] } # "defmt"
 
 [build-dependencies]
 embuild = "0.33"
@@ -40,8 +41,4 @@ default = ["esp32c6"]
 
 #defmt = ["dep:defmt", "esp-zb-raw/defmt", "esp-hal/defmt"]
 
-esp32c6 = [] #R ["esp-hal/esp32c6"]
-
-# As created by 'esp-idf-template'
-[profile.release]
-opt-level = "s"
+esp32c6 = []

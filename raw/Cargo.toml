@@ -19,7 +19,6 @@ esp_idf_sdkconfig_defaults = ["raw/sdkconfig.defaults"] # builds, but does not u
 esp_idf_components = []
 
 [dependencies]
-esp-idf-sys = { version = "0.37.2" }
 log = "0.4"
 
 # --- Optional Embassy Integration ---
@@ -48,6 +47,9 @@ log = "0.4"
 # We could make wholly separate packages ('vl_uld_println' etc.) but that's too complex.
 #
 #defmt-rtt       = { version = "1.0.0", optional = true }
+
+[dev-dependencies]
+esp-idf-sys = { version = "0.37.2" }
 
 [build-dependencies]
 embuild = "0.33"
