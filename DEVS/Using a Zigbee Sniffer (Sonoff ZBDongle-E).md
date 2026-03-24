@@ -81,7 +81,7 @@ To be able to decypher Zigbee messages, we need to edit some Wireshark settings.
 - `Edit` > `Preferences...`
 	- `Protocols` > `Zigbee`
 
-		- `Preconfigured keys`
+		- `Preconfigured keys` > `Edit...`
 
 			|||
 			|---|---|
