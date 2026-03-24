@@ -32,8 +32,10 @@ fn main() {
 
     // DEBUG: Show what we know about the compilation.
     //  <<
-    //    DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out
-    //    DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif/esp-idf/v5.5.3
+    //      ..
+    //    DEP_ESP_IDF_EMBUILD_ENV_PATH=/home/ubuntu/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin:/home/ubuntu/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin:/home/ubuntu/.espressif/tools/cmake/3.30.2/bin:/home/ubuntu/.espressif/tools/ninja/1.12.1:/home/ubuntu/.espressif/tools/esp-rom-elfs/20241011:/home/ubuntu/.espressif/python_env/idf5.5_py3.12_env/bin:/home/ubuntu/bin:/home/ubuntu/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/bin
+    //    DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/.espressif/esp-idf/v5.5.3
+    //      ..
     //    OUT_DIR=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp_zb_raw-8250c09cd209b0ce/out
     //  <<
     #[cfg(false)]
@@ -56,18 +58,17 @@ fn main() {
         use std::{env,fs};
         const FN: &str = ".BUILD_ENV";
 
-        // Note: 'DEP_ESP_IDF_...' have much shared path. We *could* deduce the latter from
-        //      the first, but it's unnecessary work.
         let arr = [
-          "DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH",
-          "DEP_ESP_IDF_ROOT",
-          "ESP_IDF_TOOLS_INSTALL_DIR",
-          //"ESP_IDF_VERSION",
-          "MCU"
+            "DEP_ESP_IDF_EMBUILD_ENV_PATH",
+            "DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH",
+            "DEP_ESP_IDF_ROOT",
+            "ESP_IDF_TOOLS_INSTALL_DIR",
+            "ESP_IDF_VERSION",
+            "MCU"
         ].map(|x| {
-          let val = env::var(x)
-            .unwrap_or_else(|_| panic!("{x} to have a value") );
-          format!("{x}={val}")
+            let val = env::var(x)
+                .unwrap_or_else(|_| panic!("❗Missing env.var '{x}'"));
+            format!("{x}={val}")
         });
 
         // Values in a format GNU Makefile can gulp in.
@@ -78,7 +79,7 @@ fn main() {
 {}", arr.join("\n"));
 
         fs::write(FN, text)
-          .unwrap_or_else(|e| panic!("Unable to write {FN}: {e}"));
+          .unwrap_or_else(|e| panic!("❗Unable to write {FN}: {e}"));
     }
 
     // make stuff
@@ -90,7 +91,7 @@ fn main() {
         .status;
 
     if !st.success() {
-        panic!("[ERROR!]: Running 'make' failed. \
+        panic!("❗[ERROR!]: Running 'make' failed. \
             SUGGESTION: run 'make manual' on the command line to see more error information. \
         ");
     }

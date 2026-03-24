@@ -2,7 +2,7 @@
 members = [
   "main",
   "raw",
-  "examples/*",
+  #"examples/*",
 ]
 resolver = "3" # release 2024 in the members
 

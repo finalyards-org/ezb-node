@@ -32,6 +32,10 @@ compilation terminated.
 - [ ] Consider opening an issue (maybe only once we have a Rust binding available...).
 -->
 
+## `esp-idf-sys` with ESP-IDF 6.0
+
+- [ ] ["Add (some) support for ESP-IDF v6.0"](https://github.com/esp-rs/esp-idf-sys/pull/408)
+	
 
 ## `zigbee-rs`
 
