@@ -1,6 +1,8 @@
+#![no_std]
+#![allow(non_snake_case)]
 
+#[path = "../tmp/bindings.rs"]
+mod bindings;
 
-#[cfg(not(feature = "esp32c6"))]
-compile_error!("'esp32c6' feature not enabled; please do");
-
+//#[cfg(feature="zcl_alarms")]
 // todo

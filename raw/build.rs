@@ -64,7 +64,8 @@ fn main() {
             "DEP_ESP_IDF_ROOT",
             "ESP_IDF_TOOLS_INSTALL_DIR",
             "ESP_IDF_VERSION",
-            "MCU"
+            "MCU",
+            "OUT_DIR"
         ].map(|x| {
             let val = env::var(x)
                 .unwrap_or_else(|_| panic!("❗Missing env.var '{x}'"));
