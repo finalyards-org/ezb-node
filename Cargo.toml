@@ -1,11 +1,15 @@
 [workspace]
 members = [
-  "main",
   "raw",
+  "x",
   #"examples/*",
 ]
-resolver = "3" # release 2024 in the members
+resolver = "3"
+    # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
+# Note: For a virtual workspace (which we are; no root level create), these settings do not
+#   automatically take effect in sub-projects.
+#
 # Instead of '.crate/config.toml', 'esp-idf-sys' configs could be provided here
 #|[workspace.metadata.esp-idf-sys]
 #|esp_idf_tools_install_dir = "global"
@@ -13,6 +17,18 @@ resolver = "3" # release 2024 in the members
 #|esp_idf_sdkconfig_defaults = ["sdkconfig.defaults"]
 #|esp_idf_version = "5.5.3"
 
+# Both 'raw' and '_' will need this/these.
+[workspace.dependencies]
+log = "0.4"
+
+# Build dependencies (here in the same leaf as normal deps)
+embuild = { version = "0.33.1", features = ["espidf"] }
+
+# These are references among '{main|x}/Cargo.toml' by:
+#   <<
+#       [lints]
+#       workspace = true
+#   <<
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5_5_3)'] }
 

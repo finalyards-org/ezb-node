@@ -158,6 +158,8 @@ The build takes longer than normally, and downloads e.g. a full ESP-IDF (C langu
 
 - [ESP Zigbee SDK Programming Guide](https://docs.espressif.com/projects/esp-zigbee-sdk) (Espressif docs)
 
+	- [API Reference](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32/api-reference/index.html) (Espressif docs)
+
 - [Espressif IoT Development Framework](https://github.com/espressif/esp-idf) (GitHub)
 
 	The C API that `esp-zigbee-sdk` builds upon.

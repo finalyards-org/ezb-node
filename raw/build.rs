@@ -55,7 +55,7 @@ fn main() {
     // Expose some env.vars to 'Makefile'.
     // Note: Writing them into a file means we can more freely develop the make itself.
     {
-        use std::{env,fs};
+        use std::fs;
         const FN: &str = ".BUILD_ENV";
 
         let arr = [
@@ -68,6 +68,7 @@ fn main() {
             "OUT_DIR"
         ].map(|x| {
             let val = env::var(x)
+                .or_else(|_| env::var(x.to_ascii_lowercase()))  // check e.g. "esp_idf_version"
                 .unwrap_or_else(|_| panic!("❗Missing env.var '{x}'"));
             format!("{x}={val}")
         });
@@ -106,11 +107,6 @@ fn main() {
         ] {
             println!("cargo::rustc-link-arg={}", s);
         }
-
-        // disabled for ever
-        //if std::env::var("TEST").is_ok() {  // 'cargo test' run
-        //    println!("cargo::rustc-link-arg-tests=-Tembedded-test.x");
-        //}
     }
 
     println!("cargo:rustc-link-search=tmp");

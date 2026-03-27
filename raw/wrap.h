@@ -30,6 +30,7 @@
 #define _STRINGIZE(x) #x
 #define _TO_STR(x) _STRINGIZE(x)
 
-const char* ESP_ZB_VER = _TO_STR(ESP_ZB_VER_MAJOR) "." \
-                        _TO_STR(ESP_ZB_VER_MINOR) "." \
-                        _TO_STR(ESP_ZB_VER_PATCH); // "1.6.8"
+const char* ESP_ZB_VER_STR = \
+  _TO_STR(ESP_ZB_VER_MAJOR) "." \
+  _TO_STR(ESP_ZB_VER_MINOR) "." \
+  _TO_STR(ESP_ZB_VER_PATCH); // "1.6.8"

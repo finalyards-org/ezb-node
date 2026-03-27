@@ -9,7 +9,7 @@
 #
 # Requires:
 #	- bindgen
-#	- esp-idf-sys headers, libs
+#	- esp-idf-sys headers, libs; ensured by running 'cargo build' once.
 #
 
 include .BUILD_ENV
@@ -69,6 +69,7 @@ all:
 # The targets that 'build.rs' normally builds (for debugging, in case make fails)
 manual: ${_BIND_RS}
 	@echo "\nManual build succeeded."
+	cloc --quiet ${_BIND_RS}
 
 # Eventually (?) 'zb_vendor.h' should be generated based on configuration from the *Rust program* using us, but
 # that's later.
@@ -142,6 +143,8 @@ ${_BIND_RS}: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ./zb
 		-I ${_ESP_IDF_PATH}/components/ieee802154/include \
 		-I ${_ESP_IDF_PATH}/components/log/include \
 		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
+		\
+		-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
 	  > $@
 
 #	    --allowlist-function 'abc' \
@@ -161,7 +164,7 @@ ${_BIND_RS}: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ./zb
 #
 manual_test: ${_BIND_RS}
 	#
-	grep -q ESP_ZB_VER $<
+	grep -q ESP_ZB_VER_MAJOR $<
   #
 	! grep -q '_NEWLIB_VERSION_H__' $<
 	@#

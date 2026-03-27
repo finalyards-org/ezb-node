@@ -5,52 +5,27 @@ edition = "2024"
 rust-version = "1.92"
 publish = false
 
-# Complements the env.vars in '.cargo/config.toml'. Implementation specific parts of 'esp-idf-sys' config are here.
-[package.metadata.esp-idf-sys]
-#esp_idf_sdkconfig_defaults = ["sdkconfig.defaults"]
-  # ^-- builds, uses '{target}/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/gen-sdkconfig.defaults'
-esp_idf_sdkconfig_defaults = ["raw/sdkconfig.defaults"]
-
 # Note: 'esp_idf_components' is not the same as using 'sdkconfig.defaults' (according to Copilot).
 #   - 'sdkconfig.defaults' "steers ESP-IDF *internal* components"
 #   - 'esp_idf_components' is for *external* ESP-IDF components (one's own code)
 #
 #esp_idf_components = ["pthread"]
 esp_idf_components = []
+    # tbd. needed?
+
+# NOTE: Did not manage to reliably use '[package.metadata.esp-idf-sys]' for steering these things,
+#       _also_ for the higher '_' package. DO NOT BOTHER - use the '[env]' in '../.cargo/config.toml', instead.
+#[package.metadata.esp-idf-sys]
+
+#R ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw" # tbd. needed?
+#R ESP_IDF_TOOLS_INSTALL_DIR = "global"
 
 [dependencies]
 esp-idf-sys = { version = "0.37.2" }
-log = "0.4"
-
-# --- Optional Embassy Integration ---
-# esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
-
-# If you enable embassy-time-driver, you MUST also add one of:
-
-# a) Standalone Embassy libs ( embassy-time, embassy-sync etc.) with a foreign async runtime:
-# embassy-time = { version = "0.4.0", features = ["generic-queue-8"] } # NOTE: any generic-queue variant will work
-
-# b) With embassy-executor:
-# embassy-executor = { version = "0.7", features = ["executor-thread", "arch-std"] }
-
-# NOTE: if you use embassy-time with embassy-executor you don't need the generic-queue-8 feature
-
-# --- Temporary workaround for embassy-executor < 0.8 ---
-# esp-idf-svc = { version = "0.51", features = ["embassy-time-driver", "embassy-sync"] }
-# critical-section = { version = "1.1", features = ["std"], default-features = false }
-
-#defmt           = { version = "1.0.1", optional = true }
-
-#[dev-dependencies]
-# Rust provides no mechanism for conditional 'dev-dependencies'. Thus, we introduce them here. THIS IS UNFORTUNATE:
-# it does make these part of the package's external interface (doesn't it?); any better way is welcome. #rust
-#
-# We could make wholly separate packages ('vl_uld_println' etc.) but that's too complex.
-#
-#defmt-rtt       = { version = "1.0.0", optional = true }
+log.workspace = true
 
 [build-dependencies]
-embuild = { version = "0.33.1", features = ["espidf"] }
+embuild.workspace = true
 
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #

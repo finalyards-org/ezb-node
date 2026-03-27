@@ -1,2 +1,27 @@
 [build]
 target = "riscv32imac-esp-espidf"
+
+# Needed for both '_' and 'raw': builds *core* for the target.
+[unstable]
+build-std = ["std", "panic_abort"]
+#build-std = ["core", "panic_abort"]    # tbd. koeta joskus
+
+# Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and '_', we
+#       provide them here. You can make local overrides in either.
+#
+[env]
+#ESP_IDF_SYS_ROOT_CRATE = "raw"
+
+esp_idf_sdkconfig_defaults = "raw/sdkconfig.defaults"
+esp_idf_version = "5.5.3"
+mcu = "esp32c6"
+
+ESP_IDF_TOOLS_INSTALL_DIR = "global"
+
+# Have this if you use Multipass VM, and a global 'target' folder.
+CARGO_WORKSPACE_DIR = { value = "", relative = true }
+    #
+    # "[...] you have set 'CARGO_TARGET_DIR' and moved your target directory out of the crate root, then
+    #   embuild is not able to locate the crate root. This will result in it among other things ignoring
+    #   your local sdkconfig.defaults. In this case you must declare: [...]
+    #     -> https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration

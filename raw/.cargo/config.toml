@@ -6,22 +6,18 @@ linker = "ldproxy"
 rustflags = ["--cfg",  "espidf_time64"]
     # "must be set for ESP-IDF 5.0 and above" <<-- tbd. is that true, still? what happens without?
 
-[unstable]
-build-std = ["std", "panic_abort"]
-
 [env]
-# 'edf-idf-sys' can also be steered in the '[package.metadata.esp-idf-sys]' (of raw module) or
-# '[workspace.metadata.esp-idf-sys]' (of workspace Cargo.toml). We have decided to keep some major settings here -
-# those having to do with Multipass VM.
-ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw" # tbd. needed?
-ESP_IDF_VERSION = "v5.5.3"
-    # You steer the ESP-IDF version to be downloaded, installed and used, here.
-MCU="esp32c6"
+#|# 'edf-idf-sys' can also be steered in the '[package.metadata.esp-idf-sys]' (of raw module) or
+#|# '[workspace.metadata.esp-idf-sys]' (of workspace Cargo.toml). We have decided to keep some major settings here -
+#|# those having to do with Multipass VM.
+#|ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw" # tbd. needed?
+#|MCU="esp32c6"
+#|
 
 # Multipass VM: avoid '.embuild' (large, small files = slow) ending up in a shared mount - at all costs!
 #
-ESP_IDF_TOOLS_INSTALL_DIR = "out"
-#ESP_IDF_TOOLS_INSTALL_DIR = "global"
+#ESP_IDF_TOOLS_INSTALL_DIR = "out"
+ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out": within the Cargo target ('cargo clean' cleans also the tools):
     #           {...}/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif
     # "global": retains ESP-IDF over 'cargo clean'; often enough
@@ -30,11 +26,3 @@ ESP_IDF_TOOLS_INSTALL_DIR = "out"
     # NOTE!!! For 'global', YOU ARE RESPONSIBLE FOR INSTALLING 'ldproxy' (cargo install ldproxy) as a CLI tool!!!
     #     - For (binding) development, use "global" and have the tool.
     #     - For maintenance (i.e. published version), "out" seems a better choice.
-
-# Have this if you use Multipass VM, and a global 'target' folder.
-CARGO_WORKSPACE_DIR = { value = "", relative = true }
-    #
-    # "[...] you have set 'CARGO_TARGET_DIR' and moved your target directory out of the crate root, then
-    #   embuild is not able to locate the crate root. This will result in it among other things ignoring
-    #   your local sdkconfig.defaults. In this case you must declare: [...]
-    #     -> https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration
