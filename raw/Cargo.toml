@@ -10,7 +10,7 @@ publish = false
 #[package.metadata.esp-idf-sys]
 
 [dependencies]
-esp-idf-sys = { version = "0.37.2" }
+esp-idf-sys.workspace = true
 log.workspace = true
 
 [build-dependencies]

@@ -19,7 +19,9 @@ resolver = "3"
 
 # Both 'raw' and '_' will need this/these.
 [workspace.dependencies]
-log = "0.4"
+esp-idf-sys = { version = "0.37.2", features = ["libstart"], default-features = false }
+    # no 'std' needed
+log = { version = "0.4" }
 
 # Build dependencies (here in the same leaf as normal deps)
 embuild = { version = "0.33.1", features = ["espidf"] }

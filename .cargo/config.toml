@@ -1,10 +1,9 @@
 [build]
 target = "riscv32imac-esp-espidf"
 
-# Needed for both '_' and 'raw': builds *core* for the target.
-# Note: 'std' is needed by 'esp-idf-sys', even if the application would be just "core".
+# Instructions on what kind of core to build for the ESP32. We don't need "std".
 [unstable]
-build-std = ["std", "panic_abort"]
+build-std = ["core", "panic_abort"]
 
 # Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and '_', we
 #       provide them here. You can make local overrides in either.

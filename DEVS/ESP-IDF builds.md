@@ -124,3 +124,83 @@ Other options:
 	```
 	
 	have `ldproxy` CLI installed (`cargo install ldproxy`).
+
+```
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'ESP_WIFI_STA_SUPPORT' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'COEX_ENABLED' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'HTTPD_ENABLED' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'MQTT_ENABLED' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'FATFS_ENABLED' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'LCD_ENABLED' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+[esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'USB_ENABLED' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
+```
+
+Watch out for this kind of warnings in the build output.
+
+In general, **`ESP-IDF` build chain** has an **uncomftably high tolerance for configuration mistakes**. In Rust, things normally break when there are ambiguities. Not so here!
+
+So watch your build output. Grep it for the word "warning".
+
+If a project builds, it does not mean it build in the **intended** way.
+
+
+
+## Single-threaded build
+
+Errors that fail a build are not necessarily at the tail of the console output.
+
+This is because ESP-IDF build tools use multiple threads. Look for "Error" or "FAIL" somewhere in your console output for details.
+
+Example:
+
+```
+  CMake Error: The source "/home/ubuntu/.espressif/esp-idf/v5.5.3/components/bootloader/subproject/CMakeLists.txt" does not match the source "/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-c5e8818c8dd375d3/out/espressif/esp-idf/v5.5.3/components/bootloader/subproject/CMakeLists.txt" used to generate cache.  Re-run cmake with a different source directory.
+[...50 lines...]
+  command did not execute successfully, got: exit status: 1
+
+  build script failed, must exit now
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+```
+
+>NOTE: Having color coding in the output would help a lot. Unfortunately, the errors don't usually get any highlighting.
+
+- Is there a way to force single-threaded build?
+
+	```
+	$ NINJAFLAGS = "-j1" {...build command...}
+	```
+	
+	```
+	$ CMAKE_BUILD_PARALLEL_LEVEL=1 {...build command...}
+	```
+	
+	<!-- Likely not needed; Rust/Cargo:
+	```
+	$ CARGO_BUILD_JOBS=1 {...build command...}
+	```
+	-->
+	
+	```
+	$ ESP_IDF_SYS_CMAKE_GENERATOR="Unix Makefiles" {...build command...}
+	```
+	
+	Try those.	
+
+
+## Qualifying `sdkconfig.defaults`
+
+The ESP-IDF build treats non-existent keys in `sdkconfig.defaults` with a **warning**, not an error.
+
+This can cause quite some time to be wasted.
+
+Ideally, we'd build with these being flagged out. Until then, do this:
+
+- `sdkconfig.json` within the output folder carries the configuration that actually made it:
+
+	```
+	{target folder}/riscv32imac-esp-espidf/release/build/esp-idf-sys-c5e8818c8dd375d3/out/build/config/sdkconfig.json
+	```
+
+	Grep that file, after a build, to see whether your intended values made it - or whether those keys are even listed.
+
+

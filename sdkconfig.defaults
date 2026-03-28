@@ -1,6 +1,8 @@
 #
 # sdkconfig.defaults
 #
+# NOTE! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
+#     the build! Keep an eye on the build output!!
 
 # Rust needs more main task stack size compared to C (the default is just 3K)
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
@@ -13,41 +15,23 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 #---
 # Below, components seen as unimportant for Zigbee applications are disabled.
 #
-# NOTE: THESE DO NOT NECESSARILY WORK!!!  e.g. 'CONFIG_ESP_WIFI_ENABLED=y' is what you see in the eventual
-#     'sdkconfig'.
-#
-# WiFi
-CONFIG_ESP_WIFI_ENABLED=n
-CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
-CONFIG_ESP_WIFI_STA_SUPPORT=n
-CONFIG_COEX_ENABLED=n
-
-# Bluetooth
-CONFIG_BT_ENABLED=n
-CONFIG_BT_BLE_ENABLED=n
-CONFIG_BT_CLASSIC_ENABLED=n
-
-# Thread
-CONFIG_OPENTHREAD_ENABLED=n
-
-# http server
-#CONFIG_ESP_HTTP_SERVER=n
-#CONFIG_MBEDTLS=n
-
-# Ethernet - KEEP
-
-# HTTP server
-CONFIG_HTTPD_ENABLED=n
-
-# MQTT - not needed right now. #later
-CONFIG_MQTT_ENABLED=n
-
-# FatFS
-CONFIG_FATFS_ENABLED=n
-
-# LCD
-CONFIG_LCD_ENABLED=n
-
-# USB
-CONFIG_USB_ENABLED=n
-
+# NOTE: THIS NEEDS MORE WORK. 'sdkconfig.defaults' are just _defaults_; we cannot switch
+#       off things activated elsewhere from here.
+#|#
+#|# WiFi
+#|CONFIG_ESP_WIFI_ENABLED=n      # becomes 'true'
+#|CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+#|#R CONFIG_ESP_WIFI_STA_SUPPORT=n  # NO SUCH
+#|CONFIG_ESP_COEX_ENABLED=n       # __
+#|
+#|# Bluetooth
+#|CONFIG_BT_ENABLED=n             # ?
+#|#CONFIG_BT_BLE_ENABLED=n        # NO SUCH
+#|#CONFIG_BT_CLASSIC_ENABLED=n    # NO SUCH
+#|
+#|# Thread
+#|CONFIG_OPENTHREAD_ENABLED=n     # ?
+#|
+#|# http server
+#|#CONFIG_ESP_HTTP_SERVER=n       # NO SUCH
+#|#CONFIG_MBEDTLS=n               # LOADS of other 'MBEDTLS' - NO SUCH

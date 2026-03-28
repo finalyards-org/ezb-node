@@ -7,10 +7,8 @@ rust-version = "1.93"
 [dependencies]
 esp-zb-raw = { path = "../raw" }
 
-#R esp-idf-svc = { version = "0.52" }
 log.workspace = true
 
-#R once_cell = { version = "1.21" }
 #esp-println = { version = "0.16.1", features = [] } # "log-04", "defmt"
 
 [build-dependencies]

@@ -74,7 +74,7 @@ fn main() {
             "ESP_IDF_TOOLS_INSTALL_DIR",
             "ESP_IDF_VERSION",
             "MCU",
-            "OUT_DIR"
+            "OUT_DIR",
         ].map(|x| {
             let val = env::var(x)
                 .or_else(|_| env::var(x.to_ascii_lowercase()))  // check e.g. "esp_idf_version"
@@ -127,6 +127,35 @@ fn idf_stuff() {
     {
         if env::var("IDF_PATH").is_ok() {
             panic!("❗️Please build with a shell that doesn't know of system-wide esp-idf. 'IDF_PATH' env.var. detected.");
+        }
+    }
+
+    // Check that keys in 'sdkconfig.defaults' are valid. CMake itself would only WARN about them,
+    // and those warnings are lost in the build noise.
+    #[cfg(false)]   // didn't work like that; R
+    {
+        use embuild::espidf;
+        use embuild::cmake::Config;
+
+        let idf = espidf::EspIdf::try_from_env().unwrap();  // ESP-IDF environment, expects 'IDF_PATH' env.var.
+        let known = idf.config().all_known_configs();
+
+        let defaults = Config::from_file("sdkconfig.defaults")
+            .expect("aaa"); // tbd.
+
+        let mut bad = Vec::new();
+
+        for (key, _) in defaults.iter() {
+            if !known.contains(key.as_str()) {
+                bad.push(key);
+            }
+        }
+
+        if !bad.is_empty() {
+            panic!("❗️Unknown 'sdkconfig.defaults' key{}: {}",
+                if bad.len() == 1 { "" } else "s",
+                bad.join(",")
+            );
         }
     }
 
