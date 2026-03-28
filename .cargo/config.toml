@@ -2,21 +2,27 @@
 target = "riscv32imac-esp-espidf"
 
 # Needed for both '_' and 'raw': builds *core* for the target.
+# Note: 'std' is needed by 'esp-idf-sys', even if the application would be just "core".
 [unstable]
 build-std = ["std", "panic_abort"]
-#build-std = ["core", "panic_abort"]    # tbd. koeta joskus
 
 # Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and '_', we
 #       provide them here. You can make local overrides in either.
 #
 [env]
-#ESP_IDF_SYS_ROOT_CRATE = "raw"
+# Important for '_' to build
+ESP_IDF_SYS_ROOT_CRATE = "esp-idf-raw"
 
-esp_idf_sdkconfig_defaults = "raw/sdkconfig.defaults"
+# (default):    tooling to '{project-folder}/.embuild/espressif'
+# "out":        '{cargo output}/espressif'
+# "global":     '~/.espressif'
+#               Global option also need
+#
+ESP_IDF_TOOLS_INSTALL_DIR = "out"
+
+esp_idf_sdkconfig_defaults = "sdkconfig.defaults"
 esp_idf_version = "5.5.3"
 mcu = "esp32c6"
-
-ESP_IDF_TOOLS_INSTALL_DIR = "global"
 
 # Have this if you use Multipass VM, and a global 'target' folder.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }

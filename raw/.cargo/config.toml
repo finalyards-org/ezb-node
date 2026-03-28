@@ -1,28 +1,12 @@
-#
-# tbd. A bit open, how much of this deserves to be under 'raw', how much in the root's config.
+# 'raw' local overrides; also see '../.cargo/config.toml'.
 
 [target.'cfg(target_os = "espidf")']
-linker = "ldproxy"
-rustflags = ["--cfg",  "espidf_time64"]
+linker = "ldproxy"  # needed if "global"
+#R??? rustflags = ["--cfg",  "espidf_time64"]
     # "must be set for ESP-IDF 5.0 and above" <<-- tbd. is that true, still? what happens without?
 
 [env]
-#|# 'edf-idf-sys' can also be steered in the '[package.metadata.esp-idf-sys]' (of raw module) or
-#|# '[workspace.metadata.esp-idf-sys]' (of workspace Cargo.toml). We have decided to keep some major settings here -
-#|# those having to do with Multipass VM.
-#|ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw" # tbd. needed?
-#|MCU="esp32c6"
-#|
-
-# Multipass VM: avoid '.embuild' (large, small files = slow) ending up in a shared mount - at all costs!
-#
-#ESP_IDF_TOOLS_INSTALL_DIR = "out"
+# Override for 'raw'
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
-    # "out": within the Cargo target ('cargo clean' cleans also the tools):
-    #           {...}/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-853a2667a8c024cb/out/espressif
-    # "global": retains ESP-IDF over 'cargo clean'; often enough
-    #           ~/.espressif/
     #
     # NOTE!!! For 'global', YOU ARE RESPONSIBLE FOR INSTALLING 'ldproxy' (cargo install ldproxy) as a CLI tool!!!
-    #     - For (binding) development, use "global" and have the tool.
-    #     - For maintenance (i.e. published version), "out" seems a better choice.

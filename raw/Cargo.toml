@@ -5,20 +5,9 @@ edition = "2024"
 rust-version = "1.92"
 publish = false
 
-# Note: 'esp_idf_components' is not the same as using 'sdkconfig.defaults' (according to Copilot).
-#   - 'sdkconfig.defaults' "steers ESP-IDF *internal* components"
-#   - 'esp_idf_components' is for *external* ESP-IDF components (one's own code)
-#
-#esp_idf_components = ["pthread"]
-esp_idf_components = []
-    # tbd. needed?
-
 # NOTE: Did not manage to reliably use '[package.metadata.esp-idf-sys]' for steering these things,
 #       _also_ for the higher '_' package. DO NOT BOTHER - use the '[env]' in '../.cargo/config.toml', instead.
 #[package.metadata.esp-idf-sys]
-
-#R ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw" # tbd. needed?
-#R ESP_IDF_TOOLS_INSTALL_DIR = "global"
 
 [dependencies]
 esp-idf-sys = { version = "0.37.2" }

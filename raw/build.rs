@@ -13,9 +13,18 @@ use std::{
     process::Command
 };
 
+const SUB_PATH: &str = "../.sub";
+
 /*
 */
 fn main() {
+    // Run 'git submodule update --init' *automatically*, if it hasn't been done, yet.
+    //
+    // Note: requires 'git' only if the submodule is not there, i.e. if you run that command
+    //      manually, 'git' is not needed.
+    //
+    ensure_submodule_inited("esp-zigbee-sdk");  // panics if there is a problem
+
     // Needed by IDF machinery.
     //  E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
     embuild::espidf::sysenv::output();
@@ -123,4 +132,69 @@ fn idf_stuff() {
 
     //println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version_major, values("5"))"#);
     //println!(r#"cargo::rustc-check-cfg=cfg(esp_idf_version, values("5.3", "5.4", "5.5"))"#);
+}
+
+/*
+* Ensure that the named submodule is inited. Doing this in 'build.rs' (automatically) means:
+*   - user should have 'git' available
+*   - we don't need to mention it in README
+*/
+fn ensure_submodule_inited(name: &str) {
+    use std::{fs, path::Path};
+
+    let path = Path::new(SUB_PATH).join(name);
+
+    // If the folder's occupied, nothing needs to be done.
+    //
+    let has_contents = match fs::read_dir(&path) {
+        Ok(mut entries) /*if entries.next().is_some()*/ => {    // Rust: cannot have mutable vars "within the pattern guard"
+            entries.next().is_some()
+        },
+        _ => false  // empty or non-existing folder
+    };
+
+    if has_contents {
+        println!("cargo:warning=🟩 DEBUG: submodule '{name}' is already populated.");  // DEBUG
+        return;
+    } else {
+        println!("cargo:warning=🟨 submodule '{name}' is empty, attempting to initialize submodules...");
+
+        let git_res = Command::new("git")
+            .args(["submodule", "update", "--init"])
+            .status();
+
+        match git_res {
+            Err(e) => {
+                panic!(
+                    "❗️Failed to run 'git submodule update --init': {e}\n\
+                     Make sure 'git' is installed and available in PATH."
+                );
+            }
+            Ok(status) if !status.success() => {
+                panic!(
+                    "❗️'git submodule update --init' failed with exit code: {:?}",
+                    status.code()
+                );
+            }
+            Ok(_) => {}
+        }
+
+        // Confirm the folder now is populated
+        match fs::read_dir(&path) {
+            Ok(mut entries) => if entries.next().is_none() {
+                panic!(
+                    "❗️Submodule directory `{}` is still empty after update.\n\
+                    Check that the submodule is correctly defined in .gitmodules.",
+                    path.display()
+                );
+            },
+            Err(_) => {
+                panic!(
+                    "❗️Submodule directory `{}` is still non-existent after update.\n\
+                    Check that the submodule is correctly defined in .gitmodules.",
+                    path.display()
+                );
+            }
+        };
+    }
 }

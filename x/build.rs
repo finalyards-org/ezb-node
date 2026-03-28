@@ -11,8 +11,8 @@
 use std::env;
 
 fn main() {
-  // Needed. E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
-  embuild::espidf::sysenv::output();
+    // Needed. E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
+    embuild::espidf::sysenv::output();
 
     // Detect when IDE is running us:
     //  - Rust Rover:
@@ -24,5 +24,5 @@ fn main() {
         }
     }
 
-  //r println!("cargo::rustc-check-cfg=cfg(esp_idf_version, values(\"5\"))");
+    //r println!("cargo::rustc-check-cfg=cfg(esp_idf_version, values(\"5\"))");
 }
