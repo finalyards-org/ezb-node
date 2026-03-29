@@ -1,8 +1,0 @@
-# local overrides; also see '../.cargo/config.toml'.
-
-[target.'cfg(target_os = "espidf")']
-linker = "ldproxy"  # needed if "global"
-
-[env]
-# Override for 'raw'
-ESP_IDF_TOOLS_INSTALL_DIR = "global"

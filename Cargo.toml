@@ -19,8 +19,8 @@ resolver = "3"
 
 # Both 'raw' and '_' will need this/these.
 [workspace.dependencies]
-esp-idf-sys = { version = "0.37.2", features = ["libstart"], default-features = false }
-    # no 'std' needed
+esp-idf-sys = { version = "0.37.2", default-features = false }
+    # steer the version, subprojects will add appropriate features (e.g. 'binstart' for examples)
 log = { version = "0.4" }
 
 # Build dependencies (here in the same leaf as normal deps)

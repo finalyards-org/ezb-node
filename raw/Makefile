@@ -120,6 +120,7 @@ ${_BIND_RS}: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ./zb
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \
+	    --raw-line '#![allow(non_camel_case_types)]' \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\

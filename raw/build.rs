@@ -63,24 +63,37 @@ fn main() {
 
     // Expose some env.vars to 'Makefile'.
     // Note: Writing them into a file means we can more freely develop the make itself.
+    //
+    // Note: The author failed to reach 'DEP_ESP_IDF_...' values in any other way, i.e. via
+    //      'embuild::' APIs.
     {
         use std::fs;
+
         const FN: &str = ".BUILD_ENV";
 
+        let mut bad = Vec::new();
         let arr = [
             "DEP_ESP_IDF_EMBUILD_ENV_PATH",
             "DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH",
             "DEP_ESP_IDF_ROOT",
-            "ESP_IDF_TOOLS_INSTALL_DIR",
-            "ESP_IDF_VERSION",
+                //
+            "ESP_IDF_TOOLS_INSTALL_DIR",            //"global"|"out"
+            "ESP_IDF_VERSION",                      //"5.5.3"
             "MCU",
-            "OUT_DIR",
+            "OUT_DIR",                              //"{target}/riscv32imac-esp-espidf/release/build/esp-zb-raw-f7c4340a8cec066b/out"
         ].map(|x| {
             let val = env::var(x)
                 .or_else(|_| env::var(x.to_ascii_lowercase()))  // check e.g. "esp_idf_version"
-                .unwrap_or_else(|_| panic!("❗Missing env.var '{x}'"));
+                .unwrap_or_else(|_| {
+                    bad.push(x); String::default()
+                });
             format!("{x}={val}")
         });
+
+        if !bad.is_empty() {
+            let suffix = if bad.len() > 1 { "s" } else { "" };
+            panic!("❗Missing env.var{suffix}: {}", bad.join(", "))
+        }
 
         // Values in a format GNU Makefile can gulp in.
         let text = format!("\

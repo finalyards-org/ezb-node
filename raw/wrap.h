@@ -11,6 +11,10 @@
 */
 #pragma once
 
+// Limit warnings in the 'cargo build -vv' output
+//  - Unfortunately, this is not where those warnings come from. It's likely ESP-IDF compilation.
+//#pragma clang diagnostic ignored "-Wexpansion-to-defined"
+
 #include "esp_zigbee_core.h"
     // brings in the rest
 

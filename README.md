@@ -42,9 +42,11 @@ ESP-IDF 6.0 was released during the development, but is not yet (Mar'26) support
 |5.5.3|default of `esp-idf-svc`<sub>[link](https://github.com/esp-rs/esp-idf-svc/blob/master/.cargo/config.toml#L10)</sub>; the version we use|
 |5.3.2|recommended by `esp-zigbee-sdk` (11-Mar-26); but it works with 5.5.3|
 
-### `esp-idf-{sys|svc}` are community efforts!
+### `esp-idf-sys` is a community effort
 
 Yes. That is a concern, if we bet the whole project on it. But on the other side, let's just drive and see whether the road takes anywhere!!
+
+We won't need `esp-idf-svc`, for example.
 
 <!-- r??
 ## Folder structure
@@ -77,7 +79,7 @@ Yes. That is a concern, if we bet the whole project on it. But on the other side
 	However, not all of these are really required. The author has these installed:
 	
 	```
-	$ sudo apt install git wget python3 cmake libssl-dev libusb-1.0-0
+	$ sudo apt install git wget python3 python3-venv cmake libssl-dev libusb-1.0-0 pkg-config
 	```
 
 - Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
@@ -88,18 +90,37 @@ Yes. That is a concern, if we bet the whole project on it. But on the other side
 	$ sudo apt install make
 	```
 
-- `ldproxy` (optional)
+- `ldproxy`
 
-	If you use `ESP_IDF_TOOLS_INSTALL_DIR = "global"` (described elsewhere), you'll need:
+	We use `ESP_IDF_TOOLS_INSTALL_DIR = "global"` by default, so you'll need:
 	
 	```
 	$ cargo install --locked ldproxy
 	```
-	
+
+- `espflash` (optional)
+
+	```
+	$ cargo install --locked espflash
+	```
+
+	```
+	$ espflash board-info
+	[...]
+	Chip type:         esp32c6 (revision v0.2)
+	Crystal frequency: 40 MHz
+	Flash size:        4MB
+	Features:          WiFi 6, BT 5
+	[...]
+	```
+
+	You'll need `espflash` to run the examples on ESP32-C6 devkits.
+
 <!--
 Developed with:
 - bindgen 0.72.1
 - ldproxy 0.3.4
+- espflash 4.3.0
 -->
 
 ## Preparation
@@ -117,22 +138,29 @@ $ git submodule update --init
 
 ### The `esp_idf_tools_install_dir` config
 
-We better discuss this right up here.
+We're using `global`, which places the ESP-IDF toolchain (about 5.5GB) in `~/.espressif/`. 
 
-You have two choices of selecting where `esp-idf-sys` (that we use) places the ESP-IDF tooling. Since this involves downloading some GB's, it's best to discuss it before the build.
+This is deemed good, because:
 
-Within the `.cargo/config.toml` and/or `raw/.cargo/config.toml` you'll find:
+- doing `cargo clean` will not require you to re-download those tools (saves time and power) 
+
+However, since Cargo projects *usually* are confined to do output within their project folders (and `target`, which may have been moved), **it is great to be aware of this**..
+
+
+**Change to `out` (optional)**
+
+You can change the type to `out` (instructions below). In such a case, the tools are downloaded to within your `target` folder - and cleaned with it. This is the more encapsulated approach.
+
+To change this, edit `.cargo/config.toml`:
 
 ```
-#ESP_IDF_TOOLS_INSTALL_DIR = "out"
-ESP_IDF_TOOLS_INSTALL_DIR = "global"
+ESP_IDF_TOOLS_INSTALL_DIR = "out"
 ```
 
+<!-- hide
 **Out - clears tooling with `cargo clean`**
 
 Places the ESP-IDF tooling in the Cargo output folder. This means `cargo clean` would remove not only build output, but the tooling as well. This can lead to extra delays and downloads, if you do `cargo clean` repeatedly.
-
->This is the setup for the project at large (in effect when you build `_`).
 
 **Global - keeps tooling separate**
 
@@ -148,9 +176,6 @@ If you wish to use `global` mode, you also need to:
 	linker = "ldproxy"
 	```
 
->This is the setup for the `raw` sub-project. If you do `cargo build --release -vv` *from within that folder* this mode is in effect.
-
-
 **Default (neither defined)**
 
 This pulls the ESP-IDF tooling to `.embuild/espressif` **within your project folder**. 
@@ -160,19 +185,15 @@ You can do this, but the author uses Multipass VM and pulling in 5GB of tooling 
 **All options work**
 
 It does not *really* matter, which option you choose. They all work.
-
-- `out` is simplest and safest, but "forgets" the tooling if you were to do `cargo clean`. It is the default for the repo.
-- `global` feels cleanest, but a) writes to your user home directory and b) requires extra setup and an install. This is why it's only used deeper in the repo.
-- default would create a folder in the project directory, which the author cannot allow, only because he uses Multipass. You can surely use this mode as well, if you prefer.
+-->
 
 
+## Next
 
-## Kicking tyres
-
-See `x` subproject for build instructions and running examples.
+Check the [`x/README`](x/README.md) for build instructions and how to run examples.
 
 
-<!-- #later
+<!-- #later; perhaps do it in `docs/`?
 ## Using in your own projects
 
 *tbd.*

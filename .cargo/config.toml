@@ -1,13 +1,16 @@
 [build]
 target = "riscv32imac-esp-espidf"
 
-# Instructions on what kind of core to build for the ESP32.
+# Instructions on what kind of core to build for the MCU.
 # - We don't need "std".
-# - 'x' (examples) need "alloc" for logging
 [unstable]
-build-std = ["core", "panic_abort"]
+#build-std = ["core", "panic_abort"]
+build-std = ["std", "panic_abort"]
+    # for 'ldproxy' (needs 'esp-idf-sys' with "std"; thus, we must build the runtime with 'std' as well...)
 
-[target.'cfg(target_os = "espidf")']
+[target.riscv32imac-esp-espidf]
+linker = "ldproxy"
+runner = "espflash flash --monitor"
 rustflags = ["--cfg",  "espidf_time64"]
     # "must be set for ESP-IDF 5.0 and above" |1|
     #
@@ -22,12 +25,12 @@ rustflags = ["--cfg",  "espidf_time64"]
 # Important for '_' to build
 ESP_IDF_SYS_ROOT_CRATE = "esp-idf-raw"
 
-# "out":        '{cargo output}/espressif'
-# "global":     '~/.espressif'
-#               Also needs 'ldproxy' to be installed and configured
-# (default):    tooling to '{project-folder}/.embuild/espressif'
-#
-ESP_IDF_TOOLS_INSTALL_DIR = "out"
+#ESP_IDF_TOOLS_INSTALL_DIR = "out"
+ESP_IDF_TOOLS_INSTALL_DIR = "global"
+    # "out":        '{cargo output}/espressif'
+    # "global":     '~/.espressif'
+    #               Also needs 'ldproxy' to be installed and configured (see above)
+    # (default):    tooling to '{project-folder}/.embuild/espressif'
 
 esp_idf_sdkconfig_defaults = "sdkconfig.defaults"
 esp_idf_version = "5.5.3"
@@ -40,3 +43,9 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
     #   embuild is not able to locate the crate root. This will result in it among other things ignoring
     #   your local sdkconfig.defaults. In this case you must declare: [...]
     #     -> https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration
+
+# This _could_ suppress some 'esp-idf-sys' warnings:
+#   <<
+#       [esp-idf-sys 0.37.2] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+#   <<
+BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"

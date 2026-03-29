@@ -10,8 +10,11 @@ publish = false
 #[package.metadata.esp-idf-sys]
 
 [dependencies]
-esp-idf-sys.workspace = true
 log.workspace = true
+
+esp-idf-sys = { workspace = true, features = [], default-features = false }
+    # Carries ESP-IDF headers, libraries (that binding to 'esp-zigbee-sdk' requires).
+    # Needs to be under '[dependencies]' since it does not support host target (e.g. x64), only ESP32.
 
 [build-dependencies]
 embuild.workspace = true

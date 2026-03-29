@@ -25,6 +25,7 @@ fn main() {
     }
 
     // Needed. E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
+    #[cfg(false)]
     embuild::espidf::sysenv::output();
 
     //r println!("cargo::rustc-check-cfg=cfg(esp_idf_version, values(\"5\"))");

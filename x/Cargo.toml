@@ -11,12 +11,11 @@ log.workspace = true
 
 #esp-println = { version = "0.16.1", features = [] } # "log-04", "defmt"
 
-[dev-dependencies]
-esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart", "panic_handler"], default-features = false }
-    # core is enough
-
-[build-dependencies]
-embuild.workspace = true
+#[bin-dependencies]  // '[dev-dependencies]' does not apply to examples.
+#esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart", "panic_handler"], default-features = false }
+    # just core
+esp-idf-sys = { workspace = true, features = ["std", "alloc_handler", "binstart", "panic_handler"], default-features = false }
+    # Making a binary ('ldproxy' linking) requires "std" feature on 'esp-idf-sys'.
 
 #[dev-dependencies]
 #embassy-executor = { version = "0.7.0", features = ["task-arena-size-12288"] }
