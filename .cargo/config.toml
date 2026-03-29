@@ -1,9 +1,19 @@
 [build]
 target = "riscv32imac-esp-espidf"
 
-# Instructions on what kind of core to build for the ESP32. We don't need "std".
+# Instructions on what kind of core to build for the ESP32.
+# - We don't need "std".
+# - 'x' (examples) need "alloc" for logging
 [unstable]
 build-std = ["core", "panic_abort"]
+
+[target.'cfg(target_os = "espidf")']
+rustflags = ["--cfg",  "espidf_time64"]
+    # "must be set for ESP-IDF 5.0 and above" |1|
+    #
+    # time was 32bit in ESP-IDF 4.x and will be 64bit from now. According to Copilot, this is *really needed*, though
+    # things do build without it. It's just the ABI mismatch risks would lurk in the background.
+    # |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#rust-configuration-flags
 
 # Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and '_', we
 #       provide them here. You can make local overrides in either.
@@ -12,10 +22,10 @@ build-std = ["core", "panic_abort"]
 # Important for '_' to build
 ESP_IDF_SYS_ROOT_CRATE = "esp-idf-raw"
 
-# (default):    tooling to '{project-folder}/.embuild/espressif'
 # "out":        '{cargo output}/espressif'
 # "global":     '~/.espressif'
-#               Global option also need
+#               Also needs 'ldproxy' to be installed and configured
+# (default):    tooling to '{project-folder}/.embuild/espressif'
 #
 ESP_IDF_TOOLS_INSTALL_DIR = "out"
 

@@ -1,12 +1,8 @@
-# 'raw' local overrides; also see '../.cargo/config.toml'.
+# local overrides; also see '../.cargo/config.toml'.
 
 [target.'cfg(target_os = "espidf")']
 linker = "ldproxy"  # needed if "global"
-#R??? rustflags = ["--cfg",  "espidf_time64"]
-    # "must be set for ESP-IDF 5.0 and above" <<-- tbd. is that true, still? what happens without?
 
 [env]
 # Override for 'raw'
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
-    #
-    # NOTE!!! For 'global', YOU ARE RESPONSIBLE FOR INSTALLING 'ldproxy' (cargo install ldproxy) as a CLI tool!!!

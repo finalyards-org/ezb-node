@@ -1,0 +1,13 @@
+# local overrides; also see '../.cargo/config.toml'.
+
+[unstable]
+build-std = ["core", "alloc", "panic_abort"] # "alloc" needed for logging
+
+#---
+# To use '~/.espressif' for tools, enable these:
+#
+#|[target.'cfg(target_os = "espidf")']
+#|linker = "ldproxy"
+#|
+#|[env]
+#|ESP_IDF_TOOLS_INSTALL_DIR = "global"

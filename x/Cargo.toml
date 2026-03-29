@@ -11,6 +11,10 @@ log.workspace = true
 
 #esp-println = { version = "0.16.1", features = [] } # "log-04", "defmt"
 
+[dev-dependencies]
+esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart", "panic_handler"], default-features = false }
+    # core is enough
+
 [build-dependencies]
 embuild.workspace = true
 
@@ -31,3 +35,7 @@ esp32c6 = ["esp-zb-raw/esp32c6"]
 
 [lints]
 workspace = true
+
+[[example]]
+name = "a"
+required-features = ["esp32c6"]

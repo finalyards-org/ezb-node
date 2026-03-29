@@ -46,6 +46,7 @@ ESP-IDF 6.0 was released during the development, but is not yet (Mar'26) support
 
 Yes. That is a concern, if we bet the whole project on it. But on the other side, let's just drive and see whether the road takes anywhere!!
 
+<!-- r??
 ## Folder structure
 
 |||
@@ -53,7 +54,7 @@ Yes. That is a concern, if we bet the whole project on it. But on the other side
 |`examples`|You may start here - how to use the Rust API.|
 |`x`|The Rust API level|
 |`raw`|Bridging of `esp-zigbee-sdk` C API's to Rust|
-
+-->
 
 ## Requirements
 
@@ -79,17 +80,26 @@ Yes. That is a concern, if we bet the whole project on it. But on the other side
 	$ sudo apt install git wget python3 cmake libssl-dev libusb-1.0-0
 	```
 
+- Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
+
 - GNU `make`
 
 	```
 	$ sudo apt install make
 	```
 
-Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
+- `ldproxy` (optional)
 
+	If you use `ESP_IDF_TOOLS_INSTALL_DIR = "global"` (described elsewhere), you'll need:
+	
+	```
+	$ cargo install --locked ldproxy
+	```
+	
 <!--
 Developed with:
 - bindgen 0.72.1
+- ldproxy 0.3.4
 -->
 
 ## Preparation
@@ -157,26 +167,10 @@ It does not *really* matter, which option you choose. They all work.
 
 
 
-## Steps
+## Kicking tyres
 
-### Build the library
+See `x` subproject for build instructions and running examples.
 
-```
-$ cd x
-$ cargo build --release -vv
-[...]
-```
-
-The build takes longer than normally, and downloads e.g. a full ESP-IDF (C language) toolchain. If things go wrong, you want to know. Adding the `-vv` ("very verbose") flag allows you to see things are progressing.
-
->For troubleshooting, or plain curiosity, check the documents under `DEVS/` folder.
-
-
-### Run an example
-
-```
-...tbd...
-```
 
 <!-- #later
 ## Using in your own projects
