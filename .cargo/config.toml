@@ -2,11 +2,9 @@
 target = "riscv32imac-esp-espidf"
 
 # Instructions on what kind of core to build for the MCU.
-# - We don't need "std".
+# - 'ldproxy' requires "std" even if our application would not.
 [unstable]
-#build-std = ["core", "panic_abort"]
 build-std = ["std", "panic_abort"]
-    # for 'ldproxy' (needs 'esp-idf-sys' with "std"; thus, we must build the runtime with 'std' as well...)
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
@@ -22,19 +20,19 @@ rustflags = ["--cfg",  "espidf_time64"]
 #       provide them here. You can make local overrides in either.
 #
 [env]
-# Important for '_' to build
-ESP_IDF_SYS_ROOT_CRATE = "esp-idf-raw"
+MCU = "esp32c6"
+ESP_IDF_VERSION = "5.5.4"
 
-#ESP_IDF_TOOLS_INSTALL_DIR = "out"
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
     # "global":     '~/.espressif'
     #               Also needs 'ldproxy' to be installed and configured (see above)
     # (default):    tooling to '{project-folder}/.embuild/espressif'
 
-esp_idf_sdkconfig_defaults = "sdkconfig.defaults"
-esp_idf_version = "5.5.3"
-mcu = "esp32c6"
+ESP_IDF_SDKCONFIG_DEFAULTS = "sdkconfig.defaults"
+
+# Important for '_' to build
+#ESP_IDF_SYS_ROOT_CRATE = "esp-idf-raw"
 
 # Have this if you use Multipass VM, and a global 'target' folder.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }
@@ -44,7 +42,7 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
     #   your local sdkconfig.defaults. In this case you must declare: [...]
     #     -> https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration
 
-# This _could_ suppress some 'esp-idf-sys' warnings:
+# Suppress some 'esp-idf-sys' warnings:
 #   <<
 #       [esp-idf-sys 0.37.2] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
 #   <<

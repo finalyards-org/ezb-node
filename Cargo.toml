@@ -7,23 +7,13 @@ members = [
 resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
-# Note: For a virtual workspace (which we are; no root level create), these settings do not
-#   automatically take effect in sub-projects.
-#
-# Instead of '.crate/config.toml', 'esp-idf-sys' configs could be provided here
-#|[workspace.metadata.esp-idf-sys]
-#|esp_idf_tools_install_dir = "global"
-#|mcu = "esp32c6"
-#|esp_idf_sdkconfig_defaults = ["sdkconfig.defaults"]
-#|esp_idf_version = "5.5.3"
-
-# Both 'raw' and '_' will need this/these.
+# Both 'raw' and '_' will need these.
 [workspace.dependencies]
 esp-idf-sys = { version = "0.37.2", default-features = false }
     # steer the version, subprojects will add appropriate features (e.g. 'binstart' for examples)
 log = { version = "0.4" }
 
-# Build dependencies (here in the same leaf as normal deps)
+# Only used by 'raw' but the author prefers version control of such tools at workspace level.
 embuild = { version = "0.33.1", features = ["espidf"] }
 
 # These are references among '{main|x}/Cargo.toml' by:
