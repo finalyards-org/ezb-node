@@ -11,10 +11,6 @@
 use std::env;
 
 fn main() {
-    // Needed by IDF machinery.
-    //  E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
-    embuild::espidf::sysenv::output();
-
     // Detect when IDE is running us, and DO NOT ENGAGE with 'esp-idf-sys' if we're under IDE.
     // i.e. keep this before 'embuild::...' - otherwise '.espressif' or '.embuild' start occuring
     //      on the local disk.
@@ -27,6 +23,9 @@ fn main() {
             //return;  // skip the rest
         }
     }
+
+    // Needed for 'ldproxy' linking (of examples) to succeed.
+    embuild::espidf::sysenv::output();
 
     //r println!("cargo::rustc-check-cfg=cfg(esp_idf_version, values(\"5\"))");
 }

@@ -12,8 +12,9 @@ esp-idf-sys = { workspace = true, features = [], default-features = false }
     # Carries ESP-IDF headers, libraries (that binding to 'esp-zigbee-sdk' requires).
     # Needs to be under '[dependencies]' since it carries libraries that get baked in.
 
-[build-dependencies]
-embuild.workspace = true
+# TEMPORARILY disabled - let's see if 'embuild' only matters when a binary is done.
+#| [build-dependencies]
+#| embuild.workspace = true
 
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #

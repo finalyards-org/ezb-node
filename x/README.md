@@ -22,4 +22,8 @@ The build takes longer than normally, since it downloads a full ESP-IDF (C langu
 
 ```
 $ cargo run --release --example a -vv
+[...]
+INFO - Hello, world! esp_zigbee_sdk: 1.6.8
+I (260) main_task: Returned from app_main()
 ```
+

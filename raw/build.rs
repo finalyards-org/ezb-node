@@ -25,10 +25,6 @@ fn main() {
     //
     ensure_submodule_inited("esp-zigbee-sdk");  // panics if there is a problem
 
-    // Needed by IDF machinery.
-    //  E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
-    embuild::espidf::sysenv::output();
-
     // Detect when IDE is running us:
     //  - Rust Rover:
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
@@ -38,6 +34,11 @@ fn main() {
             //return;  // skip the rest
         }
     }
+
+    // Needed by IDF machinery.
+    //  E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
+    #[cfg(false)]   // DO WE NEED IT ALREADY IN 'RAW' - or only for linking?
+    embuild::espidf::sysenv::output();
 
     // DEBUG: Show what we know about the compilation.
     //  <<
