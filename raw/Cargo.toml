@@ -2,7 +2,7 @@
 name = "esp-zb-raw"
     # name used in 'examples' and the 'main' project
 edition = "2024"
-rust-version = "1.92"
+rust-version = "1.94"
 publish = false
 
 [dependencies]
@@ -11,10 +11,6 @@ log.workspace = true
 esp-idf-sys = { workspace = true, features = [], default-features = false }
     # Carries ESP-IDF headers, libraries (that binding to 'esp-zigbee-sdk' requires).
     # Needs to be under '[dependencies]' since it carries libraries that get baked in.
-
-# TEMPORARILY disabled - let's see if 'embuild' only matters when a binary is done.
-#| [build-dependencies]
-#| embuild.workspace = true
 
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #

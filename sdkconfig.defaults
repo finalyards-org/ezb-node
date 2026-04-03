@@ -4,7 +4,9 @@
 # NOTE! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
 #     the build! Keep an eye on the build output!!
 
-# Rust needs more main task stack size compared to C (the default is just 3K)
+# Rust needs more main task stack size compared to C
+#   - C 'esp_zigbee_sdk' examples use 4096
+#
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 
 # Use this to set FreeRTOS kernel tick frequency to 1000 Hz (100 Hz by default).

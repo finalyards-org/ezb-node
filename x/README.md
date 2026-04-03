@@ -27,3 +27,11 @@ INFO - Hello, world! esp_zigbee_sdk: 1.6.8
 I (260) main_task: Returned from app_main()
 ```
 
+That example hardly touched the Zigbee API, and that's why you are here. Let's make a practical demo.
+
+## Demo
+
+This demo is based on the ["Light bulb"](https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light) and ["Light switch"](https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_switch) examples of the `esp-zigbee-sdk` repo.
+
+<font size=+5 color=orange>*tbd. steps*</font>
+

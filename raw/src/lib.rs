@@ -15,5 +15,31 @@ pub const ESP_ZB_VER: &str = unsafe {
     core::str::from_utf8_unchecked(bindings::ESP_ZB_VER_STR)
 }; // "1.6.8"
 
-//#[cfg(feature="zcl_alarms")]
-// todo
+// We selectively choose the elements that make it to the API layer.
+//
+// Could also filter in the 'bindgen' stage, but this turns out to be convenient, in practice.
+//
+pub use bindings::{
+    esp_zb_platform_config,
+    esp_zb_platform_config_t,
+        // {
+        //    radio_config: {
+        //      radio_mode:         ZB_RADIO_MODE_NATIVE | ZB_RADIO_MODE_UART_RCP,
+        //      radio_uart_config: {
+        //        port:  UART_NUM_0 ... UART_NUM_MAX (3)
+        //        rx_pin:
+        //        tx_pin:
+        //        uart_config: { ... }
+        //    },
+        //    host_config: {
+        //      host_connection_mode: ZB_HOST_CONNECTION_MODE_NONE | ... _MODE_CLI_UART | ... _MODE_RCP_UART
+        //      host_uart_config: { port, rx_pin, tx_pin, uart_config }
+        //    }
+        // }
+
+    esp_zb_radio_mode_t,
+    esp_zb_host_connection_mode_t,
+    esp_zb_uart_config_t,
+    esp_zb_host_config_t,
+    esp_zb_radio_config_t,
+};

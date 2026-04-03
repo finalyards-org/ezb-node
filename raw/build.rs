@@ -35,11 +35,6 @@ fn main() {
         }
     }
 
-    // Needed by IDF machinery.
-    //  E.g. "emits the necessary cfg flags for conditional compilation" (and likely way more..)
-    #[cfg(false)]   // DO WE NEED IT ALREADY IN 'RAW' - or only for linking?
-    embuild::espidf::sysenv::output();
-
     // DEBUG: Show what we know about the compilation.
     //  <<
     //      ..

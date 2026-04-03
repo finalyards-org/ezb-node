@@ -8,6 +8,8 @@
 //      log::info!("abc");
 //  <<
 //
+extern crate alloc;
+
 use esp_idf_sys::{
     esp_log_write,
     esp_log_level_t_ESP_LOG_INFO

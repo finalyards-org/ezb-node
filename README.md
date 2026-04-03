@@ -58,6 +58,25 @@ We won't need `esp-idf-svc`, for example.
 |`raw`|Bridging of `esp-zigbee-sdk` C API's to Rust|
 -->
 
+## Two layers
+
+<!-- tbd.
+![](.images/two-story-bus.png)
+
+Prompt: "...
+-->
+
+### Lower level
+
+`raw` aims to be a 1-to-1 mapping from Rust to the underlying C functions, structs and enums.
+
+We *do not change abstractions* at this level, but we do introduce filtering: only elements needed by the higher API layer are exposed.
+
+### API level
+
+`x` (or `_`) is the API layer. Here the emphasis is in *providing a Rust native experience*. Abstractions *are* provided. The aim is to *not leak C functions/structures through* - which would limit our future maneuverability for the project's API.
+
+
 ## Requirements
 
 - ESP32-C6 devkit
@@ -149,13 +168,14 @@ However, since Cargo projects *usually* are confined to do output within their p
 
 **Change to `out` (optional)**
 
-You can change the type to `out` (instructions below). In such a case, the tools are downloaded to within your `target` folder - and cleaned with it. This is the more encapsulated approach.
+You can change the type to `out`. In such a case, the tools are downloaded to within your `target` folder - and cleaned with it.
 
 To change this, edit `.cargo/config.toml`:
 
 ```
 ESP_IDF_TOOLS_INSTALL_DIR = "out"
 ```
+
 
 <!-- hide
 **Out - clears tooling with `cargo clean`**
@@ -188,15 +208,55 @@ It does not *really* matter, which option you choose. They all work.
 -->
 
 
-## Next
+## Source code
 
-Check the [`x/README`](x/README.md) for build instructions and how to run examples.
+Study the source code:
+
+- `x`
+
+	The API layer, providing a Rust interface to Zigbee.
+
+- `raw`
+
+	The 1-to-1 C/Rust interface to `esp_zigbee_sdk`, an ESP-IDF C library.
+
+Build some examples that we'll use in the next section (demo).
+
+```
+$ (cd x && cargo build --release --example light -vv)
+[...]
+```
+
+```
+$ (cd x && cargo build --release --example switch -vv)
+[...]
+```
+
+If the builds succeeded, you are ready to run the created binaries on ESP32-C6 devkits.
+
+## Demos
+
+See [`docs/DEMO.md`](docs/DEMO.md) for instructions on how to run the demos:
+
+- 1. Light bulb / switch demo with two ESP32-C6's
+	- 1a. with a commercial light bulb
+	- 1b. with a commercial switch
 
 
 <!-- #later; perhaps do it in `docs/`?
 ## Using in your own projects
 
 *tbd.*
+-->
+
+<!--
+## Cleanup
+
+Additional to normal cleanup (`cargo clean`) - if you kept the `"global"` build setting (see above):
+
+```
+$ rm -rf ~/.espressif
+```
 -->
 
 ## References

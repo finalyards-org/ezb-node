@@ -1,9 +1,7 @@
-
+//
+// Version of the 'esp_zigbee_sdk'
+//
 pub use crate::raw::{
-    ESP_ZB_VER_MAJOR,
-    ESP_ZB_VER_MINOR,
-    ESP_ZB_VER_PATCH,
-    //
     ESP_ZB_VER,
 };
 
