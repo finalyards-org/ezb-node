@@ -45,6 +45,12 @@ esp32c6 = [
 [lints]
 workspace = true
 
+[profile.dev]
+panic = "unwind"
+
+[profile.release]
+panic = "unwind"
+
 [[example]]
 name = "a"
 required-features = ["esp32c6"]

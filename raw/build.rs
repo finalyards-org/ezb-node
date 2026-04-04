@@ -105,7 +105,7 @@ fn main() {
     // make stuff
     //
     let st = Command::new("make")
-        .arg( format!("tmp/bindings.rs") )      // generate the Rust bindings
+        .arg( format!("tmp/bindings_0.rs") )      // generate the Rust bindings
         .output()
         .expect("to be able to launch `make`")   // shown if 'make' not found on PATH
         .status;

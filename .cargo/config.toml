@@ -4,7 +4,8 @@ target = "riscv32imac-esp-espidf"
 # Instructions on what kind of core to build for the MCU.
 # - 'ldproxy' requires "std" even if our application would not.
 [unstable]
-build-std = ["std", "panic_abort"]
+build-std = ["std"]
+    # note: do not use '"panic_abort"': we want the caller information.
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"

@@ -2,8 +2,6 @@
 // Platform: 'include/platform.h'
 //
 
-use core::mem::zeroed;
-
 use crate::raw::{
     esp_zb_platform_config,
     esp_zb_platform_config_t,
@@ -19,6 +17,15 @@ use crate::raw::{
 *       provide more functionality if application level needs it.
 */
 
+// tbd. Convert this to (perhaps two) enum(s), for actual use cases.
+//  - PlatformRadioConfig:
+//      - NATIVE
+//  - PlatformHostConnectionConfig:
+//      - NONE (or use an Option)
+//
+// Then, when we _finally_ need to pass these to C code, have a function that builds
+// 'esp_zb_platform_config_t' out of them!
+//
 pub struct PlatformConfig(
     esp_zb_platform_config_t
 );
@@ -40,11 +47,11 @@ impl Default for PlatformConfig {
         let o = esp_zb_platform_config_t {
             radio_config: esp_zb_radio_config_t {
                 radio_mode: esp_zb_radio_mode_t::ZB_RADIO_MODE_NATIVE,
-                radio_uart_config: uart_empty()
+                radio_uart_config: esp_zb_uart_config_t::default(),
             },
             host_config: esp_zb_host_config_t {
                 host_connection_mode: esp_zb_host_connection_mode_t::ZB_HOST_CONNECTION_MODE_NONE,
-                host_uart_config: uart_empty()
+                host_uart_config: esp_zb_uart_config_t::default(),
             }
         };
         Self(o)
@@ -55,13 +62,6 @@ impl Into<esp_zb_platform_config_t> for PlatformConfig {
     fn into(self) -> esp_zb_platform_config_t {
         self.0
     }
-}
-
-/*
-* UART configuration fields when not in use.
-*/
-fn uart_empty() -> esp_zb_uart_config_t {
-    unsafe { zeroed() }
 }
 
 /***

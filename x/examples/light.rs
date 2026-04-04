@@ -10,8 +10,6 @@
 mod common;
 use common::esp_log_init;
 
-use esp_backtrace as _;
-
 use esp_zb::{
     PlatformConfig
 };
@@ -35,6 +33,11 @@ fn main() {
     let cfg = PlatformConfig::default();
         //.with_radio_mode(RADIO_MODE_NATIVE)
         //.with_host_connection_mode(CONNECTION_MODE_NONE);
+
+    //let cfg = PlatformConfig::new(
+    //    PlatformRadioConfig::NATIVE,
+    //    None
+    //);
 
     common::init_nvs();
 

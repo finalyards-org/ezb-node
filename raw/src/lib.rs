@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(non_snake_case)]
 
-#[path = "../tmp/bindings.rs"]
+#[path = "../bindings_tail.rs"]
 mod bindings;
 
 pub use bindings::{
@@ -42,4 +42,6 @@ pub use bindings::{
     esp_zb_uart_config_t,
     esp_zb_host_config_t,
     esp_zb_radio_config_t,
+    uart_port_t,
+    gpio_num_t
 };

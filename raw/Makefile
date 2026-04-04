@@ -38,9 +38,9 @@ _RISCV_BIN_PATH := $(word 1,$(filter %/riscv32-esp-elf/bin,$(subst :, ,${DEP_ESP
 _SYSROOT:=$(realpath ${_RISCV_BIN_PATH}/..)
 	# /home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf
 
-# 'bindings.rs' *could* be created into the 'OUT_DIR' but in Multipass VM use, it's nice to see it in the IDE.
+# 'bindings_0.rs' *could* be created into the 'OUT_DIR' but in Multipass VM use, it's nice to see it in the IDE.
 #_BIND_RS:=${OUT_DIR}/bindings.rs
-_BIND_RS:=tmp/bindings.rs
+_BIND_RS:=tmp/bindings_0.rs
 
 ifeq (${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH},)
 	$(error Missing 'DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH' from '.BUILD_ENV')
@@ -120,7 +120,6 @@ ${_BIND_RS}: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ./zb
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \
-	    --raw-line '#![allow(non_camel_case_types)]' \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\
