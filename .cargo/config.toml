@@ -9,12 +9,25 @@ build-std = ["std", "panic_abort"]
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
 runner = "espflash flash --monitor"
-rustflags = ["--cfg",  "espidf_time64"]
+rustflags = [
+    # "Required to obtain backtraces [on RISC-V only], however it may negatively impact the performance of your application."
+    #
+    # "Please note that when targeting a RISC-V device, you need to force frame pointers (i.e. "-C", "force-frame-pointers",
+    # in your .cargo/config.toml); this is not required for Xtensa."
+    #
+    # Note: Interesting discussion in:
+    #   - "`force-frame-pointers` flag isn't honored always unless std is recompiled as such"
+    #       -> https://github.com/rust-lang/rust/issues/103711 (GitHub Issues; [closed])
+    #
+    #? "-C", "force-frame-pointers",
+
     # "must be set for ESP-IDF 5.0 and above" |1|
     #
-    # time was 32bit in ESP-IDF 4.x and will be 64bit from now. According to Copilot, this is *really needed*, though
-    # things do build without it. It's just the ABI mismatch risks would lurk in the background.
+    # Time was 32bit in ESP-IDF 4.x and will be 64bit from now on.
     # |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#rust-configuration-flags
+    #
+    "--cfg",  "espidf_time64"
+]
 
 # Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and '_', we
 #       provide them here. You can make local overrides in either.
@@ -31,7 +44,7 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
 
 ESP_IDF_SDKCONFIG_DEFAULTS = "sdkconfig.defaults"
 
-# Important for '_' to build
+# Important, but when ???
 #ESP_IDF_SYS_ROOT_CRATE = "esp-idf-raw"
 
 # Have this if you use Multipass VM, and a global 'target' folder.

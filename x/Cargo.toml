@@ -9,10 +9,17 @@ esp-zb-raw = { path = "../raw" }
 
 log.workspace = true
 
-#esp-println = { version = "0.16.1", features = [] } # "log-04", "defmt"
-
-esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart", "panic_handler"], default-features = false }
+esp-idf-sys = { workspace = true, default-features = false }
     # just core
+
+[dev-dependencies]
+esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart"], default-features = false }
+    # just core; we do our own panic handler
+
+esp-idf-hal = { version = "0.46.2", features = ["alloc"], default-features = false }
+    # hardware access
+
+#esp-backtrace = { version = "0.18.1", features = ["panic-handler"] } # "esp32c6"
 
 [build-dependencies]
 embuild.workspace = true
@@ -30,11 +37,18 @@ default = ["esp32c6"]
 
 #defmt = ["dep:defmt", "dep:defmt-rtt"]
 
-esp32c6 = ["esp-zb-raw/esp32c6"]
+esp32c6 = [
+    "esp-zb-raw/esp32c6",
+    #"esp-backtrace/esp32c6",
+]
 
 [lints]
 workspace = true
 
 [[example]]
 name = "a"
+required-features = ["esp32c6"]
+
+[[example]]
+name = "light"
 required-features = ["esp32c6"]

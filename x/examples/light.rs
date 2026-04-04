@@ -5,10 +5,12 @@
 * Based on:
 *   - "Light bulb" example of 'esp-zigbee-sdk'
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light
- */
+*/
 
 mod common;
 use common::esp_log_init;
+
+use esp_backtrace as _;
 
 use esp_zb::{
     PlatformConfig
@@ -26,17 +28,24 @@ fn main() {
     //      -> github.com/finalyards/esp-idf-sample
     esp_log_init();
 
+    log::info!("Hello, world!\n");
+
     // INIT: Code from 'esp_zigbee_sdk' Lights example.
 
     let cfg = PlatformConfig::default();
         //.with_radio_mode(RADIO_MODE_NATIVE)
         //.with_host_connection_mode(CONNECTION_MODE_NONE);
 
-    //todo nvs_flash_init();
+    common::init_nvs();
 
     // ROLL: Code from 'esp_zigbee_sdk' Lights example.
     //
-    log::info!("Hello, world! ABC\n");
+    todo!();
+
+    // Keep main task from returning
+    loop {
+        unsafe { esp_idf_sys::vTaskDelay(1000) };
+    }
 }
 
 //keep until works in Rust

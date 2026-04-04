@@ -69,7 +69,7 @@ all:
 # The targets that 'build.rs' normally builds (for debugging, in case make fails)
 manual: ${_BIND_RS}
 	@echo "\nManual build succeeded."
-	cloc --quiet ${_BIND_RS}
+	#cloc --quiet ${_BIND_RS}
 
 # Eventually (?) 'zb_vendor.h' should be generated based on configuration from the *Rust program* using us, but
 # that's later.
