@@ -10,7 +10,9 @@
 //
 extern crate alloc;
 
-use esp_idf_sys::{
+use esp_idf_svc::sys;
+
+use sys::{
     esp_log_write,
     esp_log_level_t_ESP_LOG_INFO
 };

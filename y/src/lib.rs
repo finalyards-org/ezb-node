@@ -8,7 +8,7 @@ pub use nvs::init_nvs;
 mod error;
 pub use error::Error;
 
-mod panic_handler;
+//? mod panic_handler;
 
 mod embassy;
 pub use embassy::*;

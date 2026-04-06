@@ -103,9 +103,3 @@ esp32c6 = []
 #    "esp-println?/defmt-espflash"
 #]
 
-#R? Features for the examples only! Rust gives no mechanism to have features that would apply only to 'examples/' (but
-#R? not be exposed to downstream projects). In downstream projects, just IGNORE THESE: THE LIBRARY DOES NOT USE THEM!!
-#R?
-#? run_with_espflash = ["defmt", "dep:esp-println"]    # ?? "dep:esp-bootloader-esp-idf" ??
-#? run_with_probe_rs = ["defmt", "dep:defmt-rtt"]
-

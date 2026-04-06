@@ -5,6 +5,7 @@ The upper level Rust adaptation.
 - What features are brought further, from `raw` 1:1 APIs.
 - How they are brought further.
 
+In practice, you'll use this from your code, or the `examples/`.
 
 ## Steps
 
@@ -18,6 +19,9 @@ The build takes longer than normally, since it downloads a full ESP-IDF (C langu
 
 >For troubleshooting, or plain curiosity, check the documents under `DEVS/` folder.
 
+<!--
+The example is merely for internal, development use. It proves that we can make a `non-std` binary using `esp-idf-sys`.
+
 ### Run an example
 
 ```
@@ -28,10 +32,4 @@ I (260) main_task: Returned from app_main()
 ```
 
 That example hardly touched the Zigbee API, and that's why you are here. Let's make a practical demo.
-
-## Demo
-
-This demo is based on the ["Light bulb"](https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light) and ["Light switch"](https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_switch) examples of the `esp-zigbee-sdk` repo.
-
-<font size=+5 color=orange>*tbd. steps*</font>
-
+-->

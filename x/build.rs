@@ -6,8 +6,6 @@
 *   - 'cargo build' (CLI); correct features
 */
 
-/*
-*/
 use std::env;
 
 fn main() {

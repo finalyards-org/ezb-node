@@ -1,7 +1,11 @@
 // Panic handler
 //
-// The author tried multiple different approaches to panic handling, before
-// settling on this. In particular:
+// For Embassy, and maybe more generally, we *really* want our own panic handler.
+//
+//  - 'esp_idf_sys' feature "panic_handler" would only work in "abort" mode, and cause device
+//    to reboot. We wish to have control over that.
+//
+
 //      - 'esp_println' doesn't fit with a 'ldproxy' project that's not 'std'
 //      - 'esp_backtrace' did not work
 //

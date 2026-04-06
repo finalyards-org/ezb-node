@@ -1,0 +1,59 @@
+[package]
+name = "esp-zb-examples"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+[dependencies]
+esp-zb = { path = "../x" }
+
+log.workspace = true
+
+anyhow = { version = "1.0", default-features = false }
+
+# 'esp-idf-svc' seems needed for Embassy integration
+#   Note: We intentionally bring in 'esp-idf-svc' only so much, as needed by Embassy. The rest features
+#       defined in 'esp-idf-sys' (instead of indirectly via 'svc'). This does not matter; it just highlights
+#       the differentiation. Ideally, we could run things without 'svc' since *our* code does not need it (does it?).
+#
+#   We should _only_ need the "Embassy compatible time driver" (of FreeRTOS) from 'esp-idf-svc', nothing more.
+#       tbd. could also see how big code that really is - perhaps worth carrying ourselves.
+#
+esp-idf-svc = { version = "0.52.1", features = ["embassy-time-driver", "alloc", "critical-section", "wake-from-isr", "binstart", "std"], default-features = false }
+
+#esp-idf-sys = { workspace = true, features = ["binstart", "std"], default-features = false }
+    # std; embassy likes it that way
+
+#esp-idf-hal = { version = "0.46.2", features = ["alloc"], default-features = false }
+#    # hardware access
+
+embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"], default-features = false }
+#embassy-futures = { version = "0.1.2" }
+embassy-time    = { version = "0.5.0", features = ["log", "generic-queue-8"] }
+#    # generic-queue: 'esp-idf-template' comments: "any 'generic-queue' implementation will work"
+
+    # ^-- No need for 'embassy-sync' or 'critical-section'(??) because we use Embassy only on a single thread (FreeRTOS task).
+
+[build-dependencies]
+embuild.workspace = true
+
+[features]
+default = ["esp32c6"]
+
+esp32c6 = [
+    "esp-zb/esp32c6",
+]
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "a"
+path = "bin/a.rs"
+required-features = ["esp32c6"]
+
+[[bin]]
+name = "light"
+path = "bin/light.rs"
+required-features = ["esp32c6"]

@@ -1,4 +1,7 @@
-use esp_idf_sys::{
+
+use esp_idf_svc::sys;
+
+use sys::{
     nvs_flash_init,
     nvs_flash_erase,
     ESP_ERR_NVS_NO_FREE_PAGES,

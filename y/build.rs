@@ -6,8 +6,6 @@
 *   - 'cargo build' (CLI); correct features
 */
 
-/*
-*/
 use std::env;
 
 fn main() {
@@ -24,7 +22,7 @@ fn main() {
         }
     }
 
-    // Needed for 'ldproxy' linking (of examples) to succeed.
+    // Needed for linking of executables to succeed.
     embuild::espidf::sysenv::output();
 
     //r println!("cargo::rustc-check-cfg=cfg(esp_idf_version, values(\"5\"))");

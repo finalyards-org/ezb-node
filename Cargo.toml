@@ -2,7 +2,7 @@
 members = [
   "raw",
   "x",
-  #"examples/*",
+  "y",
 ]
 resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
@@ -24,5 +24,10 @@ embuild = { version = "0.33.1", features = ["espidf"] }
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5_5_3)'] }
 
+# We don't use
+#[profile.dev]
+#panic = "unwind"
+
 [profile.release]
 opt-level = "s"
+panic = "unwind"
