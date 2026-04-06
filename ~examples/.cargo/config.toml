@@ -1,4 +1,0 @@
-
-[target.'cfg(true)']
-runner = "espflash flash --monitor"
-#runner = "probe-rs run"
