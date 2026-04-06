@@ -10,21 +10,33 @@
 mod common;
 use common::esp_log_init;
 
+use anyhow;
 use esp_zb::{
-    PlatformConfig
+    PlatformConfig,
+    process
 };
+
+use esp_idf_hal::peripherals::Peripherals;
+
+use esp_zb_raw::{esp_zb_cfg_t, esp_zb_nwk_device_type_t, esp_zb_cfg_s__bindgen_ty_1, esp_zb_zczr_cfg_t, esp_zb_init, esp_zb_start, esp_zb_stack_main_loop_iteration};
+
+const MAX_CHILDREN: usize = 10;             // max number of connected devices
+const INSTALLCODE_POLICY: bool = false;     // install code policy for security
+const HA_COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
 /*
 * The entry point. We get our own FreeRTOS task and don't need to create one.
 */
 #[unsafe(no_mangle)]
-fn main() {
+fn main() -> anyhow::Result<()> {
     // 'esp-idf-sys' needs it. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_sys::link_patches();
 
     // Note: If you end up using 'esp-idf-svc', also change to using its logging.
     //      -> github.com/finalyards/esp-idf-sample
     esp_log_init();
+
+    let _ = Peripherals::take()?;
 
     log::info!("Hello, world!\n");
 
@@ -33,30 +45,67 @@ fn main() {
     let cfg = PlatformConfig::default();
         //.with_radio_mode(RADIO_MODE_NATIVE)
         //.with_host_connection_mode(CONNECTION_MODE_NONE);
-
+    // OR:
     //let cfg = PlatformConfig::new(
     //    PlatformRadioConfig::NATIVE,
     //    None
     //);
 
-    common::init_nvs();
+    common::init_nvs()
+        .expect("init nvs failed");
 
     // ROLL: Code from 'esp_zigbee_sdk' Lights example.
     //
-    todo!();
 
-    // Keep main task from returning
+    // Initialize Zigbee stack
+
+    let nwk_cfg = esp_zb_cfg_t {
+        esp_zb_role: esp_zb_nwk_device_type_t::ESP_ZB_DEVICE_TYPE_ROUTER,
+        install_code_policy: INSTALLCODE_POLICY,
+        nwk_cfg: esp_zb_cfg_s__bindgen_ty_1 {
+            zczr_cfg: esp_zb_zczr_cfg_t {
+                max_children: MAX_CHILDREN as _
+            }
+        }
+    };
+
+    unsafe { esp_zb_init(nwk_cfg.into()); }
+
+    /*** next
+    esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
+    esp_zb_ep_list_t *esp_zb_color_dimmable_light_ep = esp_zb_color_dimmable_light_ep_create(HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &light_cfg);
+    zcl_basic_manufacturer_info_t info = {
+        .manufacturer_name = ESP_MANUFACTURER_NAME,
+        .model_identifier = ESP_MODEL_IDENTIFIER,
+    };
+
+    esp_zcl_utility_add_ep_basic_manufacturer_info(esp_zb_color_dimmable_light_ep, HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &info);
+    esp_zb_device_register(esp_zb_color_dimmable_light_ep);
+    esp_zb_core_action_handler_register(zb_action_handler);
+    esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
+    ***/
+    unsafe {
+        esp_zb_start(false);
+    }
+
+    esp_idf_hal::task::block_on(async {
+        loop {
+            unsafe {
+                esp_zb_stack_main_loop_iteration();
+            }
+
+            // Do something '.await' - allows other async pieces to run.
+                ...
+    });
+
+    //R Keep main task from returning
+    #[cfg(false)]
     loop {
         unsafe { esp_idf_sys::vTaskDelay(1000) };
     }
 }
 
 //keep until works in Rust
-// ESP_ERROR_CHECK(nvs_flash_init());
-// ESP_ERROR_CHECK(esp_zb_platform_config(&config));
-// xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
-
-
 /*****
 /*
  * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD

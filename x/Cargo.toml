@@ -13,33 +13,30 @@ esp-idf-sys = { workspace = true, default-features = false }
     # just core
 
 [dev-dependencies]
+anyhow = { version = "1.0", default-features = false }
 esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart"], default-features = false }
     # just core; we do our own panic handler
 
 esp-idf-hal = { version = "0.46.2", features = ["alloc"], default-features = false }
     # hardware access
 
-#esp-backtrace = { version = "0.18.1", features = ["panic-handler"] } # "esp32c6"
+embassy-executor = { version = "0.10.0", features = ["embassy-time-driver", "platform-spin", "task-arena-size-12288"] }
+#embassy-futures = { version = "0.1.2" }
+#embassy-sync    = { version = "0.7.2" }
+embassy-time    = { version = "0.5.0", features = ["log"] }
 
 [build-dependencies]
 embuild.workspace = true
 
-#[dev-dependencies]
-#embassy-executor = { version = "0.7.0", features = ["task-arena-size-12288"] }
-#embassy-futures = { version = "0.1.2" }
-#embassy-sync    = { version = "0.7.2" }
-#embassy-time    = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime"] }
-
-#esp-backtrace   = { version = "0.17.0", features = ["panic-handler", "defmt", "esp32c6", "semihosting"] }
-
 [features]
-default = ["esp32c6"]
+default = ["esp32c6","embassy"]
 
-#defmt = ["dep:defmt", "dep:defmt-rtt"]
+embassy = [
+
+]
 
 esp32c6 = [
     "esp-zb-raw/esp32c6",
-    #"esp-backtrace/esp32c6",
 ]
 
 [lints]
@@ -53,8 +50,8 @@ panic = "unwind"
 
 [[example]]
 name = "a"
-required-features = ["esp32c6"]
+required-features = ["esp32c6", "embassy"]
 
 [[example]]
 name = "light"
-required-features = ["esp32c6"]
+required-features = ["esp32c6", "embassy"]

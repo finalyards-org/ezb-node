@@ -13,5 +13,7 @@ fn main() {
     //      -> github.com/finalyards/esp-idf-sample
     esp_log_init();
 
+    common::embassy_init();
+
     log::info!("Hello, world!\n");
 }

@@ -117,6 +117,7 @@ ${_BIND_RS}: wrap.h ${_INCLUDE}/*.h $(_OTHER_INCS) Makefile ${_SDKCONFIG_H} ./zb
 			\
 			--allowlist-type 'esp_zb_attribute_.*' \
 	    \
+	    --blacklist-function 'esp_zb_main_loop' \
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \

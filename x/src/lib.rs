@@ -13,3 +13,8 @@ pub use platform::*;
 mod version;
 pub use version::*;
 
+pub async fn process() {
+    unsafe {
+        raw::esp_zb_stack_main_loop_iteration();
+    }
+};

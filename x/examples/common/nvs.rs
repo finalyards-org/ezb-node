@@ -5,8 +5,9 @@ use esp_idf_sys::{
     ESP_ERR_NVS_NEW_VERSION_FOUND
 };
 
-// This logic was suggested by Copilot.
-pub fn init_nvs() {
+// The logic was suggested by Copilot, to replace C 'nvs_flash_init()'.
+//
+pub fn init_nvs() -> Result<(),crate::Error> {
     unsafe {
         let err = nvs_flash_init();
         if err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND {
@@ -14,4 +15,5 @@ pub fn init_nvs() {
             nvs_flash_init();
         }
     }
+    Ok(())
 }

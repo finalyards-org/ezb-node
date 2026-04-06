@@ -45,3 +45,18 @@ pub use bindings::{
     uart_port_t,
     gpio_num_t
 };
+
+// Router; main loop
+pub use bindings::{
+    esp_zb_init,
+    esp_zb_cfg_t,
+    esp_zb_nwk_device_type_t,
+    esp_zb_start,
+    esp_zb_cfg_s__bindgen_ty_1,
+    esp_zb_zczr_cfg_t
+};
+
+pub use bindings::{
+    esp_zb_stack_main_loop_iteration
+};
+
