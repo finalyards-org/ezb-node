@@ -7,6 +7,7 @@
 use anyhow;
 use esp_zb::{
     PlatformConfig,
+    Router
 };
 
 use esp_idf_svc::{
@@ -17,8 +18,6 @@ use esp_idf_svc::{
 use esp_zb_examples as my;
 
 use esp_idf_hal::peripherals::Peripherals;
-
-//R use esp_zb::{esp_zb_cfg_t, esp_zb_nwk_device_type_t, esp_zb_cfg_s__bindgen_ty_1, esp_zb_zczr_cfg_t, esp_zb_init, esp_zb_start, esp_zb_stack_main_loop_iteration};
 
 const MAX_CHILDREN: usize = 10;             // max number of connected devices
 const INSTALLCODE_POLICY: bool = false;     // install code policy for security
@@ -35,7 +34,7 @@ fn main() -> anyhow::Result<()> {
     //      -> github.com/finalyards/esp-idf-sample
     my::esp_log_init();
 
-    let _ = Peripherals::take()?;
+    //#later let _ = Peripherals::take()?;
 
     // INIT: Code from 'esp_zigbee_sdk' Lights example.
 
@@ -54,19 +53,22 @@ fn main() -> anyhow::Result<()> {
     // ROLL: Code from 'esp_zigbee_sdk' Lights example.
     //
 
-    // Initialize Zigbee stack
-    /***
-    let nwk_cfg = esp_zb_cfg_t {
-        esp_zb_role: esp_zb_nwk_device_type_t::ESP_ZB_DEVICE_TYPE_ROUTER,
-        install_code_policy: INSTALLCODE_POLICY,
-        nwk_cfg: esp_zb_cfg_s__bindgen_ty_1 {
-            zczr_cfg: esp_zb_zczr_cfg_t {
-                max_children: MAX_CHILDREN as _
-            }
-        }
-    };
+    // Initialize Zigbee
+    //
+    let rter = Node::Router::new(/*&cfg*/);     // tbd. separate '&RadioConfig' and 'Option<&HostConnectionConfig>'
 
-    unsafe { esp_zb_init(nwk_cfg.into()); }
+    // Turn to Embassy async-land
+    {
+        embassy_time::driver::init(esp_idf_svc::timer::EmbassyTimeDriver::new());
+
+        static EXECUTOR: StaticCell<Executor> = StaticCell::new();
+        let executor = EXECUTOR.init(Executor::new());
+
+        executor.run(|spawner| {
+            spawner.spawn(rter.roll()).unwrap();
+            //spawner.spawn(other_tasks()).unwrap();
+        });
+    }
 
     /*** next
     esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
@@ -81,27 +83,6 @@ fn main() -> anyhow::Result<()> {
     esp_zb_core_action_handler_register(zb_action_handler);
     esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
     ***/
-    unsafe {
-        esp_zb_start(false);
-    }
-
-    esp_idf_hal::task::block_on(async {
-        loop {
-            unsafe {
-                esp_zb_stack_main_loop_iteration();
-            }
-
-            // Do something '.await' - allows other async pieces to run.
-                ...
-    });
-    ***/
-
-    //R Keep main task from returning
-    log::info!("Hello, world!\n");
-
-    loop {
-        unsafe { esp_idf_sys::vTaskDelay(1000) };
-    }
 }
 
 //keep until works in Rust

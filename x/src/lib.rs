@@ -12,3 +12,6 @@ pub use platform::*;
 
 mod version;
 pub use version::*;
+
+pub mod node;
+    // retain the '::node'

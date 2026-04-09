@@ -13,6 +13,8 @@ esp-idf-sys = { version = "0.37.2", default-features = false }
     # steer the version, subprojects will add appropriate features (e.g. 'binstart' for examples)
 log = { version = "0.4" }
 
+embassy-time = { version = "0.5", features = ["log"] }
+
 # _Seems_ only to be needed when creating executable output (bin, examples); i.e. '_/examples/...'.
 embuild = { version = "0.33.1", features = ["espidf"] }
 

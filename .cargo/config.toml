@@ -23,7 +23,7 @@ rustflags = [
     #   - "`force-frame-pointers` flag isn't honored always unless std is recompiled as such"
     #       -> https://github.com/rust-lang/rust/issues/103711 (GitHub Issues; [closed])
     #
-    # If you import 'esp-backtrace', enable this, too:
+    # We... might not need this.
     #"-C", "force-frame-pointers",
 
     # "must be set for ESP-IDF 5.0 and above" |1|

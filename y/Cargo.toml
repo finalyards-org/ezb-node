@@ -20,20 +20,15 @@ anyhow = { version = "1.0", default-features = false }
 #   We should _only_ need the "Embassy compatible time driver" (of FreeRTOS) from 'esp-idf-svc', nothing more.
 #       tbd. could also see how big code that really is - perhaps worth carrying ourselves.
 #
-esp-idf-svc = { version = "0.52.1", features = ["embassy-time-driver", "alloc", "critical-section", "wake-from-isr", "binstart", "std"], default-features = false }
+esp-idf-svc = { version = "0.52.1", features = ["embassy-time-driver"] }
+    # defaults to: "binstart", "std"
 
-#esp-idf-sys = { workspace = true, features = ["binstart", "std"], default-features = false }
-    # std; embassy likes it that way
-
-#esp-idf-hal = { version = "0.46.2", features = ["alloc"], default-features = false }
-#    # hardware access
-
-embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"], default-features = false }
+embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
 #embassy-futures = { version = "0.1.2" }
-embassy-time    = { version = "0.5.0", features = ["log", "generic-queue-8"] }
-#    # generic-queue: 'esp-idf-template' comments: "any 'generic-queue' implementation will work"
+embassy-time    = { workspace = true, features = ["generic-queue-8"] }
+    # generic-queue-X: 'esp-idf-template' comments: "any 'generic-queue' implementation will work"
 
-    # ^-- No need for 'embassy-sync' or 'critical-section'(??) because we use Embassy only on a single thread (FreeRTOS task).
+# Note: No need for 'embassy-sync' or 'critical-section' because we use Embassy only on a single (FreeRTOS) thread.
 
 [build-dependencies]
 embuild.workspace = true

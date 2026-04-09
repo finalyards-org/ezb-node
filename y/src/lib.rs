@@ -9,6 +9,3 @@ mod error;
 pub use error::Error;
 
 //? mod panic_handler;
-
-mod embassy;
-pub use embassy::*;
