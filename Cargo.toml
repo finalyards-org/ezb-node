@@ -1,8 +1,8 @@
 [workspace]
 members = [
   "raw",
-  "x",
-  "y",
+  "api",
+  "apps",
 ]
 resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
@@ -32,4 +32,4 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5
 
 [profile.release]
 opt-level = "s"
-panic = "unwind"
+#panic = "unwind"

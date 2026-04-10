@@ -6,7 +6,7 @@ rust-version = "1.94"
 publish = false
 
 [dependencies]
-esp-zb = { path = "../x" }
+esp-zb = { path = "../api" }
 
 log.workspace = true
 

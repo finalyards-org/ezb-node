@@ -3,12 +3,13 @@ target = "riscv32imac-esp-espidf"
 
 # Instructions on what kind of library to build for the target.
 #   - 'ldproxy' requires "std" even if our application would not.
-#   - 'panic_unwind' (not abort) needed for getting the 'PanicInfo' object (that has line number and text)
+#       - ..though our "apps/bin" do require "std", for Embassy + IDF to coexist ('embassy_time_driver'; long story...)
+#   - panic type does not really matter: we catch it with a hook
+#       .. to avoid a reset-loop if there is a repeating reason for a panic
+#
+# This works.
 [unstable]
-build-std = ["std", "panic_unwind",
-    "panic_abort"   # HACK: only so that the linking can proceed. The author cannot tell, who uses/needs 'panic_abort'.
-                    #       It won't actually get used, just baked into the library.
-]
+build-std = ["std", "panic_abort"]
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"

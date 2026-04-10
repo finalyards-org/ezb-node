@@ -1,5 +1,3 @@
-//R use esp_zb_examples::esp_log_init;
-
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
@@ -8,6 +6,8 @@ use esp_idf_svc::{
 };
 
 use embassy_time::{Duration, Timer};
+
+use esp_zb_examples::set_panic_hook;
 
 // Note: Could use background tasks
 //  <<
@@ -27,17 +27,19 @@ async fn main(_spawner: Spawner) {
     // 'esp-idf-sys' needs it. See https://github.com/esp-rs/esp-idf-template/issues/71
     link_patches();
 
+    set_panic_hook();
+
     EspLogger::initialize_default();
 
-    //? embassy_time_driver_init();
-
-    // Note: If you end up using 'esp-idf-svc', also change to using its logging.
-    //      -> github.com/finalyards/esp-idf-sample
-    #[cfg(false)]
-    esp_log_init();
-
     log::info!("Hello, world!\n");
-    todo!();
+    todo!();    // testing, what kind of panic message we get (restart-looping?; line number? message?)
+                //  - with default (std) panic handler, proper line + message, but seems to go to "abort"
+        // <<
+        //  I (309) a: Hello, world!
+        //
+        //  PANIC: panicked at apps/bin/a.rs:35:5:
+        //  not yet implemented
+        // <<
 
     let mut tick = true;
     loop {

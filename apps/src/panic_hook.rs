@@ -1,23 +1,23 @@
-// Panic handler
+// Panic hook
 //
-// The author tried multiple different approaches to panic handling, before
-// settling on this. In particular:
-//      - 'esp_println' doesn't fit with a 'ldproxy' project that's not 'std'
-//      - 'esp_backtrace' did not work
+// We have three requirements for the panic messages:
+//  - no restart loop
+//  - line number should be shown
+//  - proper message should be shown
 //
-// The solution below does print enough information in the case of a panic,
-// to help solve the case.
+// The default 'panic_abort' handler does 2/3, but keeps reset-looping. To prevent that, we
+// attach a hook of our own.
 //
-// Expects:
-//  - in '.cargo/config.toml': no "panic_abort" in '[unstable] build-std'
-//  - in 'Cargo.toml': '[profile.release] panic = "unwind"'
+// Note: Based on docs, this should work both on "abort" and "unwind" panic policies.
 //
-// NOTE: We could also just use 'log::error!'. It does work.
-//
-use core::panic::PanicInfo;
+use std::panic::PanicHookInfo;
+use esp_idf_svc::sys;
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+pub fn set_panic_hook() {
+    std::panic::set_hook(Box::new(panic_hook));
+}
+
+fn panic_hook(info: &PanicHookInfo) -> /* !*/ () {
     // ROM 'print' is slightly safer to use than 'log::error!'; both should work.
     {
         let mut buf = [0u8; 512];
@@ -26,7 +26,7 @@ fn panic(info: &PanicInfo) -> ! {
         let _ = write!(w, "PANIC: {}\n\0", info);
 
         unsafe {
-            esp_idf_sys::esp_rom_printf(w.buf.as_ptr() as *const _);
+            sys::esp_rom_printf(w.buf.as_ptr() as *const _);
         }
     }
     #[cfg(false)]
@@ -36,7 +36,7 @@ fn panic(info: &PanicInfo) -> ! {
 
     // Do not reboot
     loop {
-        unsafe { esp_idf_sys::vTaskDelay(1000) };
+        unsafe { sys::vTaskDelay(1000) };
     }
 }
 
