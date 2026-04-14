@@ -10,14 +10,20 @@ use esp_zb::{
     Router
 };
 
+use embassy_executor::Spawner;
+
 use esp_idf_svc::{
-    sys as esp_idf_sys,
-    hal as esp_idf_hal
+    log::EspLogger,
+    sys::{self, link_patches},
+    hal,
 };
 
-use esp_zb_examples as my;
+use esp_zb_examples::{
+    init_nvs,
+    set_panic_hook,
+};
 
-use esp_idf_hal::peripherals::Peripherals;
+use hal::peripherals::Peripherals;
 
 const MAX_CHILDREN: usize = 10;             // max number of connected devices
 const INSTALLCODE_POLICY: bool = false;     // install code policy for security
@@ -26,49 +32,27 @@ const HA_COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 /*
 * The entry point. We get our own FreeRTOS task and don't need to create one.
 */
-fn main() -> anyhow::Result<()> {
+#[embassy_executor::main]
+async fn main(_: Spawner) {
     // 'esp-idf-sys' needs it. See https://github.com/esp-rs/esp-idf-template/issues/71
-    esp_idf_sys::link_patches();
+    link_patches();
 
-    // Note: If you end up using 'esp-idf-svc', also change to using its logging.
-    //      -> github.com/finalyards/esp-idf-sample
-    my::esp_log_init();
+    set_panic_hook();
+
+    EspLogger::initialize_default();
 
     //#later let _ = Peripherals::take()?;
 
-    // INIT: Code from 'esp_zigbee_sdk' Lights example.
+    init_nvs()
+        .expect("nvs failed");
 
-    let cfg = PlatformConfig::default();
-        //.with_radio_mode(RADIO_MODE_NATIVE)
-        //.with_host_connection_mode(CONNECTION_MODE_NONE);
-    // OR:
-    //let cfg = PlatformConfig::new(
-    //    PlatformRadioConfig::NATIVE,
-    //    None
-    //);
-
-    my::init_nvs()
-        .expect("init nvs failed");
-
-    // ROLL: Code from 'esp_zigbee_sdk' Lights example.
-    //
+    let rcfg = PlatformRadioConfig::NATIVE;
 
     // Initialize Zigbee
     //
-    let rter = Node::Router::new(/*&cfg*/);     // tbd. separate '&RadioConfig' and 'Option<&HostConnectionConfig>'
+    let router = Router::new(rcfg);
 
-    // Turn to Embassy async-land
-    {
-        embassy_time::driver::init(esp_idf_svc::timer::EmbassyTimeDriver::new());
-
-        static EXECUTOR: StaticCell<Executor> = StaticCell::new();
-        let executor = EXECUTOR.init(Executor::new());
-
-        executor.run(|spawner| {
-            spawner.spawn(rter.roll()).unwrap();
-            //spawner.spawn(other_tasks()).unwrap();
-        });
-    }
+    router.roll() .await;
 
     /*** next
     esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();

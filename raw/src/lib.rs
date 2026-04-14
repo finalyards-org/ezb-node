@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(non_snake_case)]
 
-#[path = "../bindings_tail.rs"]
+#[path = "../bindings.rs"]
 mod bindings;
 
 pub use bindings::{

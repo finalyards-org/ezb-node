@@ -12,16 +12,15 @@ log.workspace = true
 
 anyhow = { version = "1.0", default-features = false }
 
-# 'esp-idf-svc' seems needed for Embassy integration
-#   Note: We intentionally bring in 'esp-idf-svc' only so much, as needed by Embassy. The rest features
-#       defined in 'esp-idf-sys' (instead of indirectly via 'svc'). This does not matter; it just highlights
-#       the differentiation. Ideally, we could run things without 'svc' since *our* code does not need it (does it?).
+# 'esp-idf-svc' *is* needed for Embassy integration
+#   - 'embassy_time_driver' comes through there, which is a vital part in tying ESP-IDF and Embassy together.
+#   - 'alloc' is needed for logging
 #
-#   We should _only_ need the "Embassy compatible time driver" (of FreeRTOS) from 'esp-idf-svc', nothing more.
-#       tbd. could also see how big code that really is - perhaps worth carrying ourselves.
-#
-esp-idf-svc = { version = "0.52.1", features = ["embassy-time-driver"] }
+esp-idf-svc = { version = "0.52.1", features = ["embassy-time-driver", "alloc", "binstart"], default-features = false }
     # defaults to: "binstart", "std"
+    #
+    # Note: Do not hesitate from bringing 'std' in, if there are problems. The above is merely the *slimmest*
+    #       setup the author thinks will work. There may be unnoticed side effects in not bringing full 'std'.
 
 embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
 #embassy-futures = { version = "0.1.2" }

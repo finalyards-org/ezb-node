@@ -32,14 +32,16 @@ async fn main(_spawner: Spawner) {
     EspLogger::initialize_default();
 
     log::info!("Hello, world!\n");
-    todo!();    // testing, what kind of panic message we get (restart-looping?; line number? message?)
+
+    #[cfg(false)]
+    panic!("A message from within"); // testing, what kind of panic message we get (restart-looping?; line number? message?)
                 //  - with default (std) panic handler, proper line + message, but seems to go to "abort"
-        // <<
-        //  I (309) a: Hello, world!
-        //
-        //  PANIC: panicked at apps/bin/a.rs:35:5:
-        //  not yet implemented
-        // <<
+                //      <<
+                //       I (309) a: Hello, world!
+                //
+                //       PANIC: panicked at apps/bin/a.rs:35:5:
+                //       not yet implemented
+                //      <<
 
     let mut tick = true;
     loop {

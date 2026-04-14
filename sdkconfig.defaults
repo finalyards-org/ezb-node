@@ -1,12 +1,16 @@
 #
 # sdkconfig.defaults
 #
-# NOTE! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
+# Here are lines we have changed in the 'sdkconfig' file.
+#
+# WARN! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
 #     the build! Keep an eye on the build output!!
+#
+#       ^-- this is understandable in the way that the config(s) are intended to be worked on using 'menuconfig',
+#           not by manual edits.
 
 # Rust needs more main task stack size compared to C
 #   - C 'esp_zigbee_sdk' examples use 4096
-#
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 
 # From 'esp-idf-svc', with mention that these be needed at least if (as we do) 'embassy-time-driver' is being used.
@@ -15,31 +19,29 @@ CONFIG_ESP_TIMER_TASK_STACK_SIZE=4096
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=8192
 CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 
-# Use this to set FreeRTOS kernel tick frequency to 1000 Hz (100 Hz by default).
-# This allows to use 1 ms granularity for thread sleeps (10 ms by default).
-#CONFIG_FREERTOS_HZ=1000
+# 1 ms granularity for (FreeRTOS) thread sleeps (10 ms by default).
+CONFIG_FREERTOS_HZ=1000
 
+# Zigbee
+CONFIG_ZB_ENABLED=y
+CONFIG_ZB_ZCZR=y
+    # Controller/Router code included (can also bake ZED's with this)
+CONFIG_ZB_RADIO_NATIVE=y
+CONFIG_ZB_GP_ENABLED=n
 
-#---
-# Below, components seen as unimportant for Zigbee applications are disabled.
-#
-# NOTE: THIS NEEDS MORE WORK. 'sdkconfig.defaults' are just _defaults_; we cannot switch
-#       off things activated elsewhere from here.
-#|#
-#|# WiFi
-#|CONFIG_ESP_WIFI_ENABLED=n      # becomes 'true'
-#|CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
-#|#R CONFIG_ESP_WIFI_STA_SUPPORT=n  # NO SUCH
-#|CONFIG_ESP_COEX_ENABLED=n       # __
-#|
-#|# Bluetooth
-#|CONFIG_BT_ENABLED=n             # ?
-#|#CONFIG_BT_BLE_ENABLED=n        # NO SUCH
-#|#CONFIG_BT_CLASSIC_ENABLED=n    # NO SUCH
-#|
-#|# Thread
-#|CONFIG_OPENTHREAD_ENABLED=n     # ?
-#|
-#|# http server
-#|#CONFIG_ESP_HTTP_SERVER=n       # NO SUCH
-#|#CONFIG_MBEDTLS=n               # LOADS of other 'MBEDTLS' - NO SUCH
+# Bluetooth, BLE
+CONFIG_BT_ENABLED=n
+
+# OpenThread
+CONFIG_OPENTHREAD_ENABLED=n
+
+# WiFi
+# wasn't able to disable it; red in 'menuconfig'
+#CONFIG_ESP_WIFI_ENABLED=n
+
+# Virtual FS
+CONFIG_VFS_SUPPORT_IO=n
+
+# MQTT
+CONFIG_MQTT_PROTOCOL_311=n
+CONFIG_MQTT_PROTOCOL_5=n

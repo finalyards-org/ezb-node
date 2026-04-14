@@ -46,3 +46,9 @@ Being a full-Rust Zigbee stack, this would bridge IEEE [`esp-radio`](https://git
 >Also, it would take closed source components away from the stack (ZBOSS).
 
 - [ ] Keep an eye on the progress
+
+
+## Deprecation warnings (with `cargo build -vv`)
+
+- ["Tracking Issue: Used deprecated headers in esp-idf-sys"](https://github.com/esp-rs/esp-idf-sys/issues/312)
+

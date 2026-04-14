@@ -1,1 +1,12 @@
 /Cargo.lock
+
+# 'menuconfig' creates; ignore
+/build/
+/managed_components/
+/dependencies.lock
+/sdkconfig.old
+/components_esp32c6.lock
+  # likely a temporary file
+
+# 'sdkconfig.defaults' is in version control; this not
+/sdkconfig

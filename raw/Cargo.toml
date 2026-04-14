@@ -1,16 +1,24 @@
 [package]
 name = "esp-zb-raw"
-    # name used in 'examples' and the 'main' project
+    # name used in 'api' and 'apps'
 edition = "2024"
 rust-version = "1.94"
 publish = false
+
+# These sections need to be within the Cargo crate designated as 'ESP_IDF_SYS_ROOT_CRATE'.
+#
+[[package.metadata.esp-idf-sys.extra_components]]
+remote_component = { name = "espressif/esp-zigbee-lib", version = "1.*" }
+
+[[package.metadata.esp-idf-sys.extra_components]]
+remote_component = { name = "espressif/esp-zboss-lib", version = "1.*" }
 
 [dependencies]
 log.workspace = true
 
 esp-idf-sys = { workspace = true, features = [], default-features = false }
-    # Carries ESP-IDF headers, libraries (that binding to 'esp-zigbee-sdk' requires).
-    # Needs to be under '[dependencies]' since it carries libraries that get baked in.
+    # Carries ESP-IDF headers, libraries, and pulls in 'esp-zigbee-lib' headers.
+    # Needs to be under '[dependencies]' since it carries libraries that end up in the product.
 
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #
@@ -94,12 +102,3 @@ esp32c6 = []
 #
 #zb_zed = []     # 'CONFIG_ZB_ZED'   todo is?
 # ...
-
-# Though we envision always having 'defmt' enabled, it's good to provide an option.
-#defmt = ["dep:defmt",
-#    "esp-hal/defmt",
-#    "esp-backtrace/defmt",
-#    #?? "esp-bootloader-esp-idf?/defmt",
-#    "esp-println?/defmt-espflash"
-#]
-

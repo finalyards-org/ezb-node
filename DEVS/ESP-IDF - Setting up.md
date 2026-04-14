@@ -2,7 +2,7 @@
 
 ---
 
-You don't need to install ESP-IDF on your system - the `esp-idf-svc` crate takes care of installing a copy and using it, when necessary.
+You don't need to install ESP-IDF on your system - the `esp-idf-sys` crate takes care of installing a copy and using it, when necessary.
 
 This file is notes by the author. Just in case you need to (e.g. running the C samples).
 
@@ -54,11 +54,7 @@ Installing takes around 4..5GB of disk space.
 
 ## Installation
 
-### Set up `esp-idf` 5.5.3
-
-<!-- tbd.
-As of March 2026, 6.0 is just released. 
--->
+### Set up `esp-idf` 5.5.4
 
 ```
 $ install -d ~/bin
@@ -67,7 +63,7 @@ $ install -d ~/bin
 The author likes placing `esp-idf` under `~/bin`, but that's just a personal preference. Use any path you like, but realize you'll keep the clone around as long as you are using the tool.
 
 ```
-$ git clone --branch v5.5.3 --depth 1 --recursive https://github.com/espressif/esp-idf.git ~/bin/esp-idf
+$ git clone --branch v5.5.4 --depth 1 --recursive --shallow-submodules https://github.com/espressif/esp-idf.git ~/bin/esp-idf
 ```
 
 >Warn: ESP-IDF tag `v5.5` does NOT mean "latest 5.5.x" but 5.5.0. Do not use it.
@@ -119,7 +115,7 @@ This needs to be done *separately* each time you intend to use `idf.py`. It sets
 
 ```
 $ idf.py --version
-ESP-IDF v5.5.3
+ESP-IDF v5.5.4
 ```
 
 
@@ -203,6 +199,45 @@ I (388) phy: libbtbb version: ec2ecba, Mar  3 2025, 16:01:27
 I (398) main_task: Returned from app_main()
 [...]
 ```
+
+
+## Update
+
+You might want to keep multiple clones of the `esp-idf` repo, but if you only (mainly) work with one (as the author does), here's how to upgrade:
+
+**In the `~/bin/esp-idf` folder:**
+
+```
+$ git fetch --depth 1 origin tag v5.5.4
+```
+
+```
+$ git reset --hard v5.5.4
+``` 
+
+```
+$ git submodule update --init --recursive
+```
+
+>This updates the components (e.g. `components/esp_wifi/lib`) to what your checked out version requires.
+
+**Somewhere else (e.g. home):**
+
+```
+$ ~/bin/esp-idf/install.sh
+[...]
+```
+
+```
+$ . ~/bin/esp-idf/export.sh
+```
+
+```
+$ idf.py --version
+ESP-IDF v5.5.4-dirty
+```
+
+>Note: Author does not know why the `-dirty` is there. Do you?
 
 ## Next steps
 

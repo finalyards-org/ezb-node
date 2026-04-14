@@ -5,6 +5,7 @@
 * This might be something we eventually generate, based on the Rust application's needs. It is NOT available via
 * the dependencies.
 */
+// YOU MAY EDIT THIS.
 
 /*
  * Copyright (c) 2021 Espressif Systems (Shanghai) CO LTD
