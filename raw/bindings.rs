@@ -1,4 +1,6 @@
 #![allow(non_camel_case_types)]
+#![allow(unused)]
+    // Disable warnings of unused entries, and imports in 'tmp/bindings_0.rs'.
 
 /*
 * Gathering the bindgen-generated binding like this allows us to attach

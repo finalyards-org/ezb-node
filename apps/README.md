@@ -20,7 +20,6 @@ Builds the:
 - `x` Rust API
 - a "Light bulb" application
 
-
 ### Run
 
 ```

@@ -28,6 +28,18 @@ CONFIG_ZB_ZCZR=y
     # Controller/Router code included (can also bake ZED's with this)
 CONFIG_ZB_RADIO_NATIVE=y
 CONFIG_ZB_GP_ENABLED=n
+    # Note: still requires `zb_zcl_green_power_cluster_handler' stub, but we provide that.
+
+# WiFi
+# Note: This does not matter, KConfig will force it to 'y' (let it be)
+#CONFIG_ESP_WIFI_ENABLED=n
+
+#---
+# NOTE: Entries below cause "unknown" warnings in build output, when the tighter 'ESP_IDF_COMPONENTS' setting
+#       (in '.cargo/config.toml') is applied. This is because components using these entries are then not active,
+#       at all.
+#
+#       The entries are here, in case you'd build with default set of components.
 
 # Bluetooth, BLE
 CONFIG_BT_ENABLED=n
@@ -35,12 +47,26 @@ CONFIG_BT_ENABLED=n
 # OpenThread
 CONFIG_OPENTHREAD_ENABLED=n
 
-# WiFi
-# wasn't able to disable it; red in 'menuconfig'
-#CONFIG_ESP_WIFI_ENABLED=n
-
 # Virtual FS
-CONFIG_VFS_SUPPORT_IO=n
+#
+# Note: There are combinations that cause the following "undefined resources" (fails the link):
+#   <<
+#       trigger_select_for_event
+#       esp_vfs_select_triggered
+#       esp_vfs_select_triggered_isr
+#   <<
+#   - 'CONFIG_VFS_SUPPORT_IO=n' alone, regardless of value of 'CONFIG_VFS_SUPPORT_SELECT'
+#
+#   // CONFIG_VFS_SUPPORT_IO=y
+#   // CONFIG_VFS_SUPPORT_DIR=y
+#   // CONFIG_VFS_SUPPORT_SELECT=y
+#   // CONFIG_VFS_SUPPRESS_SELECT_DEBUG_OUTPUT=y
+#   // # CONFIG_VFS_SELECT_IN_RAM is not set
+#   // CONFIG_VFS_SUPPORT_TERMIOS=y
+#   // CONFIG_VFS_MAX_COUNT=8
+#   // CONFIG_VFS_SEMIHOSTFS_MAX_MOUNT_POINTS=1
+#   // CONFIG_VFS_INITIALIZE_DEV_NULL=y
+#CONFIG_VFS_SUPPORT_IO=n
 
 # MQTT
 CONFIG_MQTT_PROTOCOL_311=n

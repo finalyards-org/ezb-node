@@ -70,6 +70,10 @@ ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
 #   not in this place.
 #ESP_IDF_SDKCONFIG = { value = "sdkconfig", relative = true }
 
+# AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
+ESP_IDF_SDKCONFIG = { value = ".no-such", relative = true }
+
+
 ESP_IDF_SDKCONFIG_DEFAULTS = { value = "sdkconfig.defaults", relative = true }
 
 # MUST point to the subfolder that has '[[package.metadata.esp-idf-sys.extra_components]]' section,
@@ -99,7 +103,7 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
 BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 
 #---
-# Trim down the set of components. This is OPTIONAL, but does reduce the build time.
+# Trim down the set of components (~1050 -> ~910). This is OPTIONAL, but does reduce the build time.
 #
 # List of 'esp-idf-sys' default components:
 #   <<
@@ -107,5 +111,7 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #       $ cat {above} | jq common_component_reqs -C
 #   <<
 #   ..plus some that were figured out, experimentally.
+#
+# fatfs: needed, precise reason unclear
 #
 ESP_IDF_COMPONENTS = "cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;nvs_flash;wear_levelling;fatfs;spiffs;"

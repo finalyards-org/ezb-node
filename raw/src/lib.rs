@@ -4,6 +4,9 @@
 #[path = "../bindings.rs"]
 mod bindings;
 
+#[path = "../stubs.rs"]
+mod stubs;
+
 pub use bindings::{
     ESP_ZB_VER_MAJOR,
     ESP_ZB_VER_MINOR,

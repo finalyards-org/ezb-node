@@ -40,6 +40,7 @@ async fn main(_spawner: Spawner) {
 
     //#later let _ = Peripherals::take()?;
 
+    panic!("here");
     init_nvs()
         .expect("nvs failed");
 
@@ -63,6 +64,11 @@ async fn main(_spawner: Spawner) {
     esp_zb_core_action_handler_register(zb_action_handler);
     esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
     ***/
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn esp_zb_app_signal_handler(sig_type: u32, err_code: i32) {
+    log::info!("Zigbee signal: {} code: {}", sig_type, err_code);   // TEMP
 }
 
 //keep until works in Rust
