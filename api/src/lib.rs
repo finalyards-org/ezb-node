@@ -3,15 +3,11 @@
 
 pub(crate) use esp_zb_raw as raw;
 
-// Next (current) module being worked upon; rename and take next.
-mod _wip;
-pub use _wip::*;
+pub mod node;
 
-mod platform;
-pub use platform::*;
+// Next (current) module being worked upon; rename and take next.
+//mod _wip;
+//pub use _wip::*;
 
 mod version;
 pub use version::*;
-
-pub mod node;
-    // retain the '::node'

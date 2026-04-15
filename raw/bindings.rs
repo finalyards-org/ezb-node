@@ -11,24 +11,25 @@ use core::mem::MaybeUninit;
 
 include!("tmp/bindings_0.rs");
 
-impl Default for esp_zb_uart_config_t {
+impl Default for esp_zb_platform_config_t {
     fn default() -> Self {
-        esp_zb_uart_config_t {
-            port: uart_port_t::UART_NUM_0,
-            rx_pin: gpio_num_t::GPIO_NUM_NC,
-            tx_pin: gpio_num_t::GPIO_NUM_NC,
-            uart_config: uart_config_t::default()
-       }
+        esp_zb_platform_config_t {
+            radio_config: esp_zb_radio_config_t {
+                radio_mode: esp_zb_radio_mode_t::ZB_RADIO_MODE_NATIVE,
+                radio_uart_config: esp_zb_uart_config_t::nada()
+            },
+            host_config: esp_zb_host_config_t::default()
+        }
     }
 }
 
-impl Default for uart_config_t {
-    fn default() -> Self {
+impl esp_zb_uart_config_t {
+    fn nada() -> Self {
+        // Not useful setting the random fields; for the tail two we don't even know how to.
         let un = MaybeUninit::zeroed();
         unsafe{ un.assume_init() }
 
-        // not useful setting the random fields; for the tail two we don't even know how to.
-        #[cfg(false)]
+        /***
         uart_config_t {
             baud_rate: 0,
             data_bits: uart_word_length_t::UART_DATA_8_BITS,
@@ -44,7 +45,6 @@ impl Default for uart_config_t {
                 let un = MaybeUninit::zeroed();
                 unsafe{ un.assume_init() }
             }
-            /***
             __bindgen_anon_1: uart_config_t__bindgen_ty_1 {
                 source_clk: uart_sclk_t::UART_SCLK_DEFAULT
             },
@@ -52,7 +52,21 @@ impl Default for uart_config_t {
                 _bitfield_align_1: [],
                 _bitfield_1: [],
                 __bindgen_padding_0: []
-            }***/
+            }
+        }***/
+    }
+}
+
+//  typedef struct {
+//      esp_zb_host_connection_mode_t   host_connection_mode;   /*!< The host connection mode */
+//      esp_zb_uart_config_t            host_uart_config;       /*!< The uart configuration to host */
+//  } esp_zb_host_config_t;
+//
+impl Default for esp_zb_host_config_t {
+    fn default() -> Self {
+        esp_zb_host_config_t {
+            host_connection_mode: esp_zb_host_connection_mode_t::ZB_HOST_CONNECTION_MODE_NONE,
+            host_uart_config: esp_zb_uart_config_t::nada(),
         }
     }
 }

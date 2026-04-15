@@ -10,6 +10,9 @@ use sys::{
 
 // The logic was suggested by Copilot, to replace C 'nvs_flash_init()'.
 //
+// Note: The behaviour might be a bit different from that of the C demo; come back to this,
+//      eventually. tbd. figure a useful clearing pattern for us; document
+//
 pub fn init_nvs() -> Result<(),crate::Error> {
     unsafe {
         let err = nvs_flash_init();

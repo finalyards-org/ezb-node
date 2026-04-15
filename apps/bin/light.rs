@@ -3,13 +3,6 @@
 *   - "Light bulb" example of 'esp-zigbee-sdk'
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light
 */
-
-use anyhow;
-use esp_zb::{
-    PlatformConfig,
-    Router
-};
-
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
@@ -23,17 +16,21 @@ use esp_zb_examples::{
     set_panic_hook,
 };
 
+use anyhow;
+
+use esp_zb::{
+    node::Router
+};
+
 use hal::peripherals::Peripherals;
 
-const MAX_CHILDREN: usize = 10;             // max number of connected devices
-const INSTALLCODE_POLICY: bool = false;     // install code policy for security
 const HA_COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
 /*
 * The entry point. We get our own FreeRTOS task and don't need to create one.
 */
 #[embassy_executor::main]
-async fn main(_: Spawner) {
+async fn main(_spawner: Spawner) {
     // 'esp-idf-sys' needs it. See https://github.com/esp-rs/esp-idf-template/issues/71
     link_patches();
 
@@ -46,11 +43,10 @@ async fn main(_: Spawner) {
     init_nvs()
         .expect("nvs failed");
 
-    let rcfg = PlatformRadioConfig::NATIVE;
-
     // Initialize Zigbee
     //
-    let router = Router::new(rcfg);
+    let router = Router::new(10)
+        .expect("router could not be created");
 
     router.roll() .await;
 

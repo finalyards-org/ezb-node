@@ -9,7 +9,7 @@ esp-zb-raw = { path = "../raw" }
 
 log.workspace = true
 
-#embassy-futures = { version = "0.1.2" }
+embassy-futures = { version = "0.1.2" }
 embassy-time = { workspace = true, features = ["log"] }
 
 esp-idf-sys = { workspace = true, default-features = false }
@@ -31,7 +31,3 @@ esp32c6 = [
 
 [lints]
 workspace = true
-
-[[example]]
-name = "a"
-required-features = ["esp32c6"]
