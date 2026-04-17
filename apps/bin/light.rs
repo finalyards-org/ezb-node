@@ -6,7 +6,7 @@
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
-    log::EspLogger,
+    log::{init as log_init},
     sys::{self, link_patches},
     hal,
 };
@@ -16,8 +16,7 @@ use esp_zb_examples::{
     set_panic_hook,
 };
 
-use anyhow;
-
+use log::LevelFilter;
 use esp_zb::{
     node::Router
 };
@@ -36,11 +35,10 @@ async fn main(_spawner: Spawner) {
 
     set_panic_hook();
 
-    EspLogger::initialize_default();
+    log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
     //#later let _ = Peripherals::take()?;
 
-    panic!("here");
     init_nvs()
         .expect("nvs failed");
 
@@ -66,6 +64,9 @@ async fn main(_spawner: Spawner) {
     ***/
 }
 
+/*
+* ESP_ZB_COMMON_SIGNAL_CAN_SLEEP
+*/
 #[unsafe(no_mangle)]
 extern "C" fn esp_zb_app_signal_handler(sig_type: u32, err_code: i32) {
     log::info!("Zigbee signal: {} code: {}", sig_type, err_code);   // TEMP

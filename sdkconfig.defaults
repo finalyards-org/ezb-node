@@ -22,6 +22,7 @@ CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 # 1 ms granularity for (FreeRTOS) thread sleeps (10 ms by default).
 CONFIG_FREERTOS_HZ=1000
 
+#---
 # Zigbee
 CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
@@ -30,9 +31,35 @@ CONFIG_ZB_RADIO_NATIVE=y
 CONFIG_ZB_GP_ENABLED=n
     # Note: still requires `zb_zcl_green_power_cluster_handler' stub, but we provide that.
 
+# Partition Table
+# based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
+#
+# These three won't be properly handled by 'esp-idf-sys' (0.37.2). |1| That's fine, as long as we flash with the
+# right 'partitions.csv', things seem to be ok.
+#   |1|: "Custom partitions.csv with relative path is not copied to build folder causing build to fail" (GitHub Issues)
+#       https://github.com/esp-rs/esp-idf-sys/issues/395
+#
+#CONFIG_PARTITION_TABLE_CUSTOM=y
+#CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+#CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x8000
+CONFIG_PARTITION_TABLE_MD5=y
+
+# mbedTLS
+# based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
+#
+CONFIG_MBEDTLS_HARDWARE_AES=n
+CONFIG_MBEDTLS_HARDWARE_MPI=n
+CONFIG_MBEDTLS_HARDWARE_SHA=n
+CONFIG_MBEDTLS_CMAC_C=y
+CONFIG_MBEDTLS_SSL_PROTO_DTLS=y
+CONFIG_MBEDTLS_KEY_EXCHANGE_ECJPAKE=y
+
+CONFIG_MBEDTLS_ECJPAKE_C=y
+
 # WiFi
-# Note: This does not matter, KConfig will force it to 'y' (let it be)
-#CONFIG_ESP_WIFI_ENABLED=n
+# Note: does not take effect, KConfig will force it to 'y'.
+CONFIG_ESP_WIFI_ENABLED=n
 
 #---
 # NOTE: Entries below cause "unknown" warnings in build output, when the tighter 'ESP_IDF_COMPONENTS' setting

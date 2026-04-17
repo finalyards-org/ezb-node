@@ -5,6 +5,10 @@ edition = "2024"
 rust-version = "1.94"
 publish = false
 
+# Inform 'espflash'
+[package.metadata.espflash]
+partition_table = "partitions.csv"
+
 [dependencies]
 esp-zb = { path = "../api" }
 

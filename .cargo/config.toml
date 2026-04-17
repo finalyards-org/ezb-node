@@ -13,7 +13,14 @@ build-std = ["std", "panic_abort"]
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
-runner = "espflash flash --monitor"
+runner = "espflash flash --monitor --partition-table ../partitions.csv"
+    #
+    # Note: You can try to get faster flash speed by:
+    #   '--flash-freq 80mhz' (default is 40MHz); did not cause a speed-up with the author.
+    #   '--flash-mode qio' (default is DIO); did not work for the author.
+    #
+    #   Such settings (if they work for you) can be placed in '.config/espflash/espflash.toml'
+
 rustflags = [
     # "Required to obtain backtraces [on RISC-V only], however it may negatively impact the performance of your application."
     #

@@ -86,17 +86,25 @@ pub trait Node {
     // Ah, the 'async' within trait.
     //
     async fn roll(self) -> ! where Self: Sized {
+        log::debug!("1");
         unsafe {
             esp_zb_start(Self::AUTO_START);     // tbd. C examples have 'false'?  Why?
         }
 
-        #[cfg(true)]
         loop {
             unsafe { esp_zb_stack_main_loop_iteration() };
+
+            // Note: Optimizing what shall be here is not trivial. We would ideally both:
+            //  - process Zigbee events without delay (call e.g. 'yield_now().await' instead of waiting 1 tick)
+            //  - sleep if there's nothing happening
+            //
+            //      Also, we must consider the Zigbee event loop. For NOW, it's safest to just
+            //      always have a small nap. 'esp_zigbee_lib' should be fine. So should Embassy
+            //      async code.
+            //
             Timer::after(Duration::from_ticks(1)).await;
         }
 
-        // An optimization, if we know the idle/busy state of Zigbee library. #later
         #[cfg(false)]
         loop {
             unsafe { esp_zb_stack_main_loop_iteration() };
@@ -104,7 +112,7 @@ pub trait Node {
             // 'yield_now()' consumes 100% CPU, but means there's no gap between Zigbee processing
             // its messages. We fall asleep only once Zigbee is idle.
             //
-            if unsafe { esp_zb_scheduler_can_sleep() } {
+            if unsafe { esp_zb_scheduler_can_sleep() } {    // <-- no such function
                 Timer::after(Duration::from_ticks(1)).await;
             } else {
                 yield_now().await;
