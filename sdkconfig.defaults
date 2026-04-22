@@ -35,15 +35,14 @@ CONFIG_ZB_GP_ENABLED=n
 # based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
 #
 # These three won't be properly handled by 'esp-idf-sys' (0.37.2). |1| That's fine, as long as we flash with the
-# right 'partitions.csv', things seem to be ok.
+# right 'partitions.csv'.
 #   |1|: "Custom partitions.csv with relative path is not copied to build folder causing build to fail" (GitHub Issues)
 #       https://github.com/esp-rs/esp-idf-sys/issues/395
-#
-#CONFIG_PARTITION_TABLE_CUSTOM=y
-#CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
-#CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
-CONFIG_PARTITION_TABLE_OFFSET=0x8000
-CONFIG_PARTITION_TABLE_MD5=y
+#|CONFIG_PARTITION_TABLE_CUSTOM=y
+#|CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+#|CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+#CONFIG_PARTITION_TABLE_OFFSET=0x8000   # default
 
 # mbedTLS
 # based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light

@@ -49,17 +49,39 @@ pub use bindings::{
     gpio_num_t
 };
 
-// Router; main loop
+// Router; main loop; signal hook
 pub use bindings::{
     esp_zb_init,
     esp_zb_cfg_t,
     esp_zb_nwk_device_type_t,
     esp_zb_start,
     esp_zb_cfg_s__bindgen_ty_1,
-    esp_zb_zczr_cfg_t
+    esp_zb_zczr_cfg_t,
+
+    esp_zb_app_signal_t,
+    esp_zb_app_signal_type_t,
+    esp_err_t,
+    esp_zb_app_signal_get_params,
 };
 
 pub use bindings::{
     esp_zb_stack_main_loop_iteration
 };
 
+// signals
+pub use bindings::{
+    esp_zb_zdo_signal_device_annce_params_t,
+    esp_zb_zdo_signal_leave_params_t,
+    esp_zb_bdb_signal_touchlink_nwk_started_params_t,
+    esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
+    esp_zb_nwk_signal_device_associated_params_t,
+    esp_zb_zdo_signal_leave_indication_params_t,
+    //esp_zb_zgp_signal_commissioning_params_t,
+    esp_zb_zdo_signal_can_sleep_params_t,
+    esp_zb_zdo_signal_device_authorized_params_t,
+    esp_zb_zdo_signal_device_update_params_t,
+    esp_zb_zdo_signal_nwk_status_indication_params_t,
+    esp_zb_zdo_device_unavailable_params_t,
+    //esp_zb_zgp_signal_approve_comm_params_t,
+    esp_zb_nwk_leave_type_t,
+};

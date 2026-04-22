@@ -9,5 +9,8 @@ pub mod node;
 //mod _wip;
 //pub use _wip::*;
 
+mod signal;
+pub use signal::*;
+
 mod version;
 pub use version::*;

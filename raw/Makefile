@@ -94,6 +94,12 @@ manual: ${_BIND_RS}
 #
 # Generate the 'binding*.rs’. MANUAL CHANGES TO IT WILL BE LOST; modify this instead.
 #
+# Note:
+#		- Cannot use '--opaque-type' too broadly, since the methods are defined within those (not the '_t' aliases)
+#			<<
+#				--opaque-type ".*_s" \
+#			<<
+#
 ${_BIND_RS}: wrap.h ${_ESP_ZIGBEE_LIB_INCLUDE}/*.h ${_SDKCONFIG_H} Makefile ./zb_vendor.h ./zb_vendor_default.h \
 	| bindgen
 	bindgen $< \
@@ -113,7 +119,7 @@ ${_BIND_RS}: wrap.h ${_ESP_ZIGBEE_LIB_INCLUDE}/*.h ${_SDKCONFIG_H} Makefile ./zb
 			--allowlist-function 'esp_zb_cluster_.*' \
 			\
 			--allowlist-type 'esp_zb_attribute_.*' \
-	    \
+			\
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \

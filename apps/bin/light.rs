@@ -3,6 +3,7 @@
 *   - "Light bulb" example of 'esp-zigbee-sdk'
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light
 */
+use std::time::Duration;
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
@@ -18,7 +19,8 @@ use esp_zb_examples::{
 
 use log::LevelFilter;
 use esp_zb::{
-    node::Router
+    node::Router,
+    Signal
 };
 
 use hal::peripherals::Peripherals;
@@ -39,13 +41,14 @@ async fn main(_spawner: Spawner) {
 
     //#later let _ = Peripherals::take()?;
 
-    init_nvs()
-        .expect("nvs failed");
+    init_nvs()?;
 
     // Initialize Zigbee
     //
-    let router = Router::new(10)
-        .expect("router could not be created");
+    let router = Router::new(10)?;
+
+    router.on_app_signal(onAppSignal);
+        // tbd. consider placing as a param of '::new()', or a piped call to it?
 
     router.roll() .await;
 
@@ -65,11 +68,66 @@ async fn main(_spawner: Spawner) {
 }
 
 /*
-* ESP_ZB_COMMON_SIGNAL_CAN_SLEEP
+* tbd. The library could provide higher level helpers for this.
+*       Perhaps other '.onXXX' so that resorting to this (as the C 'light' example does)
+*       becomes an optional thing?
 */
-#[unsafe(no_mangle)]
-extern "C" fn esp_zb_app_signal_handler(sig_type: u32, err_code: i32) {
-    log::info!("Zigbee signal: {} code: {}", sig_type, err_code);   // TEMP
+fn onAppSignal(rtr: Router, sig: Signal) {
+    use Signal::*;
+
+    match sig {
+        Signal::ZdoSignalSkipStartup => {
+            log::info!("Initialize Zigbee stack");
+
+            rtr.bdb_start_top_level_commissioning(Router::BDB_MODE_INITIALIZATION);
+        },
+
+        BdbSignalDeviceFirstStart{ success: true } | BdbSignalDeviceReboot{ success: true } => {
+            // Could do delayed hw initialization, here
+
+            let tmp = esp_zb_bdb_is_factory_new();
+            log::info!("Device started up in{{ if tmp "" else " non" }} factory-reset mode");
+            if tmp {
+                log::info!("Start network steering");
+                rtr.bdb_start_top_level_commissioning(Router::BDB_MODE_NETWORK_STEERING);
+            } else {
+                log::info!("Device rebooted");
+            }
+        },
+        BdbSignalDeviceFirstStart{ success: false } | BdbSignalDeviceReboot{ success: false } => {
+            log::warn!("{} failed, retrying", sig);
+
+            rtr.schedule(1000.ms, |node| {
+                node.bdb_start_top_level_commissioning_cb(Router::BDB_MODE_INITIALIZATION);
+            });
+        },
+
+        BdbSignalSteering{ success: true } => {
+            //esp_zb_ieee_addr_t extended_pan_id;
+            //esp_zb_get_extended_pan_id(extended_pan_id);
+
+            log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {:0x4x}, Channel:{}, Short Address: {:0x4x}",
+                sig.extended_pan_id,
+                     rtr.get_pan_id(), rtr.get_current_channel(), rtr.get_short_address());
+        },
+        BdbSignalSteering{ success: false } => {
+            log::info!("Network steering was not successful: {}", sig);
+            rtr.schedule( 1000.ms, |node| {
+                node.bdb_start_top_level_commissioning_cb(Router::BDB_MODE_NETWORK_STEERING);
+            });
+        }
+
+        NwkSignalPermitJoinStatus{ isOpened: true } => {
+            if (*(uint8_t *)esp_zb_app_signal_get_params(p_sg_p)) {
+                ESP_LOGI(TAG, "Network(0x%04hx) is open for %d seconds", esp_zb_get_pan_id(), *(uint8_t *)esp_zb_app_signal_get_params(p_sg_p));
+            } else {
+                ESP_LOGW(TAG, "Network(0x%04hx) closed, devices joining not allowed.", esp_zb_get_pan_id());
+            }
+        },
+        _ => {
+            log::debug!("ZDO signal: {sig}");
+        },
+    }
 }
 
 //keep until works in Rust

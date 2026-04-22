@@ -10,6 +10,8 @@
 */
 use embassy_time::{Timer, Duration};
 
+use log;
+
 use esp_zb_raw::{
     esp_zb_cfg_t,
     esp_zb_nwk_device_type_t,
@@ -17,8 +19,14 @@ use esp_zb_raw::{
     esp_zb_zczr_cfg_t,
     esp_zb_init,
     esp_zb_start,
-    esp_zb_stack_main_loop_iteration
+    esp_zb_stack_main_loop_iteration,
+    esp_zb_app_signal_t,
+    //esp_zb_app_signal_type_t,
 };
+
+use esp_idf_sys::EspError;
+
+use crate::Signal;
 
 #[allow(non_upper_case_globals)]
 static mut G_nwk_cfg: Option<esp_zb_cfg_t> = None;
@@ -170,4 +178,42 @@ impl Router {
 
 impl Node for Router {
     // enables '.roll()'
+}
+
+/*
+* Handler for Zigbee APP signals.
+*/
+//  typedef struct esp_zb_app_signal_s {
+//      uint32_t *p_app_signal;   /*!< Application pointer signal type, refer to esp_zb_app_signal_type_t */
+//      esp_err_t esp_err_status; /*!< The error status of the each signal event, refer to esp_err_t */
+//  } esp_zb_app_signal_t;
+//
+// NOTE: In addition to pointing to the signal type, 'p_app_signal' can be given to 'esp_zb_app_signal_get_params()',
+//      in order to fetch more, signal specific, information. We bake those into a single value
+//      Rust enum, below, before providing to the application.
+//
+#[unsafe(no_mangle)]
+extern "C" fn esp_zb_app_signal_handler(ss: *mut esp_zb_app_signal_t) {
+    let ss: *const esp_zb_app_signal_t = ss;  // un-mut
+
+    let esp_zb_app_signal_t{ p_app_signal, esp_err_status: err_st } = unsafe { *ss };
+
+    Signal::from(p_app_signal as *const _, err_st)
+        .map(|sig| {
+            log::info!("Received: {}", sig);
+        })
+        .unwrap_or_else(|| {
+            let sig_type = unsafe { *p_app_signal };
+
+            // 'EspError' is 'Display': we can use it to give a wording for the error code.
+            //  Note: Handling became a bit elaborate: 'Option<EspError>' is not 'Display'.
+            //
+            let ee = EspError::from(err_st);
+            let display_ee: &dyn core::fmt::Display = match ee {
+                Some(ref e) => e,
+                None => &"ESP_OK",
+            };
+
+            log::error!("Unexpected app signal: {}, {}", sig_type, display_ee);
+        });
 }

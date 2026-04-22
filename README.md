@@ -268,3 +268,5 @@ $ rm -rf ~/.espressif
 - [Espressif IoT Development Framework](https://github.com/espressif/esp-idf) (GitHub)
 
 	The C API that `esp-zigbee-sdk` builds upon.
+
+- [Partition Tables](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32c6/api-guides/partition-tables.html) (ESP-IDF API Guides)
