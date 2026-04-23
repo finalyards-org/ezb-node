@@ -30,6 +30,8 @@ embassy-time    = { workspace = true, features = ["generic-queue-8"] }
 
 # Note: No need for 'embassy-sync' or 'critical-section' because we use Embassy only on a single (FreeRTOS) thread.
 
+time = { version = "0.3.47" }
+
 [build-dependencies]
 embuild.workspace = true
 

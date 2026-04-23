@@ -518,7 +518,7 @@ pub enum Signal {
     //  - Pointer to 'uint8_t', indicating:
     //      0: network is closed
     //      >0: network is open for {this number of} seconds
-    NwkSignalPermitJoinStatus(NwkOpened),
+    NwkSignalPermitJoinStatus{ isOpened: Option<IsOpenedForSecs> },
 
     /**
     * Overview:
@@ -899,7 +899,7 @@ impl Signal {
                 //  '*uint8_t', "indicating the network status (open or closed)"
                 if_ok!(|| {
                     let x = get_param::<u8>(p_app_signal);
-                    Self::NwkSignalPermitJoinStatus( NwkOpened::from_raw(x) )
+                    Self::NwkSignalPermitJoinStatus{ isOpened: IsOpenedForSecs::from_raw(x) }
                 })
             },
             ESP_ZB_BDB_SIGNAL_STEERING_CANCELLED => { // 0x37
@@ -1021,16 +1021,13 @@ impl fmt::LowerHex for IeeeAddr {
 // Parameter for 'NwkSignalPermitJoinStatus'
 //
 #[derive(Debug)]
-pub enum NwkOpened {
-    Closed,
-    OpenedForSecs(u8)
-}
+pub struct IsOpenedForSecs(u8);
 
-impl NwkOpened {
-    fn from_raw(x: u8) -> Self {
+impl IsOpenedForSecs {
+    fn from_raw(x: u8) -> Option<Self> {
         match x {
-            0 => Self::Closed,
-            _ => Self::OpenedForSecs(x)
+            0 => None,
+            _ => Some( IsOpenedForSecs(x) )
         }
     }
 }

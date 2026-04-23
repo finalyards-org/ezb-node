@@ -19,11 +19,14 @@ use esp_zb_examples::{
 
 use log::LevelFilter;
 use esp_zb::{
-    node::Router,
-    Signal
+    router::prelude::*,
+    Signal,
+    bdb_commissioning_mode
 };
 
 use hal::peripherals::Peripherals;
+
+use time::ext::NumericalDuration;   // allows '1000 .milliseconds()'
 
 const HA_COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
@@ -72,21 +75,21 @@ async fn main(_spawner: Spawner) {
 *       Perhaps other '.onXXX' so that resorting to this (as the C 'light' example does)
 *       becomes an optional thing?
 */
-fn onAppSignal(rtr: Router, sig: Signal) {
+fn onAppSignal(rtr: &Router, sig: Signal) {
     use Signal::*;
 
     match sig {
-        Signal::ZdoSignalSkipStartup => {
+        ZdoSignalSkipStartup => {
             log::info!("Initialize Zigbee stack");
 
-            rtr.bdb_start_top_level_commissioning(Router::BDB_MODE_INITIALIZATION);
+            rtr.start_commissioning(bdb_commissioning_mode_t::BDB_MODE_INITIALIZATION);
         },
 
         BdbSignalDeviceFirstStart{ success: true } | BdbSignalDeviceReboot{ success: true } => {
             // Could do delayed hw initialization, here
 
             let tmp = esp_zb_bdb_is_factory_new();
-            log::info!("Device started up in{{ if tmp "" else " non" }} factory-reset mode");
+            log::info!("Device started up in {}factory-reset mode",  if tmp {""} else {"non"});
             if tmp {
                 log::info!("Start network steering");
                 rtr.bdb_start_top_level_commissioning(Router::BDB_MODE_NETWORK_STEERING);
@@ -97,32 +100,32 @@ fn onAppSignal(rtr: Router, sig: Signal) {
         BdbSignalDeviceFirstStart{ success: false } | BdbSignalDeviceReboot{ success: false } => {
             log::warn!("{} failed, retrying", sig);
 
-            rtr.schedule(1000.ms, |node| {
+            rtr.schedule(1000 .milliseconds(), |node| {
                 node.bdb_start_top_level_commissioning_cb(Router::BDB_MODE_INITIALIZATION);
             });
         },
 
         BdbSignalSteering{ success: true } => {
-            //esp_zb_ieee_addr_t extended_pan_id;
-            //esp_zb_get_extended_pan_id(extended_pan_id);
-
-            log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {:0x4x}, Channel:{}, Short Address: {:0x4x}",
-                sig.extended_pan_id,
+            log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:0x4x}",
+                sig.get_extended_pan_id(),
                      rtr.get_pan_id(), rtr.get_current_channel(), rtr.get_short_address());
         },
         BdbSignalSteering{ success: false } => {
             log::info!("Network steering was not successful: {}", sig);
-            rtr.schedule( 1000.ms, |node| {
+            rtr.schedule( 1000 .milliseconds(), |node| {
                 node.bdb_start_top_level_commissioning_cb(Router::BDB_MODE_NETWORK_STEERING);
             });
         }
 
-        NwkSignalPermitJoinStatus{ isOpened: true } => {
-            if (*(uint8_t *)esp_zb_app_signal_get_params(p_sg_p)) {
-                ESP_LOGI(TAG, "Network(0x%04hx) is open for %d seconds", esp_zb_get_pan_id(), *(uint8_t *)esp_zb_app_signal_get_params(p_sg_p));
-            } else {
-                ESP_LOGW(TAG, "Network(0x%04hx) closed, devices joining not allowed.", esp_zb_get_pan_id());
-            }
+        NwkSignalPermitJoinStatus{ isOpened } => {
+            let pan_id = rtr.get_pan_id();
+
+            match isOpened {
+                Some(secs) =>
+                    log::info!("Network{} is open for {} seconds", pan_id, secs),
+                None =>
+                    log::info!("Network{} closed, devices joining not allowed.", pan_id)
+            };
         },
         _ => {
             log::debug!("ZDO signal: {sig}");

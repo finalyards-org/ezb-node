@@ -1,9 +1,13 @@
 /*
 * A Router, Controller and/or EndDevice.
 *
+* Node type specific methods and constants are defined each in their own source file.
+* General (all nodes) are under 'Node' trait.
+*
 * Design:
-*   The concept is implemented as a global in C 'esp_zigbee_sdk'. We wrap them in a more object-
-*   oriented way.
+*   The C API implements all these as _global_ functions and constants. We are more specific,
+*   which should help e.g. in IDE auto-completion (and generally not using weird stuff when it
+*   does not make sense!).
 *
 * Note:
 *   C code supports both native and RCP (radio co-processor) implementations. We only native.
@@ -14,19 +18,23 @@ use log;
 
 use esp_zb_raw::{
     esp_zb_cfg_t,
-    esp_zb_nwk_device_type_t,
-    esp_zb_cfg_s__bindgen_ty_1,
-    esp_zb_zczr_cfg_t,
     esp_zb_init,
     esp_zb_start,
     esp_zb_stack_main_loop_iteration,
     esp_zb_app_signal_t,
-    //esp_zb_app_signal_type_t,
+    esp_zb_get_pan_id,
+    esp_zb_get_current_channel,
+    esp_zb_bdb_start_top_level_commissioning,
+    esp_zb_bdb_commissioning_mode_t,
+    esp_zb_get_extended_pan_id,
 };
 
 use esp_idf_sys::EspError;
 
-use crate::Signal;
+use crate::{IeeeAddr, Signal};
+
+mod router;
+pub use router::Router;
 
 #[allow(non_upper_case_globals)]
 static mut G_nwk_cfg: Option<esp_zb_cfg_t> = None;
@@ -127,57 +135,62 @@ pub trait Node {
             }
         }
     }
-}
 
-/**
-* Zigbee router.
-*/
-pub struct Router{
-    _private: ()    // prevent creation from outside (even if we don't store the state)
-}
+    /**
+    * Get the Zigbee network PAN ID.
+    */
+    fn get_pan_id(&self) -> u16 {
+        unsafe {
+            esp_zb_get_pan_id()
+        }
+    }
 
-impl Router {
-    pub fn new(max_children: u8) -> Result<Self, &'static str> {
+    /**
+    * Get extended PAN ID.
+    */
+    fn get_extended_pan_id(&self) -> IeeeAddr {
+        let mut buf: [u8;8] = [0;_];
+        unsafe {
+            esp_zb_get_extended_pan_id(buf.as_mut_ptr());
+        }
+        IeeeAddr::from(buf)
+    }
 
-        // tbd. For INITIAL DEMOS, have this as 'false' (as was in C example)
-        //      - move to 'true' (even for demos); heading for the secure pairing time
-        //
-        const INSTALLCODE_NOT_YET: bool = false;
+    /**
+    * Get the currently used channel.
+    */
+    fn get_current_channel(&self) -> u8 {
+        unsafe {
+            esp_zb_get_current_channel()
+        }
+    }
 
-        //typedef struct esp_zb_cfg_s {
-        //    esp_zb_nwk_device_type_t esp_zb_role; /*!< The nwk device type */
-        //    bool install_code_policy;             /*!< Allow install code security policy or not */
-        //    union {
-        //        esp_zb_zczr_cfg_t zczr_cfg; /*!< The Zigbee zc/zr device configuration */
-        //        esp_zb_zed_cfg_t zed_cfg;   /*!< The Zigbee zed device configuration */
-        //    } nwk_cfg;                      /*!< Union of the network configuration */
-        //} esp_zb_cfg_t;
-        //
-        //typedef struct {
-        //    uint8_t max_children; /*!< Max number of the children */
-        //} esp_zb_zczr_cfg_t;
-        //
-        let tmp = esp_zb_cfg_t {
-            esp_zb_role: esp_zb_nwk_device_type_t::ESP_ZB_DEVICE_TYPE_ROUTER,
-            install_code_policy: INSTALLCODE_NOT_YET,
-            nwk_cfg: esp_zb_cfg_s__bindgen_ty_1 {
-                zczr_cfg: esp_zb_zczr_cfg_t {
-                    max_children
-                }
-            }
+    /**
+    * Start commissioning.
+    *
+    * This function is intended to be a lower level, common tool. Applications should likely use
+    * node type -specific helper methods (and not directly the modes).
+    *
+    * Note: Some of the modes apply only to certain node types (NETWORK_FORMATION only to Coordinator
+    *       role).
+    */
+    fn start_commissioning(&self, mode: u8) -> Option<EspError> {
+        let err= unsafe {
+            esp_zb_bdb_start_top_level_commissioning(mode)
         };
-        <Self as Node>::take_stack(tmp)?;
-
-        Ok( Self{ _private: () } )
+        EspError::from(err) // provides 'Option'
     }
 
-    pub async fn roll(self) -> ! {
-        <Self as Node>::roll(self) .await
+    /**
+    * Coordinator/Router: Open a network for others to join.
+    * EndDevice: Join an existing network.
+    */
+    // tbd. revise the docs --^
+    fn join_network(&self) {
+        self.start_commissioning(esp_zb_bdb_commissioning_mode_t::ESP_ZB_BDB_MODE_NETWORK_STEERING as u8);
+            // tbd. 'esp_zb_bdb_commissioning_mode_t' should not be an enum - rather u8 values; used as mask.
+            //      revise the bindgen settings for it?
     }
-}
-
-impl Node for Router {
-    // enables '.roll()'
 }
 
 /*
@@ -217,3 +230,4 @@ extern "C" fn esp_zb_app_signal_handler(ss: *mut esp_zb_app_signal_t) {
             log::error!("Unexpected app signal: {}, {}", sig_type, display_ee);
         });
 }
+
