@@ -1,3 +1,4 @@
+# needed for building 'riscv32imac-esp-espidf' core
 [toolchain]
 channel = "nightly"
 components = ["rust-src"]

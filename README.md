@@ -8,7 +8,21 @@ This repo aims to provide the possibility to create, in Rust, for ESP32 MCUs:
 - Zigbee router
 - Zigbee custom end device
 
-Wifi ([`esp-radio`](https://github.com/esp-rs/esp-hal/tree/main/esp-radio)) and BLE ([`trouBLE`](https://github.com/embassy-rs/trouble)) are already Rust friendly comms platforms.
+Wifi ([`esp-radio`](https://github.com/esp-rs/esp-hal/tree/main/esp-radio)) and BLE ([`trouBLE`](https://github.com/embassy-rs/trouble)) are already Rust friendly comms platforms, but for Zigbee there does not seem to be a working solution.
+
+### Focus
+
+This repo aims at *forward looking* development. This means:
+
+- using latest underlying versions of libraries (yes, we know `esp-zigbee-lib` 2.0 is out)
+- strong interest in Zigbee 4.0
+- low interest in legacy
+
+Likely *only some ZCL profiles* will be supported. <!--tbd. list here-->
+
+### Value
+
+With Rust, we can make a whole lot better APIs than with C. Less code. Better IDE support.
 
 
 ## About ESP-IDF

@@ -22,14 +22,19 @@ CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 # 1 ms granularity for (FreeRTOS) thread sleeps (10 ms by default).
 CONFIG_FREERTOS_HZ=1000
 
+# NOTE! In ESP-IDF use of Kconfig files, DISABLED LINES ARE USUALLY COMMENTED OUT, NOT SET TO '=n'. This seems to be
+#   "so that C #ifdef can be used for seeing which features are in use" (video |here|).
+#
+#   We could go for that?
+#       |here| (around 4:20): "ESP32 - Kconfig with ESP-IDF Tutorial" -> https://www.youtube.com/watch?v=KsrDYfQ9geU
+
 #---
 # Zigbee
 CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
     # Controller/Router code included (can also bake ZED's with this)
 CONFIG_ZB_RADIO_NATIVE=y
-CONFIG_ZB_GP_ENABLED=n
-    # Note: still requires `zb_zcl_green_power_cluster_handler' stub, but we provide that.
+#CONFIG_ZB_GP_ENABLED=y
 
 # Partition Table
 # based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
@@ -47,9 +52,9 @@ CONFIG_ZB_GP_ENABLED=n
 # mbedTLS
 # based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
 #
-CONFIG_MBEDTLS_HARDWARE_AES=n
-CONFIG_MBEDTLS_HARDWARE_MPI=n
-CONFIG_MBEDTLS_HARDWARE_SHA=n
+#CONFIG_MBEDTLS_HARDWARE_AES=y
+#CONFIG_MBEDTLS_HARDWARE_MPI=y
+#CONFIG_MBEDTLS_HARDWARE_SHA=y
 CONFIG_MBEDTLS_CMAC_C=y
 CONFIG_MBEDTLS_SSL_PROTO_DTLS=y
 CONFIG_MBEDTLS_KEY_EXCHANGE_ECJPAKE=y
@@ -57,8 +62,8 @@ CONFIG_MBEDTLS_KEY_EXCHANGE_ECJPAKE=y
 CONFIG_MBEDTLS_ECJPAKE_C=y
 
 # WiFi
-# Note: does not take effect, KConfig will force it to 'y'.
-CONFIG_ESP_WIFI_ENABLED=n
+# Note: something forces it to 'y'.
+#CONFIG_ESP_WIFI_ENABLED=y
 
 #---
 # NOTE: Entries below cause "unknown" warnings in build output, when the tighter 'ESP_IDF_COMPONENTS' setting
@@ -68,21 +73,14 @@ CONFIG_ESP_WIFI_ENABLED=n
 #       The entries are here, in case you'd build with default set of components.
 
 # Bluetooth, BLE
-CONFIG_BT_ENABLED=n
+#CONFIG_BT_ENABLED=y
 
 # OpenThread
-CONFIG_OPENTHREAD_ENABLED=n
+#CONFIG_OPENTHREAD_ENABLED=y
 
 # Virtual FS
 #
-# Note: There are combinations that cause the following "undefined resources" (fails the link):
-#   <<
-#       trigger_select_for_event
-#       esp_vfs_select_triggered
-#       esp_vfs_select_triggered_isr
-#   <<
-#   - 'CONFIG_VFS_SUPPORT_IO=n' alone, regardless of value of 'CONFIG_VFS_SUPPORT_SELECT'
-#
+# We don't.. use virtual FS.
 #   // CONFIG_VFS_SUPPORT_IO=y
 #   // CONFIG_VFS_SUPPORT_DIR=y
 #   // CONFIG_VFS_SUPPORT_SELECT=y
@@ -92,8 +90,8 @@ CONFIG_OPENTHREAD_ENABLED=n
 #   // CONFIG_VFS_MAX_COUNT=8
 #   // CONFIG_VFS_SEMIHOSTFS_MAX_MOUNT_POINTS=1
 #   // CONFIG_VFS_INITIALIZE_DEV_NULL=y
-#CONFIG_VFS_SUPPORT_IO=n
+#CONFIG_VFS_SUPPORT_IO=y
 
 # MQTT
-CONFIG_MQTT_PROTOCOL_311=n
-CONFIG_MQTT_PROTOCOL_5=n
+#CONFIG_MQTT_PROTOCOL_311=y
+#CONFIG_MQTT_PROTOCOL_5=y

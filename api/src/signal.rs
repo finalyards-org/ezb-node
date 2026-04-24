@@ -1021,7 +1021,7 @@ impl fmt::LowerHex for IeeeAddr {
 // Parameter for 'NwkSignalPermitJoinStatus'
 //
 #[derive(Debug)]
-pub struct IsOpenedForSecs(u8);
+pub struct IsOpenedForSecs(pub u8);
 
 impl IsOpenedForSecs {
     fn from_raw(x: u8) -> Option<Self> {

@@ -15,6 +15,9 @@ pub use signal::*;
 mod version;
 pub use version::*;
 
+mod error;
+pub use error::Error;
+
 // We'll expose these _for now_ but the idea is 'raw' should not (need to) be visible in the API.
 pub use raw::{
     esp_zb_bdb_commissioning_mode_t as bdb_commissioning_mode,

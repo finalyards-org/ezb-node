@@ -14,6 +14,7 @@
 */
 use embassy_time::{Timer, Duration};
 
+use bitflags::bitflags;
 use log;
 
 use esp_zb_raw::{
@@ -31,7 +32,7 @@ use esp_zb_raw::{
 
 use esp_idf_sys::EspError;
 
-use crate::{IeeeAddr, Signal};
+use crate::{Error, IeeeAddr, Signal};
 
 mod router;
 pub use router::Router;
@@ -45,7 +46,7 @@ pub trait Node {
     /**
     * Take ownership of the Zigbee C stack. May only be called once.
     */
-    fn take_stack(nwk_cfg: esp_zb_cfg_t) -> Result<(),&'static str> {
+    fn take_stack(nwk_cfg: esp_zb_cfg_t) -> Result<(),crate::Error> {
 
         // If 'G_nwk_cfg' already used, fail.
         // Note: This does not need to be atomic, since all access happens within the same
@@ -60,7 +61,7 @@ pub trait Node {
         #[allow(static_mut_refs)]
         let ptr = unsafe {
             if G_nwk_cfg.is_some() {
-                return Err("Zigbee already in use");
+                return Err(Error::AlreadyInUse);
             }
             G_nwk_cfg.insert(nwk_cfg)  // eats 'nwk_cfg'
         };
@@ -173,25 +174,54 @@ pub trait Node {
     *
     * Note: Some of the modes apply only to certain node types (NETWORK_FORMATION only to Coordinator
     *       role).
+    *
+    * Note: Modes are bit patterns.
     */
-    fn start_commissioning(&self, mode: u8) -> Option<EspError> {
+    fn start_commissioning(&self, mask: CommissioningModesMask) -> Option<EspError> {
         let err= unsafe {
-            esp_zb_bdb_start_top_level_commissioning(mode)
+            esp_zb_bdb_start_top_level_commissioning(mask.bits())
         };
         EspError::from(err) // provides 'Option'
     }
 
+    /***R
     /**
     * Coordinator/Router: Open a network for others to join.
     * EndDevice: Join an existing network.
     */
     // tbd. revise the docs --^
     fn join_network(&self) {
-        self.start_commissioning(esp_zb_bdb_commissioning_mode_t::ESP_ZB_BDB_MODE_NETWORK_STEERING as u8);
+        self.start_commissioning(CommissioningMode::NETWORK_STEERING);
             // tbd. 'esp_zb_bdb_commissioning_mode_t' should not be an enum - rather u8 values; used as mask.
             //      revise the bindgen settings for it?
+    }***/
+}
+
+type BdbMode = esp_zb_bdb_commissioning_mode_t;
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct CommissioningModesMask: u8 {
+        // 0 should ideally not be used as 'bitflags' (see bitflags docs); use '::empty()' instead.
+        //const INITIALIZATION = ESP_ZB_BDB_MODE_INITIALIZATION; // 0
+
+        #[cfg(feature = "touchlink")]
+        const TOUCHLINK = BdbMode::ESP_ZB_BDB_MODE_TOUCHLINK.0 as u8; // 1
+        const NETWORK_STEERING = BdbMode::ESP_ZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 2
+        #[cfg(feature = "controller")]
+        const NETWORK_FORMATION = BdbMode::ESP_ZB_BDB_MODE_NETWORK_FORMATION.0 as u8; // 4
+        #[cfg(feature = "touchlink")]
+        const TOUCHLINK_TARGET = BdbMode::ESP_ZB_BDB_MODE_TOUCHLINK_TARGET.0 as u8; // 64
+
+        // Declare all bits as "known". Recommended for 'bitflags', when working with C library APIs.
+        const _ = !0;
     }
 }
+
+/****R impl CommissioningMode {
+    fn empty() -> Self {
+        CommissioningMode::
+    }
+}****/
 
 /*
 * Handler for Zigbee APP signals.

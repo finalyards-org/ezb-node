@@ -52,5 +52,5 @@ required-features = ["esp32c6"]
 
 [[bin]]
 name = "light"
-path = "bin/light.rs"
+path = "bin/light/main.rs"
 required-features = ["esp32c6"]

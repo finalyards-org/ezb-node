@@ -28,7 +28,8 @@ _ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
 #_SDKCONFIG:=${DEP_ESP_IDF_ROOT}/sdkconfig
 	# ^-- good for checking what config got generated [DEBUG]
 _SDKCONFIG_H:=${DEP_ESP_IDF_ROOT}/build/config/sdkconfig.h
-_ESP_ZIGBEE_LIB_INCLUDE:=${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include
+_ESP_ZIGBEE_LIB_INCLUDE:=${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include \
+	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zboss-lib/include
 
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
 # section that we need.
@@ -43,21 +44,33 @@ _SYSROOT:=$(realpath ${_RISCV_BIN_PATH}/..)
 #_BIND_RS:=${OUT_DIR}/bindings.rs
 _BIND_RS:=tmp/bindings_0.rs
 
+# EDITING NOTE:
+#		Keep indentations below _with spaces_ (no tabs)!
+#
 ifeq (${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH},)
-	$(error Missing 'DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH' from '.BUILD_ENV')
+  $(error Missing 'DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH' from '.BUILD_ENV')
 endif
 ifeq (${DEP_ESP_IDF_ROOT},)
-	$(error Missing 'DEP_ESP_IDF_ROOT' from '.BUILD_ENV')
+  $(error Missing 'DEP_ESP_IDF_ROOT' from '.BUILD_ENV')
 endif
 ifeq (${DEP_ESP_IDF_EMBUILD_ENV_PATH},)
-	$(error Missing 'DEP_ESP_IDF_EMBUILD_ENV_PATH' from '.BUILD_ENV')
+  $(error Missing 'DEP_ESP_IDF_EMBUILD_ENV_PATH' from '.BUILD_ENV')
 endif
 ifeq (${OUT_DIR},)
-	$(error Missing 'OUT_DIR' from '.BUILD_ENV')
+  $(error Missing 'OUT_DIR' from '.BUILD_ENV')
 endif
-ifeq ($(wildcard $(_ESP_ZIGBEE_LIB_INCLUDE)/*),)
-	$(error No files within '${_ESP_ZIGBEE_LIB_INCLUDE}')
+
+# This happens if ESP-IDF does not pick up the definitions that we need 'esp-zigbee-lib'
+ifeq ($(wildcard $(DEP_ESP_IDF_ROOT)/managed_components),)
+  $(error No 'managed_components' pulled by Rust build)
 endif
+
+# Check both paths within the var, separately.
+$(foreach p,$(_ESP_ZIGBEE_LIB_INCLUDE),$(if $(wildcard $(p)/*),,$(error No files within '$(p)')))
+
+#Rifeq ($(wildcard $(word 1, $(_ESP_ZIGBEE_LIB_INCLUDE))/*),)
+#R  $(error No files within '$(_ESP_ZIGBEE_LIB_INCLUDE)')
+#Rendif
 
 _TARGET:=${MCU}
 
@@ -100,7 +113,7 @@ manual: ${_BIND_RS}
 #				--opaque-type ".*_s" \
 #			<<
 #
-${_BIND_RS}: wrap.h ${_ESP_ZIGBEE_LIB_INCLUDE}/*.h ${_SDKCONFIG_H} Makefile ./zb_vendor.h ./zb_vendor_default.h \
+${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile ./zb_vendor.h ./zb_vendor_default.h \
 	| bindgen
 	bindgen $< \
 	    --allowlist-file wrap.h \
@@ -120,13 +133,14 @@ ${_BIND_RS}: wrap.h ${_ESP_ZIGBEE_LIB_INCLUDE}/*.h ${_SDKCONFIG_H} Makefile ./zb
 			\
 			--allowlist-type 'esp_zb_attribute_.*' \
 			\
+			--bitfield-enum 'esp_zb_bdb_commissioning_mode_t' \
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\
-	  -I. -I${_ESP_ZIGBEE_LIB_INCLUDE} -I${_TMP} -Ifake \
+	  -I. -I$(firstword ${_ESP_ZIGBEE_LIB_INCLUDE}) -I$(lastword ${_ESP_ZIGBEE_LIB_INCLUDE}) -I${_TMP} -Ifake \
 		-I $(dir ${_SDKCONFIG_H}) \
 		-I ${_SYSROOT}/riscv32-esp-elf/include \
 		-I ${_ESP_IDF_PATH}/components/esp_common/include \

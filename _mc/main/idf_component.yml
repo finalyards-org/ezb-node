@@ -3,7 +3,7 @@
 # Causes 'menuconfig' to activate the same external components as in Rust build.
 #
 # NOTE:
-#   Keep this aligned with '../raw/Cargo.toml':
+#   Keep this aligned with '{project folder}/raw/Cargo.toml':
 #   <<
 #     [[package.metadata.esp-idf-sys.extra_components]]
 #     remote_component = { name = "espressif/esp-zigbee-lib", version = "1.*" }

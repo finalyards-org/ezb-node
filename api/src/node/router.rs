@@ -10,18 +10,27 @@ use esp_zb_raw::{
     esp_zb_cfg_s__bindgen_ty_1,
     esp_zb_zczr_cfg_t,
 };
-
-use super::Node;
+use crate::Signal;
+use crate::node::Node;
 
 /**
 * Zigbee router.
+*
+* Example:
+*   ```
+*   struct MyRouter [...];
+*   impl Router for MyRouter {
+*       type Error = ...;
+*       fn onAppSignal(&self, sig: Signal) {
+*           ...
+*           }
+*   }
+*   ```
 */
-pub struct Router{
-    _private: ()    // prevent creation from outside (even if we don't store the state)
-}
+pub trait Router where Self: Node {
+    type Error;
 
-impl Router {
-    pub fn new(max_children: u8) -> Result<Self, &'static str> {
+    fn init(max_children: u8) -> Result<(), crate::Error> {
 
         // tbd. For INITIAL DEMOS, have this as 'false' (as was in C example)
         //      - move to 'true' (even for demos); heading for the secure pairing time
@@ -50,16 +59,8 @@ impl Router {
                 }
             }
         };
-        <Self as Node>::take_stack(tmp)?;
-
-        Ok( Self{ _private: () } )
+        <Self as Node>::take_stack(tmp)
     }
 
-    pub async fn roll(self) -> ! {
-        <Self as Node>::roll(self) .await
-    }
-}
-
-impl Node for Router {
-    // enables '.roll()'
+    fn on_app_signal(&self, sig: Signal) /*-> Result<(), Self::Error>*/;
 }

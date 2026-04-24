@@ -15,15 +15,19 @@ embassy-time = { workspace = true, features = ["log"] }
 esp-idf-sys = { workspace = true, default-features = false }
     # just core
 
-[dev-dependencies]
-esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart"], default-features = false }
-    # just core; we do our own panic handler
+bitflags = { version = "2.11.1" }
+
+#r [dev-dependencies]
+#r esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart"], default-features = false }
+#r    # just core
 
 [build-dependencies]
 embuild.workspace = true
 
 [features]
 default = ["esp32c6"]
+controller = []
+    # include features only needed for a Controller (in addition to EndDevice and Router capabilities)
 
 touchlink = []
 gp = []

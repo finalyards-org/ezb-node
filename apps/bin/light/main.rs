@@ -3,35 +3,41 @@
 *   - "Light bulb" example of 'esp-zigbee-sdk'
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light
 */
-use std::time::Duration;
+#![feature(never_type)]
+
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
     log::{init as log_init},
-    sys::{self, link_patches},
-    hal,
+    sys::{link_patches},
+    //hal,
 };
 
 use esp_zb_examples::{
+    //self as my,
     init_nvs,
     set_panic_hook,
+    AppError,
 };
 
 use log::LevelFilter;
 use esp_zb::{
     router::prelude::*,
     Signal,
-    bdb_commissioning_mode
+    IsOpenedForSecs,  // tbd. bring in from prelude; some system which makes sense..???
 };
 
-use hal::peripherals::Peripherals;
+//use hal::peripherals::Peripherals;
 
 use time::ext::NumericalDuration;   // allows '1000 .milliseconds()'
 
+mod lrouter;
+use lrouter::LightRouter;
+
 const HA_COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
-/*
-* The entry point. We get our own FreeRTOS task and don't need to create one.
+/**
+* The entry point.
 */
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -42,18 +48,26 @@ async fn main(_spawner: Spawner) {
 
     log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
+    let _ = main2().await .map_err(async |e| {
+        log::error!("Fatal error: {:?}", e);
+        loop {
+            embassy_time::Timer::after_secs(1).await;
+        }
+    });
+}
+
+/**
+* An inner 'main()' that may fail its initialization.
+*/
+async fn main2() -> Result<!, AppError> {
     //#later let _ = Peripherals::take()?;
 
     init_nvs()?;
 
     // Initialize Zigbee
     //
-    let router = Router::new(10)?;
-
-    router.on_app_signal(onAppSignal);
-        // tbd. consider placing as a param of '::new()', or a piped call to it?
-
-    router.roll() .await;
+    let _ = LightRouter::new()?
+        .roll() .await;
 
     /*** next
     esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
@@ -70,68 +84,6 @@ async fn main(_spawner: Spawner) {
     ***/
 }
 
-/*
-* tbd. The library could provide higher level helpers for this.
-*       Perhaps other '.onXXX' so that resorting to this (as the C 'light' example does)
-*       becomes an optional thing?
-*/
-fn onAppSignal(rtr: &Router, sig: Signal) {
-    use Signal::*;
-
-    match sig {
-        ZdoSignalSkipStartup => {
-            log::info!("Initialize Zigbee stack");
-
-            rtr.start_commissioning(bdb_commissioning_mode_t::BDB_MODE_INITIALIZATION);
-        },
-
-        BdbSignalDeviceFirstStart{ success: true } | BdbSignalDeviceReboot{ success: true } => {
-            // Could do delayed hw initialization, here
-
-            let tmp = esp_zb_bdb_is_factory_new();
-            log::info!("Device started up in {}factory-reset mode",  if tmp {""} else {"non"});
-            if tmp {
-                log::info!("Start network steering");
-                rtr.bdb_start_top_level_commissioning(Router::BDB_MODE_NETWORK_STEERING);
-            } else {
-                log::info!("Device rebooted");
-            }
-        },
-        BdbSignalDeviceFirstStart{ success: false } | BdbSignalDeviceReboot{ success: false } => {
-            log::warn!("{} failed, retrying", sig);
-
-            rtr.schedule(1000 .milliseconds(), |node| {
-                node.bdb_start_top_level_commissioning_cb(Router::BDB_MODE_INITIALIZATION);
-            });
-        },
-
-        BdbSignalSteering{ success: true } => {
-            log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:0x4x}",
-                sig.get_extended_pan_id(),
-                     rtr.get_pan_id(), rtr.get_current_channel(), rtr.get_short_address());
-        },
-        BdbSignalSteering{ success: false } => {
-            log::info!("Network steering was not successful: {}", sig);
-            rtr.schedule( 1000 .milliseconds(), |node| {
-                node.bdb_start_top_level_commissioning_cb(Router::BDB_MODE_NETWORK_STEERING);
-            });
-        }
-
-        NwkSignalPermitJoinStatus{ isOpened } => {
-            let pan_id = rtr.get_pan_id();
-
-            match isOpened {
-                Some(secs) =>
-                    log::info!("Network{} is open for {} seconds", pan_id, secs),
-                None =>
-                    log::info!("Network{} closed, devices joining not allowed.", pan_id)
-            };
-        },
-        _ => {
-            log::debug!("ZDO signal: {sig}");
-        },
-    }
-}
 
 //keep until works in Rust
 /*****
