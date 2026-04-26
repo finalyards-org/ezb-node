@@ -17,18 +17,7 @@ use embassy_time::{Timer, Duration};
 use bitflags::bitflags;
 use log;
 
-use esp_zb_raw::{
-    esp_zb_cfg_t,
-    esp_zb_init,
-    esp_zb_start,
-    esp_zb_stack_main_loop_iteration,
-    esp_zb_app_signal_t,
-    esp_zb_get_pan_id,
-    esp_zb_get_current_channel,
-    esp_zb_bdb_start_top_level_commissioning,
-    esp_zb_bdb_commissioning_mode_t,
-    esp_zb_get_extended_pan_id,
-};
+use esp_zb_raw::{esp_zb_cfg_t, esp_zb_init, esp_zb_start, esp_zb_stack_main_loop_iteration, esp_zb_app_signal_t, esp_zb_get_pan_id, esp_zb_get_current_channel, esp_zb_bdb_start_top_level_commissioning, esp_zb_bdb_commissioning_mode_t, esp_zb_get_extended_pan_id, esp_zb_bdb_is_factory_new, esp_zb_get_short_address};
 
 use esp_idf_sys::EspError;
 
@@ -95,17 +84,20 @@ pub trait Node {
     *       note. Autostart 'false' needs to call 'esp_zb_bdb_start_top_level_commissioning()', for manually starting
     *           the network stuff.
     */
-    const AUTO_START: bool = true;
+    //const AUTO_START: bool = true;
 
     /**
     * Process Zigbee messages.
+    *
+    * @param auto_start
+    *   'true' for automatic start of the Zigbee stack
+    *   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
     */
-    // Ah, the 'async' within trait.
-    //
-    async fn roll(self) -> ! where Self: Sized {
-        log::debug!("1");
+    #[allow(async_fn_in_trait)] // "you can suppress this lint if you plan to use the trait only in your own code"
+    async fn roll(self: Self, auto_start: bool) -> ! where Self: Sized {
+
         unsafe {
-            esp_zb_start(Self::AUTO_START);     // tbd. C examples have 'false'?  Why?
+            esp_zb_start(auto_start);
         }
 
         loop {
@@ -158,6 +150,15 @@ pub trait Node {
     }
 
     /**
+    * Get the short address.
+    */
+    fn get_short_address(&self) -> u16 {
+        unsafe {
+            esp_zb_get_short_address()
+        }
+    }
+
+    /**
     * Get the currently used channel.
     */
     fn get_current_channel(&self) -> u8 {
@@ -177,24 +178,37 @@ pub trait Node {
     *
     * Note: Modes are bit patterns.
     */
-    fn start_commissioning(&self, mask: CommissioningModesMask) -> Option<EspError> {
+    fn start_top_level_commissioning(&self, mask: CommissioningModesMask) -> Option<EspError> {
         let err= unsafe {
             esp_zb_bdb_start_top_level_commissioning(mask.bits())
         };
         EspError::from(err) // provides 'Option'
     }
 
-    /***R
     /**
-    * Coordinator/Router: Open a network for others to join.
-    * EndDevice: Join an existing network.
+    * Get the "factory new" status.
+    *
+    * A factory new device:
+    *   - is not part of any network
+    *   - has no stored keys
+    *   - all settings (bindings, intervals) are at their defaults
     */
-    // tbd. revise the docs --^
-    fn join_network(&self) {
-        self.start_commissioning(CommissioningMode::NETWORK_STEERING);
-            // tbd. 'esp_zb_bdb_commissioning_mode_t' should not be an enum - rather u8 values; used as mask.
-            //      revise the bindgen settings for it?
-    }***/
+    fn is_factory_new(&self) -> bool {
+        unsafe {
+            esp_zb_bdb_is_factory_new()
+        }
+    }
+
+    /**
+    * @brief Perform "factory reset" procedure
+    * @note The device will completely erase the `zb_storage` partition and then restart
+    */
+    #[cfg(false)]
+    fn factory_reset(&self) {
+        unsafe {
+            esp_zb_factory_reset()
+        }
+    }
 }
 
 type BdbMode = esp_zb_bdb_commissioning_mode_t;
@@ -216,12 +230,6 @@ bitflags! {
         const _ = !0;
     }
 }
-
-/****R impl CommissioningMode {
-    fn empty() -> Self {
-        CommissioningMode::
-    }
-}****/
 
 /*
 * Handler for Zigbee APP signals.

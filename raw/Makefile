@@ -113,6 +113,15 @@ manual: ${_BIND_RS}
 #				--opaque-type ".*_s" \
 #			<<
 #
+_BLOCKLIST_TYPES:=$(strip ESP_ZB_ZCL_VALUE_NaN)
+	# - 'ESP_ZB_ZCL_VALUE_NaN': avoid warning on its naming (we don't need it, either)
+
+# Typedefs to zero-size structs. Trying to suppress warnings.
+_OPAQUE_TYPES:=$(strip \
+	esp_zb_diagnostics_cluster_cfg_t \
+	esp_zb_price_cluster_cfg_t \
+	esp_zb_touchlink_commissioning_cfg_t \
+)
 ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile ./zb_vendor.h ./zb_vendor_default.h \
 	| bindgen
 	bindgen $< \
@@ -132,6 +141,9 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 			--allowlist-function 'esp_zb_cluster_.*' \
 			\
 			--allowlist-type 'esp_zb_attribute_.*' \
+			\
+			$(addprefix --blocklist-type ,$(_BLOCKLIST_TYPES)) \
+			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
 			\
 			--bitfield-enum 'esp_zb_bdb_commissioning_mode_t' \
 	    --use-core \
@@ -199,7 +211,7 @@ _clean:
 	-rm ${_BIND_RS}
 
 echo:
-	@echo ${_ESP_IDF_PATH}
+	@echo $(addprefix --blocklist-type ,$(_BLOCKLIST_TYPES))
 
 # Remove any targets created if a build fails.
 .DELETE_ON_ERROR:

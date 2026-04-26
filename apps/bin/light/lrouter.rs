@@ -1,13 +1,21 @@
 /*
 *
 */
-use std::time::Duration;
 use esp_zb::{
     node::{Node, Router},
+    IsOpenedForSecs,
     Signal
 };
-use esp_zb::node::CommissioningMode;
-use crate::AppError;
+use esp_zb::node::CommissioningModesMask;
+
+use embassy_time::{Duration};
+
+use crate::{
+    AppError,
+    scheduler::schedule
+};
+
+const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub(crate) struct LightRouter where Self: Router {
 
@@ -15,7 +23,7 @@ pub(crate) struct LightRouter where Self: Router {
 
 impl LightRouter {
     pub(crate) fn new() -> Result<Self, AppError> {
-        Router::init(10);
+        <Self as Router>::init(10)?;
         Ok(Self {})
     }
 }
@@ -30,8 +38,6 @@ impl Router for LightRouter {
 
 impl Node for LightRouter {}
 
-const ONE_SEC: Duration = Duration::from_millis(1000);
-
 /**
 */
 fn on_app_signal(rtr: &LightRouter, sig: Signal) /*? -> Result<(), AppError>*/ {
@@ -41,18 +47,17 @@ fn on_app_signal(rtr: &LightRouter, sig: Signal) /*? -> Result<(), AppError>*/ {
         ZdoSignalSkipStartup => {
             log::info!("Initialize Zigbee stack");
 
-            rtr.start_commissioning(CommissioningMode::empty()); // BDB_MODE_INITIALIZATION
+            rtr.start_top_level_commissioning(CommissioningModesMask::empty()); // BDB_MODE_INITIALIZATION
         },
 
         BdbSignalDeviceFirstStart{ success: true } | BdbSignalDeviceReboot{ success: true } => {
             // Could do delayed hw initialization, here
 
-            // tbd. what does the "is factory new" actually mean?
-            let x = rtr.bdb_is_factory_new();
-            log::info!("Device started up in {}factory-reset mode",  if x {""} else {"non"});
-            if x {
+            let is_virgin = rtr.is_factory_new();
+            log::info!("Device started up in {} mode.", if is_virgin {"factory-reset"} else {"commissioned"});
+            if is_virgin {
                 log::info!("Start network steering");
-                rtr.bdb_start_top_level_commissioning(CommissioningMode::NETWORK_STEERING);
+                rtr.start_top_level_commissioning(CommissioningModesMask::NETWORK_STEERING);
             } else {
                 log::info!("Device rebooted");
             }
@@ -60,19 +65,19 @@ fn on_app_signal(rtr: &LightRouter, sig: Signal) /*? -> Result<(), AppError>*/ {
         BdbSignalDeviceFirstStart{ success: false } | BdbSignalDeviceReboot{ success: false } => {
             log::warn!("{} failed, retrying", sig);
 
-            rtr.schedule( ONE_SEC, |node| {
-                node.bdb_start_top_level_commissioning(0);   // BDB_MODE_INITIALIZATION
+            schedule( ONE_SEC, |node| {
+                node.start_top_level_commissioning(CommissioningModesMask::empty());   // BDB_MODE_INITIALIZATION
             });
         },
 
         BdbSignalSteering{ success: true } => {
-            log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: 0x{:04x}",
+            log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
                 rtr.get_extended_pan_id(), rtr.get_pan_id(), rtr.get_current_channel(), rtr.get_short_address());
         },
         BdbSignalSteering{ success: false } => {
             log::info!("Network steering was not successful: {}", sig);
-            rtr.schedule( ONE_SEC, |node| {
-                node.bdb_start_top_level_commissioning_cb(CommissioningMode::NETWORK_STEERING);
+            schedule( ONE_SEC, |node| {
+                node.start_top_level_commissioning(CommissioningModesMask::NETWORK_STEERING);
             });
         }
 

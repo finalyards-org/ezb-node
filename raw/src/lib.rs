@@ -84,7 +84,6 @@ pub use bindings::{
     esp_zb_zdo_device_unavailable_params_t,
     //esp_zb_zgp_signal_approve_comm_params_t,
     esp_zb_nwk_leave_type_t,
-    esp_zb_get_extended_pan_id,
 };
 
 // Node constants and methods (global in C API)
@@ -96,6 +95,7 @@ pub use bindings::{
     esp_zb_get_pan_id,
     esp_zb_get_current_channel,
     esp_zb_get_short_address,
-
+    esp_zb_get_extended_pan_id,
+    esp_zb_factory_reset,
 };
 
