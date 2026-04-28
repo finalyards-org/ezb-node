@@ -12,16 +12,36 @@
 * Note:
 *   C code supports both native and RCP (radio co-processor) implementations. We only native.
 */
+extern crate alloc;
+
 use embassy_time::{Timer, Duration};
 
 use bitflags::bitflags;
 use log;
+use alloc::{
+    boxed::Box,
+    vec::Vec,
+};
 
-use esp_zb_raw::{esp_zb_cfg_t, esp_zb_init, esp_zb_start, esp_zb_stack_main_loop_iteration, esp_zb_app_signal_t, esp_zb_get_pan_id, esp_zb_get_current_channel, esp_zb_bdb_start_top_level_commissioning, esp_zb_bdb_commissioning_mode_t, esp_zb_get_extended_pan_id, esp_zb_bdb_is_factory_new, esp_zb_get_short_address};
+use esp_zb_raw::{
+    esp_zb_cfg_t,
+    esp_zb_init,
+    esp_zb_start,
+    esp_zb_stack_main_loop_iteration,
+    esp_zb_app_signal_t,
+    esp_zb_get_pan_id,
+    esp_zb_get_current_channel,
+    esp_zb_bdb_start_top_level_commissioning,
+    esp_zb_bdb_commissioning_mode_t,
+    esp_zb_get_extended_pan_id,
+    esp_zb_bdb_is_factory_new,
+    esp_zb_get_short_address,
+    esp_zb_set_primary_network_channel_set,
+};
 
 use esp_idf_sys::EspError;
 
-use crate::{Error, IeeeAddr, Signal};
+use crate::{Error, IeeeAddr, Signal, ChannelMask, Endpoint};
 
 mod router;
 pub use router::Router;
@@ -94,8 +114,26 @@ pub trait Node {
     *   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
     */
     #[allow(async_fn_in_trait)] // "you can suppress this lint if you plan to use the trait only in your own code"
-    async fn roll(self: Self, auto_start: bool) -> ! where Self: Sized {
+    async fn roll(self: Self, channel_mask: ChannelMask, endpoints: Vec<Box<dyn Endpoint>>, auto_start: bool) -> ! where Self: Sized {
 
+        // Note: #later we can consider adding endpoints using meta-tags (like Embassy does).
+        //      For now, we can take them as parameters.
+        //
+        for ep in endpoints {
+            unimplemented!()
+        }
+
+        esp_zcl_utility_add_ep_basic_manufacturer_info(esp_zb_color_dimmable_light_ep, HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &info);
+        esp_zb_device_register(esp_zb_color_dimmable_light_ep);
+
+        unsafe {
+            // register?
+            unimplemented!()
+        }
+
+        unsafe {
+            esp_zb_set_primary_network_channel_set(ChannelMask.0);
+        }
         unsafe {
             esp_zb_start(auto_start);
         }

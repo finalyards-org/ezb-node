@@ -33,6 +33,9 @@ controller = []
 touchlink = []
 gp = []
 
+# Endpoint types
+ep_color_dimmable_light = []
+
 esp32c6 = [
     "esp-zb-raw/esp32c6",
 ]

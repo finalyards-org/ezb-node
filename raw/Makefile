@@ -113,7 +113,7 @@ manual: ${_BIND_RS}
 #				--opaque-type ".*_s" \
 #			<<
 #
-_BLOCKLIST_TYPES:=$(strip ESP_ZB_ZCL_VALUE_NaN)
+_BLOCKLIST_VARS:=$(strip ESP_ZB_ZCL_VALUE_NaN)
 	# - 'ESP_ZB_ZCL_VALUE_NaN': avoid warning on its naming (we don't need it, either)
 
 # Typedefs to zero-size structs. Trying to suppress warnings.
@@ -142,7 +142,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 			\
 			--allowlist-type 'esp_zb_attribute_.*' \
 			\
-			$(addprefix --blocklist-type ,$(_BLOCKLIST_TYPES)) \
+			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
 			\
 			--bitfield-enum 'esp_zb_bdb_commissioning_mode_t' \

@@ -158,17 +158,6 @@ Developed with:
 
 ## Preparation
 
-<!-- hidden; now happens automatically if the person has 'git' available.
-### Submodules
-
-Load git submodules - we get the C sources that way.
-
-```
-$ git submodule update --init
-```
--->
-
-
 ### The `esp_idf_tools_install_dir` config
 
 We're using `global`, which places the ESP-IDF toolchain (about 5.5GB) in `~/.espressif/`. 

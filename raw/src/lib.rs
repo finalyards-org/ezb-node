@@ -97,5 +97,15 @@ pub use bindings::{
     esp_zb_get_short_address,
     esp_zb_get_extended_pan_id,
     esp_zb_factory_reset,
+    esp_zb_set_primary_network_channel_set,
+};
+
+// Endpoints
+pub use bindings::{
+    esp_zb_zcl_basic_attr_t,
+    esp_zb_ep_list_t,
+    esp_zb_device_register,
+    //esp_zb_color_dimmable_light_cfg_t,
+    //esp_zb_color_dimmable_switch_cfg_t,
 };
 

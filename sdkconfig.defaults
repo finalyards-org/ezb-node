@@ -13,26 +13,26 @@
 #   - C 'esp_zigbee_sdk' examples use 4096
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 
-# From 'esp-idf-svc', with mention that these be needed at least if (as we do) 'embassy-time-driver' is being used.
+# Recommended by 'esp-idf-svc', at least if (as we do) 'embassy-time-driver' is being used.
 CONFIG_ESP_TIMER_TASK_STACK_SIZE=4096
 #CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=8192
 CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 
 # 1 ms granularity for (FreeRTOS) thread sleeps (10 ms by default).
+# This is likely vital, for having 'esp-zigbee-lib' respond in a timely manner.
 CONFIG_FREERTOS_HZ=1000
 
 # NOTE! In ESP-IDF use of Kconfig files, DISABLED LINES ARE USUALLY COMMENTED OUT, NOT SET TO '=n'. This seems to be
 #   "so that C #ifdef can be used for seeing which features are in use" (video |here|).
 #
-#   We could go for that?
 #       |here| (around 4:20): "ESP32 - Kconfig with ESP-IDF Tutorial" -> https://www.youtube.com/watch?v=KsrDYfQ9geU
 
 #---
 # Zigbee
 CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
-    # Controller/Router code included (can also bake ZED's with this)
+    # Controller/Router code included (can also do EndDevices with this)
 CONFIG_ZB_RADIO_NATIVE=y
 #CONFIG_ZB_GP_ENABLED=y
 

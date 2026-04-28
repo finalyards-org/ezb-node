@@ -18,6 +18,12 @@ pub use version::*;
 mod error;
 pub use error::Error;
 
+mod endpoint;
+pub use endpoint::Endpoint;
+
+mod channel_mask;
+pub use channel_mask::ChannelMask;
+
 // We'll expose these _for now_ but the idea is 'raw' should not (need to) be visible in the API.
 pub use raw::{
     esp_zb_bdb_commissioning_mode_t as bdb_commissioning_mode,

@@ -67,9 +67,13 @@ async fn main2() -> Result<!, AppError> {
     // Initialize Zigbee
     //
     let _ = LightRouter::new()?
+        //R .add_ep_basic_manufacturer_info()
+        //R .device_register()
+        //R .core_action_handler_register()
+        //R .set_primary_network_channel_set()
+        //
         .roll(false) .await;
 
-    //unreachable!()
     /*** next
     esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
     esp_zb_ep_list_t *esp_zb_color_dimmable_light_ep = esp_zb_color_dimmable_light_ep_create(HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &light_cfg);

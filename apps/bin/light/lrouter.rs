@@ -1,11 +1,7 @@
 /*
 *
 */
-use esp_zb::{
-    node::{Node, Router},
-    IsOpenedForSecs,
-    Signal
-};
+use esp_zb::{node::{Node, Router}, IsOpenedForSecs, ManufacturerInfo, Signal};
 use esp_zb::node::CommissioningModesMask;
 
 use embassy_time::{Duration};
@@ -21,10 +17,24 @@ pub(crate) struct LightRouter where Self: Router {
 
 }
 
+//? const COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
+
 impl LightRouter {
     pub(crate) fn new() -> Result<Self, AppError> {
         <Self as Router>::init(10)?;
-        Ok(Self {})
+
+        let cfg: esp_zb_color_dimmable_light_cfg_t = esp_zb_color_dimmable_light_cfg_t::default();
+        let ep: = esp_zb_color_dimmable_light_ep_create(, &cfg);
+
+        let ep = endpoint::ColorDimmableLight::new(COLOR_DIMMABLE_LIGHT_ENDPOINT);
+
+        let me = Self{};
+        me.add_ep_basic_manufacturer_info(ep, HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &info);
+        me.device_register(ep);
+        //me.action_handler_register(zb_action_handler);
+        //me.set_primary_network_channel_set(...);
+
+        Ok(me)
     }
 }
 

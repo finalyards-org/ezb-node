@@ -7,13 +7,11 @@
 use core::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct ChannelMask(u32);
+pub struct ChannelMask(pub(crate) u32);
 
 impl ChannelMask {
     const PRIMARY: Self = ChannelMask(1 << 11 | 1 << 15 | 1 << 20 | 1 << 25);
     const ALL: Self = ChannelMask(0x07FFF800);    // channels 11..26 enabled
-
-    fn as_raw(&self) -> u32 { self.0 }
 }
 
 impl fmt::Debug for ChannelMask {
