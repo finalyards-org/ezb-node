@@ -57,15 +57,13 @@ When you see the build output, pay attention to certain parts of it. Especially 
 
 2. `esp_idf_sdkconfig:`
 
-	We haven't defined one, but letting `esp-idf-sys` to generate such.
-	
-	>The author does not currently fully comprehend the `sdkconfig` workflow. If you know more, input, opinions and PRs are appreciated!!
+	Not sure, in which cases one would provide their own `sdkconfig`. We provide the `sdkconfig.defaults` (next).
 	
 3. `esp_idf_sdkconfig_defaults:`
 
-	Provides **defaults** to ESP-IDF configuration, but **if there is a component somewhere alongside the build chain that defines a config, its value gets used**.
+	Provides **defaults** to ESP-IDF configuration. Note that this is (by convention) used to place things "on", but **cannot be used for banning options** - if there is a component somewhere alongside the build chain that enables a config, it does get pulled in.
 	
-	This means you cannot "force" e.g. WLAN to be off (though we'd like). Consider the contents of such a file as very indicative, not authoritive.
+	>This means you cannot "force" e.g. WLAN to be off (though we'd like).
 	
 	>In general, `cargo` builds use only the **topmost build environment**. Dependencies bring their code and `build.rs` - but not the env.vars. or build metadata. This is a design decision by cargo and we need to live with it. The ESP-IDF toolchain matches rather poorly with it (and/or the author hasn't figured this out, yet!!!).
 	
@@ -77,7 +75,10 @@ When you see the build output, pay attention to certain parts of it. Especially 
 
 	Shows the ESP-IDF version you wish to use.
 	
-	Keep an eye on this, casually. The `esp-idf-sys` toolchain defaults to 5.2 (at the moment, Mar'26) - if you see that the configuration is somehow faulty.
+	Keep an eye on this, casually. If you see something other than you expected, the configuration is somehow faulty.
+
+
+### Root crate
 	
 ```
 cargo:warning=the crate given by `ESP_IDF_SYS_ROOT_CRATE` does not exist in this workspace
@@ -88,42 +89,15 @@ cargo:warning=the crate given by `ESP_IDF_SYS_ROOT_CRATE` does not exist in this
 
 You should not see this - but taking it here as a sample on how build warnings/errors would show in the log.
 
-```
-[esp-idf-sys 0.37.2] pip 24.0 from /home/ubuntu/esp-zb/.embuild/espressif/python_env/idf5.5_py3.12_env/lib/python3.12/site-packages/pip (python 3.12)
-```
+**Note that `esp-sys-idf` is overly tolerant on errors! It just spits warnings, uses some defaults, and keeps going!!** This feels very unusual for a Cargo project, because in Rust, it's normally "explicit over implicit".
 
-Note the `.embuild` created *under* the project folder.
 
->This is because (in this build) the `esp_idf_tools_install_dir` was NOT DEFINED. That led to using `.embuild/espressif` within the project folder.
-
-Other options:
-
-- `esp_idf_tools_install_dir: "out"`
-
-	```
-	[esp-idf-sys 0.37.2] Cloning into '/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-c5e8818c8dd375d3/out/espressif/esp-idf/v5.5.3'...
-	```
-
-	The tooling goes to `{Cargo output folder}/espressif/`
-
-- `esp_idf_tools_install_dir: "global"`
-
-	```
-	... 
-	```
+### `ldproxy`
 	
-	<!-- tbd. try, paste a line above -->
-	
-	The tooling goes to `~/.espressif/`.
+Have `ldproxy` CLI installed: `cargo install ldproxy`.
 
-	For using `"global"`, you also need to:
 
-	```	
-	[target.'cfg(target_os = "espidf")']
-	linker = "ldproxy"
-	```
-	
-	have `ldproxy` CLI installed (`cargo install ldproxy`).
+### `warning: unknown kconfig symbol`
 
 ```
 [esp-idf-sys 0.37.2] warning: unknown kconfig symbol 'ESP_WIFI_STA_SUPPORT' assigned to 'n' in /home/ubuntu/esp-zb/sdkconfig.defaults
@@ -137,11 +111,11 @@ Other options:
 
 Watch out for this kind of warnings in the build output.
 
-In general, **`ESP-IDF` build chain** has an **uncomftably high tolerance for configuration mistakes**. In Rust, things normally break when there are ambiguities. Not so here!
+Again, the `ESP-IDF` build chain has an **uncomftably high tolerance for configuration mistakes**. If a configuration key is misspelled, it is simply ignored - with a warning like above. 
 
 So watch your build output. Grep it for the word "warning".
 
-If a project builds, it does not mean it build in the **intended** way.
+👉 If a project builds, it does not mean it built in the **intended** way.
 
 
 
@@ -162,7 +136,7 @@ Example:
   note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
 
->NOTE: Having color coding in the output would help a lot. Unfortunately, the errors don't usually get any highlighting.
+>NOTE: Having color coding in the output would help a lot. Unfortunately, the errors/warnings within the ESP-IDF portion don't often get any highlighting.
 
 - Is there a way to force single-threaded build?
 
@@ -189,18 +163,9 @@ Example:
 
 ## Qualifying `sdkconfig.defaults`
 
-The ESP-IDF build treats non-existent keys in `sdkconfig.defaults` with a **warning**, not an error.
+See `_mc/` for tools and info on how to:
 
-This can cause quite some time to be wasted.
+a. detect which configuration keys are available
+b. what their values after a build have become
 
-Ideally, we'd build with these being flagged out. Until then, do this:
-
-- `sdkconfig.json` within the output folder carries the configuration that actually made it:
-
-	```
-	{target folder}/riscv32imac-esp-espidf/release/build/esp-idf-sys-c5e8818c8dd375d3/out/build/config/sdkconfig.json
-	```
-
-	Grep that file, after a build, to see whether your intended values made it - or whether those keys are even listed.
-
-
+This helps you to pick the right keys for `sdkconfig.defaults` and hopefully avoid components that are not needed.
