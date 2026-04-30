@@ -72,3 +72,76 @@ impl Default for esp_zb_host_config_t {
         }
     }
 }
+
+// /**
+//  * @brief Structure of device descriptor on a endpoint
+//  */
+// typedef struct esp_zb_endpoint_config_s {
+//     uint8_t    endpoint;                        /*!< Endpoint */
+//     uint16_t   app_profile_id;                  /*!< Application profile identifier */
+//     uint16_t   app_device_id;                   /*!< Application device identifier */
+//     uint32_t   app_device_version: 4;           /*!< Application device version */
+// } ESP_ZB_PACKED_STRUCT
+// esp_zb_endpoint_config_t;
+//
+const O: esp_zb_endpoint_config_t = {
+    let un = MaybeUninit::zeroed();
+    unsafe { un.assume_init() }
+};
+
+impl Default for esp_zb_endpoint_config_t where Self: Clone {
+    fn default() -> Self {
+        O   // tbd. rename if works
+    }
+}
+
+//#define ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG()
+//    {
+//         .basic_cfg =
+//             {
+//                 .zcl_version = ESP_ZB_ZCL_BASIC_ZCL_VERSION_DEFAULT_VALUE,
+//                 .power_source = ESP_ZB_ZCL_BASIC_POWER_SOURCE_DEFAULT_VALUE,
+//             },
+//         .identify_cfg =
+//             {
+//                 .identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE,
+//             },
+//         .groups_cfg =
+//             {
+//                 .groups_name_support_id = ESP_ZB_ZCL_GROUPS_NAME_SUPPORT_DEFAULT_VALUE,
+//             },
+//         .scenes_cfg =
+//             {
+//                 .scenes_count = ESP_ZB_ZCL_SCENES_SCENE_COUNT_DEFAULT_VALUE,
+//                 .current_scene = ESP_ZB_ZCL_SCENES_CURRENT_SCENE_DEFAULT_VALUE,
+//                 .current_group = ESP_ZB_ZCL_SCENES_CURRENT_GROUP_DEFAULT_VALUE,
+//                 .scene_valid = ESP_ZB_ZCL_SCENES_SCENE_VALID_DEFAULT_VALUE,
+//                 .name_support = ESP_ZB_ZCL_SCENES_NAME_SUPPORT_DEFAULT_VALUE,
+//             },
+//         .on_off_cfg =
+//             {
+//                 .on_off = ESP_ZB_ZCL_ON_OFF_ON_OFF_DEFAULT_VALUE,
+//             },
+//         .level_cfg =
+//             {
+//                 .current_level = ESP_ZB_ZCL_LEVEL_CONTROL_CURRENT_LEVEL_DEFAULT_VALUE,
+//             },
+//         .color_cfg =
+//             {
+//                 .current_x = ESP_ZB_ZCL_COLOR_CONTROL_CURRENT_X_DEF_VALUE,
+//                 .current_y = ESP_ZB_ZCL_COLOR_CONTROL_CURRENT_Y_DEF_VALUE,
+//                 .color_mode = ESP_ZB_ZCL_COLOR_CONTROL_COLOR_MODE_DEFAULT_VALUE,
+//                 .options = ESP_ZB_ZCL_COLOR_CONTROL_OPTIONS_DEFAULT_VALUE,
+//                 .enhanced_color_mode = ESP_ZB_ZCL_COLOR_CONTROL_ENHANCED_COLOR_MODE_DEFAULT_VALUE,
+//                 .color_capabilities = 0x0008,
+//             },
+//     }
+//
+#[cfg(feature = "ep_color_dimmable_light")]
+impl Default for esp_zb_color_dimmable_light_cfg_t {
+    fn default() -> Self {
+        unsafe {
+            ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG
+        }
+    }
+}

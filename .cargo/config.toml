@@ -122,3 +122,8 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 # fatfs: needed, precise reason unclear
 #
 ESP_IDF_COMPONENTS = "cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;nvs_flash;wear_levelling;fatfs;spiffs;"
+
+[alias]
+"apps:light:build" = "build --manifest-path apps/Cargo.toml --release --bin light --features esp-zb/ep_color_dimmable_light"
+"apps:switch:build" = "build --manifest-path apps/Cargo.toml --release --bin switch --features ..."
+    #tbd.

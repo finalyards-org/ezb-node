@@ -26,6 +26,9 @@
 //#include "esp_zigbee_trace.h"
 #include "esp_zigbee_type.h"
 
+// tbd. #ifdef if 'ep_color_dimmable_light' featured.
+#include "esp_zigbee_ha_standard.h"
+
 #include "esp_zigbee_version.h"
     // #define ESP_ZB_VER_MAJOR 1
     // #define ESP_ZB_VER_MINOR 6
@@ -38,3 +41,10 @@ const char* ESP_ZB_VER_STR = \
   _TO_STR(ESP_ZB_VER_MAJOR) "." \
   _TO_STR(ESP_ZB_VER_MINOR) "." \
   _TO_STR(ESP_ZB_VER_PATCH); // "1.6.8"
+
+// ColorDimmableLight
+//
+// Manifest 'ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG()' macro into a 'const', so we can bring it to Rust.
+//
+// tbd. use '#ifdef' to conditionally bake this in only if Rust 'ep_color_dimmable_light' featured.
+const esp_zb_color_dimmable_light_cfg_t ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();

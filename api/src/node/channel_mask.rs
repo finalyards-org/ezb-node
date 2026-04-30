@@ -10,8 +10,8 @@ use core::fmt;
 pub struct ChannelMask(pub(crate) u32);
 
 impl ChannelMask {
-    const PRIMARY: Self = ChannelMask(1 << 11 | 1 << 15 | 1 << 20 | 1 << 25);
-    const ALL: Self = ChannelMask(0x07FFF800);    // channels 11..26 enabled
+    pub const PRIMARY_CHANNELS: Self = ChannelMask(1 << 11 | 1 << 15 | 1 << 20 | 1 << 25);
+    pub const ALL_CHANNELS: Self = ChannelMask(0x07FFF800);    // channels 11..26 enabled
 }
 
 impl fmt::Debug for ChannelMask {

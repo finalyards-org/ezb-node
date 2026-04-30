@@ -11,7 +11,12 @@ use esp_zb_raw::{
     esp_zb_zczr_cfg_t,
 };
 use crate::Signal;
-use crate::node::Node;
+use crate::node::{Node, NodeConfig};
+
+#[cfg(any(feature = "controller", feature = "router"))]
+const MAX_CHILDREN_DEFAULT: u8 = 10;
+#[cfg(not(any(feature = "controller", feature = "router")))]
+const MAX_CHILDREN_DEFAULT: u8 = 0; // end device
 
 /**
 * Zigbee router.
@@ -30,7 +35,9 @@ use crate::node::Node;
 pub trait Router where Self: Node {
     type Error;
 
-    fn init(max_children: u8) -> Result<(), crate::Error> {
+    fn init(cfg: NodeConfig) -> Result<(), crate::Error> {
+
+        let max_children = cfg.max_children.unwrap_or(MAX_CHILDREN_DEFAULT);
 
         // tbd. For INITIAL DEMOS, have this as 'false' (as was in C example)
         //      - move to 'true' (even for demos); heading for the secure pairing time
@@ -58,8 +65,10 @@ pub trait Router where Self: Node {
                     max_children
                 }
             }
-        };
-        <Self as Node>::take_stack(tmp)
+        };  // tbd. move crafting the 'tmp' (above) inside '::take_stack'; can have router-conditional code (then it handles all raw level)
+        <Self as Node>::take_stack(tmp, cfg)?;
+
+        Ok(())
     }
 
     fn on_app_signal(&self, sig: Signal) /*-> Result<(), Self::Error>*/;

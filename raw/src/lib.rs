@@ -105,7 +105,20 @@ pub use bindings::{
     esp_zb_zcl_basic_attr_t,
     esp_zb_ep_list_t,
     esp_zb_device_register,
-    //esp_zb_color_dimmable_light_cfg_t,
+    esp_zb_color_dimmable_light_cfg_t,
     //esp_zb_color_dimmable_switch_cfg_t,
+    esp_zb_color_dimmable_light_ep_create,
+    esp_zb_ep_list_create,
+    esp_zb_ep_list_add_ep,
+    esp_zb_cluster_list_t,
+    esp_zb_endpoint_config_t,
+    esp_zb_color_dimmable_light_clusters_create,
+    esp_zb_af_profile_id_t::{
+        self,
+        ESP_ZB_AF_HA_PROFILE_ID
+    },
+    esp_zb_ha_standard_devices_t::{
+        self,
+        ESP_ZB_HA_COLOR_DIMMABLE_LIGHT_DEVICE_ID
+    },
 };
-

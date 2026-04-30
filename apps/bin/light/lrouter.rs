@@ -1,17 +1,27 @@
 /*
 *
 */
-use esp_zb::{node::{Node, Router}, IsOpenedForSecs, ManufacturerInfo, Signal};
-use esp_zb::node::CommissioningModesMask;
+use std::collections::BTreeMap;
+
+use esp_zb::{
+    node::{Node, Router, ChannelMask, NodeConfig},
+    IsOpenedForSecs,
+    ManufacturerInfo,
+    Signal,
+    utils::PascalString,
+};
+use esp_zb::node::{BasicConfig, CommissioningModesMask, EndpointConfig, EndpointType, ColorDimmableLightConfig};
 
 use embassy_time::{Duration};
 
-use crate::{
-    AppError,
-    scheduler::schedule
-};
+use crate::{AppError, scheduler::schedule};
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
+
+// Note: These vanish to 'TOML' once done.
+const CHANNEL_MASK: ChannelMask = ChannelMask::PRIMARY_CHANNELS;
+const MANUFACTURER_NAME: String = "Your name".into();
+const MODEL_IDENTIFIER: String = "Your model".into();
 
 pub(crate) struct LightRouter where Self: Router {
 
@@ -19,20 +29,56 @@ pub(crate) struct LightRouter where Self: Router {
 
 //? const COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
+#[cfg(false)] //R
+const MF_INFO: ManufacturerInfo = ManufacturerInfo{
+    manufacturer_name: "Your name",
+    model_identifier: "Your model"
+};
+
 impl LightRouter {
     pub(crate) fn new() -> Result<Self, AppError> {
-        <Self as Router>::init(10)?;
 
-        let cfg: esp_zb_color_dimmable_light_cfg_t = esp_zb_color_dimmable_light_cfg_t::default();
-        let ep: = esp_zb_color_dimmable_light_ep_create(, &cfg);
+        // tbd. Most/all things inside here could be gathered to TOML
+        //
+        //  <<
+        //      [network]
+        //      channel_mask: [11,15,20,25],    // primary channels
+        //
+        //      [node]
+        //      max_children: 10,
+        //
+        //      # default for endpoints
+        //      manufacturer_name: ...
+        //      model_identifier: ...
+        //
+        //      [node.endpoints.10]
+        //      type: "COLOR_DIMMABLE_LIGHT"
+        //
+        //  <<
+        //
+        let ep_10 = EndpointConfig(
+            EndpointType::ColorDimmableLight( ColorDimmableLightConfig::default() ),
+            BasicConfig {
+                manufacturer_name: PascalString::from(MANUFACTURER_NAME),
+                model_identifier: PascalString::from(MODEL_IDENTIFIER),
+            }
+        );
 
-        let ep = endpoint::ColorDimmableLight::new(COLOR_DIMMABLE_LIGHT_ENDPOINT);
+        let cfg: NodeConfig = {
+            NodeConfig {
+                channel_mask: Some(CHANNEL_MASK),
+                max_children: None,     // use default
+                endpoints: {
+                    let mut m = BTreeMap::new();
+                        //
+                        m.insert(10, ep_10);
+                    m
+                }
+            }
+        };
 
+        <Self as Router>::init(cfg)?;
         let me = Self{};
-        me.add_ep_basic_manufacturer_info(ep, HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &info);
-        me.device_register(ep);
-        //me.action_handler_register(zb_action_handler);
-        //me.set_primary_network_channel_set(...);
 
         Ok(me)
     }

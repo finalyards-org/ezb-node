@@ -23,18 +23,15 @@ use esp_zb_examples::{
 use log::LevelFilter;
 use esp_zb::{
     router::prelude::*,
-    //RSignal,
-    //RIsOpenedForSecs,  // tbd. bring in from prelude; some system which makes sense..???
+    ChannelMask,
 };
-
+use esp_zb::node::ChannelMask;
 //use hal::peripherals::Peripherals;
 
 mod lrouter;
 mod scheduler;
 
 use lrouter::LightRouter;
-
-// const HA_COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
 /**
 * The entry point.
@@ -67,12 +64,9 @@ async fn main2() -> Result<!, AppError> {
     // Initialize Zigbee
     //
     let _ = LightRouter::new()?
-        //R .add_ep_basic_manufacturer_info()
-        //R .device_register()
         //R .core_action_handler_register()
-        //R .set_primary_network_channel_set()
         //
-        .roll(false) .await;
+        .roll( false) .await;
 
     /*** next
     esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();

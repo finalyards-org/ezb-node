@@ -1,13 +1,9 @@
 #![no_std]
-#![allow(non_snake_case)]
+//#![allow(non_snake_case)]
 
 pub(crate) use esp_zb_raw as raw;
 
 pub mod node;
-
-// Next (current) module being worked upon; rename and take next.
-//mod _wip;
-//pub use _wip::*;
 
 mod signal;
 pub use signal::*;
@@ -18,11 +14,12 @@ pub use version::*;
 mod error;
 pub use error::Error;
 
-mod endpoint;
-pub use endpoint::Endpoint;
+pub mod endpoint;
+//pub use endpoint::{
+//    Endpoint,
+//};
 
-mod channel_mask;
-pub use channel_mask::ChannelMask;
+pub mod utils;
 
 // We'll expose these _for now_ but the idea is 'raw' should not (need to) be visible in the API.
 pub use raw::{

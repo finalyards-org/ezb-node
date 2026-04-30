@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 * Basic manufacturer information.
 */
 // tbd. describe when and where this is exposed over Zigbee comms.
-
+//
 // typedef struct zcl_basic_manufacturer_info_s {
 //     char *manufacturer_name;
 //     char *model_identifier;
@@ -17,19 +17,12 @@ use alloc::vec::Vec;
 //
 pub struct ManufacturerInfo {
     /// name of e.g. your company
-    manufacturer_name: &'static str,
+    pub manufacturer_name: &'static str,
     /// name of your particular product
-    model_identifier: &'static str,
+    pub model_identifier: &'static str,
 }
 
 impl ManufacturerInfo {
-    pub const fn new(name: &'static str, model: &'static str) -> Self {
-        Self {
-            manufacturer_name: name,
-            model_identifier: model,
-        }
-    }
-
     // tbd. ensure the lifetime of the strings, and/or write directly to C buffers.
 
     pub(crate) fn as_zcl_strings(&self) -> (Vec<u8>, Vec<u8>) {

@@ -27,14 +27,14 @@ embuild.workspace = true
 
 [features]
 default = ["esp32c6"]
-controller = []
-    # include features only needed for a Controller (in addition to EndDevice and Router capabilities)
+controller = [] # enable building as a Controller (in addition to Router and EndDevice)
+router = []     # enable building as a Router (in addition to EndDevice)
 
 touchlink = []
 gp = []
 
 # Endpoint types
-ep_color_dimmable_light = []
+ep_color_dimmable_light = ["esp-zb-raw/ep_color_dimmable_light"]
 
 esp32c6 = [
     "esp-zb-raw/esp32c6",

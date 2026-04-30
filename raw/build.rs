@@ -120,6 +120,23 @@ fn main() {
 
     println!("cargo:rustc-link-search=tmp");
     //_! println!("cargo:rustc-link-lib=static=vendor_uld{}", X);
+
+    // Defaults:
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src");
+    // +
+    println!("cargo:rerun-if-changed=bindings.rs");
+    println!("cargo:rerun-if-changed=Makefile");
+    println!("cargo:rerun-if-changed=wrap.h");
+    println!("cargo:rerun-if-changed=stubs.rs");
+    //
+    println!("cargo:rerun-if-changed=tmp/bindings_0.rs");
+        //
+        // Note: 'bindings_0.rs' is an *output* but this helps dependent crates to realize if it has been removed,
+        //      and avoid a failing upstream build.
+        //
+        // Note 2: using 'rerun-if-changed' replaces the automatic defaults; that's why the "defaults" need now explicitly
+        //      to be stated. ('Cargo.{toml|lock}' are tracked nonetheless.)
 }
 
 fn idf_stuff() {

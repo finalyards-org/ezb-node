@@ -1,0 +1,14 @@
+#
+# Makefile.dev
+#
+# Development helper targets. You can ignore this, but need to type the longer commands.
+#
+
+all:
+	false
+
+lb light\:build:
+	cargo build --release -vv --bin light --features esp-zb/ep_color_dimmable_light
+
+lr light\:run:
+	cargo build --release -vv --bin light --features esp-zb/ep_color_dimmable_light

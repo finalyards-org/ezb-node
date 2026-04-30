@@ -226,14 +226,16 @@ Study the source code:
 Build some examples that we'll use in the next section (demo).
 
 ```
-$ (cd x && cargo build --release --example light -vv)
+$ cargo apps:light:build
 [...]
 ```
 
 ```
-$ (cd x && cargo build --release --example switch -vv)
+$ cargo apps:switch:build
 [...]
 ```
+
+>Note: To see the longer commands, check out `.cargo/config.toml`.
 
 If the builds succeeded, you are ready to run the created binaries on ESP32-C6 devkits.
 

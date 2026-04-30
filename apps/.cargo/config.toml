@@ -1,3 +1,0 @@
-[alias]
-light = "run --release --bin light --features esp-zb/ep_color_dimmable_light"
-"light:build" = "build --release --bin light --features esp-zb/ep_color_dimmable_light"

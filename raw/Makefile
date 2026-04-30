@@ -28,7 +28,9 @@ _ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
 #_SDKCONFIG:=${DEP_ESP_IDF_ROOT}/sdkconfig
 	# ^-- good for checking what config got generated [DEBUG]
 _SDKCONFIG_H:=${DEP_ESP_IDF_ROOT}/build/config/sdkconfig.h
-_ESP_ZIGBEE_LIB_INCLUDE:=${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include \
+_ESP_ZIGBEE_LIB_INCLUDE:=\
+	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include \
+	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include/ha \
 	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zboss-lib/include
 
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
@@ -65,12 +67,8 @@ ifeq ($(wildcard $(DEP_ESP_IDF_ROOT)/managed_components),)
   $(error No 'managed_components' pulled by Rust build)
 endif
 
-# Check both paths within the var, separately.
+# Check all paths within the var, separately.
 $(foreach p,$(_ESP_ZIGBEE_LIB_INCLUDE),$(if $(wildcard $(p)/*),,$(error No files within '$(p)')))
-
-#Rifeq ($(wildcard $(word 1, $(_ESP_ZIGBEE_LIB_INCLUDE))/*),)
-#R  $(error No files within '$(_ESP_ZIGBEE_LIB_INCLUDE)')
-#Rendif
 
 _TARGET:=${MCU}
 
@@ -152,7 +150,8 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\
-	  -I. -I$(firstword ${_ESP_ZIGBEE_LIB_INCLUDE}) -I$(lastword ${_ESP_ZIGBEE_LIB_INCLUDE}) -I${_TMP} -Ifake \
+	  -I. -I${_TMP} -Ifake \
+	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
 		-I $(dir ${_SDKCONFIG_H}) \
 		-I ${_SYSROOT}/riscv32-esp-elf/include \
 		-I ${_ESP_IDF_PATH}/components/esp_common/include \

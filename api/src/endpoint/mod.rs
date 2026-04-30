@@ -3,14 +3,12 @@
 *
 * A Zigbee endpoint has one or more Clusters; Basic Cluster being #0.
 */
-#[cfg(feature = "ep_color_dimmable_light")]
-mod color_dimmable_light;
-#[cfg(feature = "ep_color_dimmable_light")]
-pub use color_dimmable_light::*;
+pub mod profile;
 
-mod manufacturer_info;
-//pub use manufacturer_info::ManufacturerInfo;
+mod endpoint_config;
+pub use endpoint_config::*;
 
-pub trait Endpoint {
-
+pub enum Endpoint {
+    #[cfg(feature = "ep_color_dimmable_light")]
+    ColorDimmableLight,
 }
