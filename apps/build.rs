@@ -22,28 +22,6 @@ fn main() {
         }
     }
 
-    /***R
-    // Inject env.vars for 'esp-idf-sys' build, pointing to the 'partitions.csv' as an absolute
-    // path.
-    //
-    // HACK. Needed because 'esp-idf-sys' does not properly map the relative paths in 'sdkconfig.defaults'.
-    {
-        use std::path::PathBuf;
-
-        let project_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-
-        let partition_file = PathBuf::from(&project_dir).join("partitions.csv");
-        println!("cargo:warning=PARTITIONS FILE: {}", partition_file.display());
-        unimplemented!();
-
-        assert!(partition_file.exists(), "'partitions.csv' not found");
-
-        println!("cargo:rustc-env=ESP_IDF_SDKCONFIG_CUSTOM_PARTITION_TABLE={}", partition_file.display());
-
-            // Joissain versioissa tämä on varmempi tapa:
-            println!("cargo:rustc-env=SDKCONFIG_DEFAULTS={}/sdkconfig.defaults", project_dir);
-        }***/
-
     // Needed for linking of executables to succeed.
     embuild::espidf::sysenv::output();
 

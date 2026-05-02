@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(non_snake_case)]
+extern crate alloc;
 
 #[path = "../bindings.rs"]
 mod bindings;
@@ -8,23 +9,16 @@ mod bindings;
 mod stubs;
 
 pub use bindings::{
-    ESP_ZB_VER_MAJOR,
-    ESP_ZB_VER_MINOR,
-    ESP_ZB_VER_PATCH,
+    esp_zigbee_get_version_string,
 };
-
-// Rust note: converting '[u8;_]' to a const string requires 'unsafe': we confirm the contents are valid UTF8.
-pub const ESP_ZB_VER: &str = unsafe {
-    core::str::from_utf8_unchecked(bindings::ESP_ZB_VER_STR)
-}; // "1.6.8"
 
 // We selectively choose the elements that make it to the API layer.
 //
 // Could also filter in the 'bindgen' stage, but this turns out to be convenient, in practice.
 //
 pub use bindings::{
-    esp_zb_platform_config,
-    esp_zb_platform_config_t,
+    //R esp_zb_platform_config,
+    esp_zigbee_platform_config_t,   // 1.x: esp_zb_platform_config_t,
         // {
         //    radio_config: {
         //      radio_mode:         ZB_RADIO_MODE_NATIVE | ZB_RADIO_MODE_UART_RCP,
@@ -33,39 +27,32 @@ pub use bindings::{
         //        rx_pin:
         //        tx_pin:
         //        uart_config: { ... }
-        //    },
-        //    host_config: {
-        //      host_connection_mode: ZB_HOST_CONNECTION_MODE_NONE | ... _MODE_CLI_UART | ... _MODE_RCP_UART
-        //      host_uart_config: { port, rx_pin, tx_pin, uart_config }
         //    }
         // }
 
-    esp_zb_radio_mode_t,
-    esp_zb_host_connection_mode_t,
-    esp_zb_uart_config_t,
-    esp_zb_host_config_t,
-    esp_zb_radio_config_t,
-    uart_port_t,
-    gpio_num_t
+    esp_zigbee_radio_mode_t,
+    //R esp_zb_host_connection_mode_t,
+    //r esp_zb_uart_config_t,
+    //r esp_zb_host_config_t,
+    //r esp_zb_radio_config_t,
+    //r uart_port_t,
+    //r gpio_num_t
 };
 
 // Router; main loop; signal hook
 pub use bindings::{
-    esp_zb_init,
-    esp_zb_cfg_t,
-    esp_zb_nwk_device_type_t,
-    esp_zb_start,
-    esp_zb_cfg_s__bindgen_ty_1,
-    esp_zb_zczr_cfg_t,
+    esp_zigbee_init,
+    //esp_zb_cfg_t,
+    //esp_zb_nwk_device_type_t,
+    esp_zigbee_start,
+    //esp_zb_cfg_s__bindgen_ty_1,
+    esp_zigbee_zczr_config_s,
 
-    esp_zb_app_signal_t,
-    esp_zb_app_signal_type_t,
+    //esp_zb_app_signal_t,
+    ezb_app_signal_type_t,
     esp_err_t,
-    esp_zb_app_signal_get_params,
-};
-
-pub use bindings::{
-    esp_zb_stack_main_loop_iteration
+    //esp_zb_app_signal_get_params,
+    //esp_zb_stack_main_loop_iteration,   // 2.0: "deprecated"; RATHER DISCONTINUED: expands to a no-op; Q: How to get involved in the main loop, in 2.0???
 };
 
 // signals

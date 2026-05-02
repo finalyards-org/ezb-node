@@ -1,6 +1,6 @@
 # Understanding `menuconfig`
 
-The `_mc` folder is separate from the rest of the repo.
+This `_mc` folder is not used by the rest of the repo.
 
 The purpose is to be able to study and fine tune the ESP-IDF *configuration* used in building the Rust projects.
 
@@ -11,9 +11,9 @@ The purpose is to be able to study and fine tune the ESP-IDF *configuration* use
 
 **`sdkconfig.defaults`**
 
-This file gives the *intention* of the author, for which ESP-IDF capabilities should be activated, and which banned. **It DOES NOT STEER** the build: one cannot e.g. state "WiFi disabled", if there's some enabled component that brings it in.
+This file gives the *intention* of the author, for which ESP-IDF capabilities should be activated. **It DOES NOT DIRECTLY STEER** the build: one cannot disable components with it, only pull them in, or configure them.
 
-It's a ... kind request.
+>Note: The "cannot disable" is a convention held by ESP-IDF. The KConfig format itself allows setting things off (`n`), but such lines will not matter, if some other component says otherwise.
 
 **`sdkconfig`**
 
@@ -31,12 +31,22 @@ This lists *all* the configuration for ESP-IDF and has thousands of lines. **IT 
 ```
 $ cat `find ~/target -name sdkconfig` | grep VFS_
 CONFIG_FATFS_VFS_FSTAT_BLKSIZE=0
-# CONFIG_VFS_SUPPORT_IO is not set
+CONFIG_VFS_SUPPORT_IO=y
+CONFIG_VFS_SUPPORT_DIR=y
+CONFIG_VFS_SUPPORT_SELECT=y
+CONFIG_VFS_SUPPRESS_SELECT_DEBUG_OUTPUT=y
+# CONFIG_VFS_SELECT_IN_RAM is not set
+CONFIG_VFS_SUPPORT_TERMIOS=y
+CONFIG_VFS_MAX_COUNT=8
+CONFIG_VFS_SEMIHOSTFS_MAX_MOUNT_POINTS=1
+CONFIG_VFS_INITIALIZE_DEV_NULL=y
 ```
 
-Here we manually checked that the `VFS` (virtual file system) is off.
+>Note all the `y`'s (on). The one configuration not used is only mentioned as a comment: "`is not set`".
 
->Try the same for `ZB_` (should find some; Zigbee specific), `BT_` (Bluetooth) and so forth.
+Here we manually checked that the `VFS` (virtual file system) configuration.
+
+>Try the same for `ZB_` (should find some; Zigbee specific), `WIFI` and so forth.
 
 ## Using `menuconfig`
 
@@ -78,15 +88,14 @@ This is **important**. You need to set the target MCU within the project folder.
 You can either copy the `sdkconfig` file (from `target` output, see above) to the `_mc` folder, or point to it with the `ESP_IDF_SDKCONFIG` env.var.
 
 ```
-$ ESP_IDF_SDKCONFIG=../sdkconfig idf.py menuconfig
+$ ESP_IDF_SDKCONFIG={path-to}/sdkconfig idf.py menuconfig
 ```
 
 If the launch is good, you will see:
 
 ```
-NOTICE: [1/3] espressif/esp-zboss-lib (1.6.4)
-NOTICE: [2/3] espressif/esp-zigbee-lib (1.6.8)
-NOTICE: [3/3] idf (5.5.4)
+NOTICE: [1/2] espressif/esp-zigbee-lib (2.0.0)
+NOTICE: [2/2] idf (5.5.4)
 ```
 
 This means the external components have been included in the configuration.
@@ -102,26 +111,30 @@ The interesting part is often under `Component config`.
 
 It should be fairly easy from here...
 
-<!-- nah
-### Interesting keys
+>Hint: Most of the interesting stuff takes place under `Component config`.
 
-- `Component config` > `Zigbee`
-
-	The keys for our `esp-zigbee-lib` external component.
--->
 
 ## Advanced
 
 ### 🤔Hint: speed up `menuconfig` on Multipass VM's
 
-If you are using Multipass VM, you might speed up the launch 5..10x by:
+If you are using Multipass VM, you can speed up the commands by **10..x** by:
 
 ```
 $ install -d /tmp/mc-build
 $ ln -s /tmp/mc-build build
 ```
 
-This keeps the build files (26MB of them) within the VM, without sharing them with the host.
+This keeps the build files (26MB of them) within the VM's filesystem.
+
+```
+$ install -d /tmp/managed_components
+$ ln -s /tmp/managed_components managed_components
+```
+
+Does the same for the `esp-zigbee-lib` component (329MB).
+
+>Together, these changed the author's `menuconfig` launch from crawling to light weight.
 
 
 ### `idf.py reconfigure`

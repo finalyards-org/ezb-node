@@ -5,15 +5,12 @@ edition = "2024"
 rust-version = "1.94"
 publish = false
 
-# These sections need to be within the Cargo crate designated as 'ESP_IDF_SYS_ROOT_CRATE'.
+# The '[package.metadata.esp-idf-sys]' needs to be within the Cargo crate designated as 'ESP_IDF_SYS_ROOT_CRATE'.
 #
 #   Note: Please reflect any changes also in '{project}/_mc/main/idf_component.yml'
 #
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "espressif/esp-zigbee-lib", version = "1.*" }
-
-[[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "espressif/esp-zboss-lib", version = "1.*" }
+remote_component = { name = "espressif/esp-zigbee-lib", version = "2.*" }
 
 [dependencies]
 log.workspace = true

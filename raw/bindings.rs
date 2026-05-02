@@ -9,22 +9,39 @@
 * We can see this (converting C uninitialized struct parts to Rust-friendly defaults)
 * as being part of the stated aim of "1-to-1 C-Rust" interface.
 */
+use alloc::string::String;
 use core::mem::MaybeUninit;
 
 include!("tmp/bindings_0.rs");
 
-impl Default for esp_zb_platform_config_t {
+const STORAGE_PARTITION_NAME: &str = "zb_storage";    // from 'partitions.csv'; tbd. maybe bring in from TOML
+
+// typedef struct esp_zigbee_platform_config_s {
+//     const char *storage_partition_name;     /*!< The name of the storage partition */
+//     esp_zigbee_radio_config_t radio_config; /*!< The radio configuration */
+// } esp_zigbee_platform_config_t;
+//
+//typedef struct esp_zigbee_radio_config_s {
+//     esp_zigbee_radio_mode_t  radio_mode;            /*!< The radio mode */
+//     union {
+//         esp_zigbee_uart_config_t radio_uart_config; /*!< The uart configuration to RCP */
+//     };
+// } esp_zigbee_radio_config_t;
+//
+impl Default for esp_zigbee_platform_config_t {
     fn default() -> Self {
-        esp_zb_platform_config_t {
-            radio_config: esp_zb_radio_config_t {
-                radio_mode: esp_zb_radio_mode_t::ZB_RADIO_MODE_NATIVE,
-                radio_uart_config: esp_zb_uart_config_t::nada()
-            },
-            host_config: esp_zb_host_config_t::default()
+        esp_zigbee_platform_config_t {
+            storage_partition_name: STORAGE_PARTITION_NAME.as_ptr(),
+            radio_config: esp_zigbee_radio_config_t {
+                radio_mode: esp_zigbee_radio_mode_t::ESP_ZIGBEE_RADIO_MODE_NATIVE,
+                __bindgen_anon_1: unsafe { core::mem::zeroed() } // not used
+            }
         }
     }
 }
 
+//R
+#[cfg(false)]
 impl esp_zb_uart_config_t {
     fn nada() -> Self {
         // Not useful setting the random fields; for the tail two we don't even know how to.
@@ -59,11 +76,13 @@ impl esp_zb_uart_config_t {
     }
 }
 
+//R
 //  typedef struct {
 //      esp_zb_host_connection_mode_t   host_connection_mode;   /*!< The host connection mode */
 //      esp_zb_uart_config_t            host_uart_config;       /*!< The uart configuration to host */
 //  } esp_zb_host_config_t;
 //
+#[cfg(false)]
 impl Default for esp_zb_host_config_t {
     fn default() -> Self {
         esp_zb_host_config_t {
@@ -73,6 +92,7 @@ impl Default for esp_zb_host_config_t {
     }
 }
 
+//R
 // /**
 //  * @brief Structure of device descriptor on a endpoint
 //  */
@@ -84,11 +104,13 @@ impl Default for esp_zb_host_config_t {
 // } ESP_ZB_PACKED_STRUCT
 // esp_zb_endpoint_config_t;
 //
+#[cfg(false)]
 const O: esp_zb_endpoint_config_t = {
     let un = MaybeUninit::zeroed();
     unsafe { un.assume_init() }
 };
 
+#[cfg(false)]
 impl Default for esp_zb_endpoint_config_t where Self: Clone {
     fn default() -> Self {
         O   // tbd. rename if works
@@ -138,7 +160,7 @@ impl Default for esp_zb_endpoint_config_t where Self: Clone {
 //     }
 //
 #[cfg(feature = "ep_color_dimmable_light")]
-impl Default for esp_zb_color_dimmable_light_cfg_t {
+impl Default for esp_zigbee_color_dimmable_light_cfg_t {
     fn default() -> Self {
         unsafe {
             ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG

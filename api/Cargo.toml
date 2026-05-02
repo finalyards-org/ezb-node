@@ -17,6 +17,7 @@ esp-idf-sys = { workspace = true, default-features = false }
     # just core
 
 bitflags = { version = "2.11.1" }
+once_cell = { version = "1.21", default-features = false }
 
 #r [dev-dependencies]
 #r esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart"], default-features = false }
@@ -31,7 +32,7 @@ controller = [] # enable building as a Controller (in addition to Router and End
 router = []     # enable building as a Router (in addition to EndDevice)
 
 touchlink = []
-gp = []
+#R gp = []
 
 # Endpoint types
 ep_color_dimmable_light = ["esp-zb-raw/ep_color_dimmable_light"]

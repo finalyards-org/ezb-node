@@ -13,7 +13,7 @@ build-std = ["std", "panic_abort"]
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
-runner = "espflash flash --monitor --partition-table ../partitions.csv"
+runner = "espflash flash --monitor --partition-table partitions.csv"
     #
     # Note: You can try to get faster flash speed by:
     #   '--flash-freq 80mhz' (default is 40MHz); did not cause a speed-up with the author.

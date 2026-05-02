@@ -29,9 +29,9 @@ _ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
 	# ^-- good for checking what config got generated [DEBUG]
 _SDKCONFIG_H:=${DEP_ESP_IDF_ROOT}/build/config/sdkconfig.h
 _ESP_ZIGBEE_LIB_INCLUDE:=\
-	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include \
-	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include/ha \
-	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zboss-lib/include
+	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include
+
+	# Note: for 'esp-zigbee-sdk' 1.x we needed more than one include path. Keep the setup, for now...
 
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
 # section that we need.
@@ -72,9 +72,6 @@ $(foreach p,$(_ESP_ZIGBEE_LIB_INCLUDE),$(if $(wildcard $(p)/*),,$(error No files
 
 _TARGET:=${MCU}
 
-#R _ESP_ZIGBEE_SDK=../.sub/esp-zigbee-sdk
-#R ESP_ZIGBEE_LIB=${_ESP_ZIGBEE_SDK}/components/esp-zigbee-lib
-
 _TMP:=./tmp
 
 all:
@@ -83,22 +80,6 @@ all:
 # The targets that 'build.rs' normally builds (for debugging, in case make fails)
 manual: ${_BIND_RS}
 	@echo "\nManual build succeeded."
-
-# Eventually (?) 'zb_vendor.h' should be generated based on configuration from the *Rust program* using us, but
-# that's later.
-#
-# Example (courtesy Copilot):
-#		<<
-#		#define ZB_MANUFACTURER_CODE 0x1234
-#   #define ZB_VENDOR_CLUSTER_ID 0xFC00
-#   #define ZB_VENDOR_ENDPOINT   1
-#		<<
-#
-#|${_TMP}/zb_vendor.h:
-#|	@echo "#pragma once" > $@
-#|	@echo "#define ZB_MANUFACTURER_CODE 0x1234" >> $@
-#|	@echo "#define ZB_VENDOR_CLUSTER_ID 0xFC00" >> $@
-#|	@echo "#define ZB_VENDOR_ENDPOINT   1" >> $@
 
 #---
 # Generate Rust
@@ -120,25 +101,14 @@ _OPAQUE_TYPES:=$(strip \
 	esp_zb_price_cluster_cfg_t \
 	esp_zb_touchlink_commissioning_cfg_t \
 )
-${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile ./zb_vendor.h ./zb_vendor_default.h \
+${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
 	| bindgen
 	bindgen $< \
 	    --allowlist-file wrap.h \
-	    --allowlist-type 'esp_zb_.+' \
+	    --allowlist-type 'ezb_.+' \
+	    --allowlist-function 'ezb_.+' \
+	    --allowlist-function 'esp_zigbee_.+' \
 	    --allowlist-function 'esp_zb_.+' \
-	    --allowlist-var 'ESP_ZB_.+' \
-	    \
-	    --allowlist-item 'ESP_ZB_VER' \
-			--allowlist-type 'esp_zb_zcl_.*' \
-			--allowlist-function 'esp_zb_zcl_.*' \
-			\
-			--allowlist-type 'esp_zb_zdo_.*' \
-			--allowlist-function 'esp_zb_zdo_.*' \
-			\
-			--allowlist-type 'esp_zb_cluster_.*' \
-			--allowlist-function 'esp_zb_cluster_.*' \
-			\
-			--allowlist-type 'esp_zb_attribute_.*' \
 			\
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \

@@ -6,10 +6,7 @@
 #   Keep this aligned with '{project folder}/raw/Cargo.toml':
 #   <<
 #     [[package.metadata.esp-idf-sys.extra_components]]
-#     remote_component = { name = "espressif/esp-zigbee-lib", version = "1.*" }
-#
-#     [[package.metadata.esp-idf-sys.extra_components]]
-#     remote_component = { name = "espressif/esp-zboss-lib", version = "1.*" }
+#     remote_component = { name = "espressif/esp-zigbee-lib", version = "2.*" }
 #   <<
 #
 # References:
@@ -20,6 +17,5 @@ targets:
   - esp32c6
 
 dependencies:
-  espressif/esp-zigbee-lib: "1.*"
-  espressif/esp-zboss-lib: "1.*"
+  espressif/esp-zigbee-lib: "2.*"
   idf: ">=5.5"

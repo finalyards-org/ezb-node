@@ -4,11 +4,23 @@
 # Development helper targets. You can ignore this, but need to type the longer commands.
 #
 
+define HELP
+targets:
+  light:{build|run}  # the light application
+endef
+export HELP
+
 all:
-	false
+	@echo "$$HELP"
 
 lb light\:build:
 	cargo build --release -vv --bin light --features esp-zb/ep_color_dimmable_light
 
 lr light\:run:
 	cargo build --release -vv --bin light --features esp-zb/ep_color_dimmable_light
+
+#---
+echo:
+	@echo A
+
+.PHONY: all help echo

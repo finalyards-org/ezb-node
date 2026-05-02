@@ -106,14 +106,14 @@ pub trait Node {
     *   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
     */
     #[allow(async_fn_in_trait)] // "you can suppress this lint if you plan to use the trait only in your own code"
-    async fn roll(self: Self, auto_start: bool) -> ! where Self: Sized {
+    async fn launch(self: Self, auto_start: bool) -> ! where Self: Sized {
 
         unsafe {
-            esp_zb_start(auto_start);
+            esp_zigbee_start(auto_start);
         }
 
         loop {
-            unsafe { esp_zb_stack_main_loop_iteration() };
+            unsafe { esp_zigbee_stack_main_loop_iteration() };
 
             // Note: Optimizing what shall be here is not trivial. We would ideally both:
             //  - process Zigbee events without delay (call e.g. 'yield_now().await' instead of waiting 1 tick)
