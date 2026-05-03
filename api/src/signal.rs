@@ -4,38 +4,31 @@ use core::{
     time::Duration
 };
 
-use esp_zb_raw::{
-    esp_err_t,
-    esp_zb_app_signal_type_t,
-    esp_zb_zdo_signal_device_annce_params_t,
-    esp_zb_app_signal_get_params,
-    esp_zb_zdo_signal_leave_params_t,
-    esp_zb_nwk_signal_device_associated_params_t,
-    esp_zb_zdo_signal_leave_indication_params_t,
-    esp_zb_zdo_signal_can_sleep_params_t,
-    esp_zb_zdo_signal_device_authorized_params_t,
-    esp_zb_zdo_signal_device_update_params_t,
-    esp_zb_zdo_signal_nwk_status_indication_params_t,
-    esp_zb_zdo_device_unavailable_params_t,
+use crate::raw::{
+    ezb_app_signal_type_t,
+    ezb_zdo_signal_device_annce_params_t,
+    //R ezb_app_signal_get_params,
+    ezb_zdo_signal_leave_params_t,
+    //R ezb_nwk_signal_device_associated_params_t,
+    ezb_zdo_signal_leave_indication_params_t,
+    //R ezb_zdo_signal_can_sleep_params_t,
+    ezb_zdo_signal_device_authorized_params_t,
+    ezb_zdo_signal_device_update_params_t,
+    //R ezb_zdo_signal_nwk_status_indication_params_t,
+    //R ezb_zdo_device_unavailable_params_t,
 };
 
 #[cfg(feature = "touchlink")]
-use esp_zb_raw::{
+use crate::raw::{
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
     esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
 };
 
-#[cfg(feature = "gp")]  // only for consistency; not aiming to support
-use esp_zb_raw::{
-    esp_zb_zgp_signal_commissioning_params_t,
-    esp_zb_zgp_signal_approve_comm_params_t,
-};
-
 use esp_idf_sys::{
     EspError,
-    ESP_FAIL,
-    ESP_ERR_INVALID_STATE
+    //R ESP_FAIL,
+    //R ESP_ERR_INVALID_STATE
 };
 
 use crate::utils::IeeeAddr;
@@ -354,21 +347,6 @@ pub enum Signal {
 
     /**
     * Overview:
-    * - Indicates the GPCB (Green Power Combo Basic) commissioning signal.
-    *
-    * When generated:
-    * - When a device is commissioned or decommissioned by the GPCB.
-    */
-    // Status code:
-    //  - ESP_OK: Commissioning or decommissioning completed successfully.
-    //
-    // Payload:
-    //  - Refer to esp_zb_zgp_signal_commissioning_params_t
-    #[cfg(feature = "gp")]
-    ZgpSignalCommissioning { x: esp_zb_zgp_signal_commissioning_params_t },
-
-    /**
-    * Overview:
     * - Indicates the device can enter sleep mode.
     *
     * When generated:
@@ -588,34 +566,18 @@ pub enum Signal {
         short_addr: u16
     },
 
-    /**
-    * Overview:
-    * - ZGP Approve Commissioning.
-    *
-    * When generated:
-    *  - When the ZGP subsystem is ready to create a new pairing, but the APP should check
-    *    if the GPD application functionality matches to continue the pairing.
-    */
-    // Status code:
-    //  - ESP_OK: On success.
-    //
-    // Payload:
-    //  - Refer to esp_zb_zgp_signal_approve_comm_params_t
-    #[cfg(feature = "gp")]
-    ZgpSignalApproveCommissioning { x: esp_zb_zgp_signal_approve_comm_params_t },
-
     SignalEnd,
 }
 
 impl Signal {
     /**
-    * Convert the application signal from Zigbee C level to Rust so that
+    * Convert the application signal from Zigbee C level to Rust so that:
     *   - all information is contained in a single, values-only enum
     *
     * For some signals, this means fetching extraneous information, using the C API global functions.
     */
-    pub(crate) fn from(p_app_signal: *const esp_zb_app_signal_type_t, st: esp_err_t) -> Option<Self> {
-        use esp_zb_app_signal_type_t::*;    // signal values
+    pub(crate) fn from(p_app_signal: *const ezb_app_signal_type_t, st: esp_err_t) -> Option<Self> {
+        use ezb_app_signal_type_t::*;    // signal values
 
         assert!(!p_app_signal.is_null());
         let app_signal = unsafe { *p_app_signal };
@@ -690,7 +652,7 @@ impl Signal {
                 //  uint8_t       capability;             /*!< The capability of the device. */
                 //
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_device_annce_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_device_annce_params_t>(p_app_signal);
                     Self::ZdoSignalDeviceAnnce {
                         device_short_addr: x.device_short_addr,
                         ieee_addr: x.ieee_addr.into(),
@@ -704,7 +666,7 @@ impl Signal {
                 //  uint8_t leave_type;             /*!< Leave type, refer to esp_zb_nwk_leave_type_t */
 
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_leave_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_leave_params_t>(p_app_signal);
                     Self::ZdoSignalLeave {
                         leave_type_X: x.leave_type
                     }
@@ -781,7 +743,7 @@ impl Signal {
                 // payload:
                 //  esp_zb_ieee_addr_t device_addr; /*!< address of associated device */
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_nwk_signal_device_associated_params_t>(p_app_signal);
+                    let x = get_param::<ezb_nwk_signal_device_associated_params_t>(p_app_signal);
                     Self::NwkSignalDeviceAssociated {
                         device_addr: x.device_addr.into(),
                     }
@@ -795,7 +757,7 @@ impl Signal {
                 //  uint8_t rejoin;                         /*!< 1 if this was leave with rejoin; 0 - otherwise */
 
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_leave_indication_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_leave_indication_params_t>(p_app_signal);
                     Self::ZdoSignalLeaveIndication {
                         short_addr: x.short_addr,
                         device_addr: x.device_addr.into(),
@@ -811,7 +773,7 @@ impl Signal {
             ESP_ZB_ZGP_SIGNAL_COMMISSIONING => { // 0x15
                 // assert: 'st' ∈ ESP_OK
                 // payload: *tbd. describe*
-                let x = get_param::<esp_zb_zgp_signal_commissioning_params_t>();
+                let x = get_param::<ezb_zgp_signal_commissioning_params_t>();
                 Self::ZdoSignalComissioning { x }
             },
             ESP_ZB_COMMON_SIGNAL_CAN_SLEEP => { // 0x16
@@ -819,7 +781,7 @@ impl Signal {
                 // payload:
                 //  uint32_t sleep_duration; /*!< sleep duration in milliseconds */
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_can_sleep_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_can_sleep_params_t>(p_app_signal);
                     Self::CommonSignalCanSleep {
                         sleep_duration: Duration::from_millis(x.sleep_duration as u64)
                     }
@@ -842,7 +804,7 @@ impl Signal {
                 //  uint8_t authorization_type;   /*!< Type of the authorization procedure */
                 //  uint8_t authorization_status; /*!< Status of the authorization procedure which depends on authorization_type */
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_device_authorized_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_device_authorized_params_t>(p_app_signal);
                     Self::ZdoSignalDeviceAuthorized {
                         long_addr: x.long_addr.into(),
                         short_addr: x.short_addr,
@@ -860,7 +822,7 @@ impl Signal {
                 //  uint8_t tc_action;              /*!< Trust center action,  refer to esp_zb_zdo_update_dev_tc_action_t */
                 //  uint16_t parent_short;          /*!< The short address of device's parent */
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_device_update_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_device_update_params_t>(p_app_signal);
                     Self::ZdoSignalDeviceUpdate {
                         long_addr: x.long_addr.into(),
                         short_addr: x.short_addr,
@@ -881,7 +843,7 @@ impl Signal {
                 //  uint16_t network_addr;        /*!< Network device address associated with the status information */
                 //  uint8_t unknown_command_id;   /*!< Unknown command ID */
                 if_ok!(|| {
-                    let x = get_param::<esp_zb_zdo_signal_nwk_status_indication_params_t>(p_app_signal);
+                    let x = get_param::<ezb_zdo_signal_nwk_status_indication_params_t>(p_app_signal);
                     Self::NlmeStatusIndication {
                         statusX: x.status,
                         network_addr: x.network_addr,

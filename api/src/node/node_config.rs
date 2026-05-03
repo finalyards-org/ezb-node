@@ -1,8 +1,6 @@
 /*
 * Configuration covering a node.
 */
-extern crate alloc;
-
 use alloc::{
     collections::BTreeMap,
 };

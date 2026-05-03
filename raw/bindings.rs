@@ -1,18 +1,40 @@
-#![allow(non_camel_case_types)]
-#![allow(unused)]
-    // Disable warnings of unused entries, and imports in 'tmp/bindings_0.rs'.
-
 /*
 * Gathering the bindgen-generated binding like this allows us to attach
 * 'Default' (and/or other traits) to its types.
-*
-* We can see this (converting C uninitialized struct parts to Rust-friendly defaults)
-* as being part of the stated aim of "1-to-1 C-Rust" interface.
 */
-use alloc::string::String;
-use core::mem::MaybeUninit;
+#[allow(non_camel_case_types)]
+#[allow(unused)]
+    // Disable warnings of unused entries, and imports in 'tmp/bindings_0.rs'.
 
-include!("tmp/bindings_0.rs");
+#[allow(unsafe_op_in_unsafe_fn)]
+    // 'bindgen' (0.72.1) generates code that has 'unsafe fn' but not using 'unsafe within the body; this seems to be a problem.
+    //  <<
+    //      #[inline]
+    //      pub unsafe fn as_slice(&self, len: usize) -> &[T] {
+    //          // <-- no 'unsafe {' here
+    //          ::core::slice::from_raw_parts(self.as_ptr(), len)
+    //      }
+    //  <<
+
+// Silence:
+//  <<
+//warning: unnecessary transmute
+//     --> raw/src/../tmp/bindings_0.rs:2006:48
+//      |
+// 2006 |             let router_capacity: u8 = unsafe { ::core::mem::transmute(router_capacity) };
+//      |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//      |
+// help: replace this with
+//      |
+// 2006 -             let router_capacity: u8 = unsafe { ::core::mem::transmute(router_capacity) };
+// 2006 +             let router_capacity: u8 = unsafe { u8::from(router_capacity) };
+//  <<
+//
+#[allow(unnecessary_transmutes)]
+mod a {
+    include!("tmp/bindings_0.rs");
+}
+pub use a::*;
 
 const STORAGE_PARTITION_NAME: &str = "zb_storage";    // from 'partitions.csv'; tbd. maybe bring in from TOML
 

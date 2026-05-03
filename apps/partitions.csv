@@ -1,14 +1,14 @@
 # Name,     Type, SubType, Offset, Size, Flags
 nvs,        data, nvs,,     0x6000,
 #otadata,   data, ota,,     0x2000,
-#phy_init,   data, phy,,     0x1000,
-zb_storage, data, nvs,,     16K,
-zb_fct,     data, fat,,     1K,
-factory,    app,  factory,, 1400K,
+phy_init,   data, phy,,     0x1000,
 #ota_0,        app,  ota_0,,  1400K,
 #ota_1,        app,  ota_1,,  1400K,
+factory,    app,  factory,, 1400K,
+zb_storage, data, nvs,,     16K,
+zb_fct,     data, fat,,     1K,
 
-# zb_storage: required by 'esp_zigbee_lib'
-# zb_fct:     storing of mfg data, device specific data, Zigbee 3.0 Install Code
-# factory:    application specific use (note: 1600K is less than half the total flash; so theoretically ready for OTA)
-# ota*:       in anticipation for Over-the-air (firmware) updates.
+# ota*:       for Over-the-air (firmware) updates
+# factory:    application specific use (disable once using OTA, though they are not exclusive)
+# zb_storage: Zigbee network parameters, for re-joining after a power-off
+# zb_fct:     storing of manufacturing, device specific data, Zigbee 3.0 Install Code

@@ -6,7 +6,6 @@ use std::collections::BTreeMap;
 use esp_zb::{
     node::{Node, Router, ChannelMask, NodeConfig},
     IsOpenedForSecs,
-    ManufacturerInfo,
     Signal,
     utils::PascalString,
 };
@@ -23,19 +22,13 @@ const CHANNEL_MASK: ChannelMask = ChannelMask::PRIMARY_CHANNELS;
 const MANUFACTURER_NAME: String = "Your name".into();
 const MODEL_IDENTIFIER: String = "Your model".into();
 
-pub(crate) struct LightRouter where Self: Router {
+pub(crate) struct LightController where Self: Router {  // tbd. !!! make 'Controller'; match 2.0
 
 }
 
 //? const COLOR_DIMMABLE_LIGHT_ENDPOINT: u8 = 10;
 
-#[cfg(false)] //R
-const MF_INFO: ManufacturerInfo = ManufacturerInfo{
-    manufacturer_name: "Your name",
-    model_identifier: "Your model"
-};
-
-impl LightRouter {
+impl LightController {
     pub(crate) fn new() -> Result<Self, AppError> {
 
         // tbd. Most/all things inside here could be gathered to TOML
@@ -84,7 +77,7 @@ impl LightRouter {
     }
 }
 
-impl Router for LightRouter {
+impl Router for LightController {
     type Error = AppError;
 
     fn on_app_signal(&self, sig: Signal) /*? -> Result<(), AppError>*/ {
@@ -92,11 +85,11 @@ impl Router for LightRouter {
     }
 }
 
-impl Node for LightRouter {}
+impl Node for LightController {}
 
 /**
 */
-fn on_app_signal(rtr: &LightRouter, sig: Signal) /*? -> Result<(), AppError>*/ {
+fn on_app_signal(rtr: &LightController, sig: Signal) /*? -> Result<(), AppError>*/ {
     use Signal::*;
 
     match sig {

@@ -1,7 +1,7 @@
 /*
 * Based on:
-*   - "Light bulb" example of 'esp-zigbee-sdk'
-*       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/esp_zigbee_HA_sample/HA_color_dimmable_light
+*   - "Color dimmable light" example of 'esp-zigbee-sdk' v.2.0
+*       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmable_light
 */
 #![feature(never_type)]
 
@@ -14,7 +14,6 @@ use esp_idf_svc::{
 };
 
 use esp_zb_examples::{
-    //self as my,
     init_nvs,
     set_panic_hook,
     AppError,
@@ -22,16 +21,16 @@ use esp_zb_examples::{
 
 use log::LevelFilter;
 use esp_zb::{
+    node::ChannelMask,
     router::prelude::*,
-    ChannelMask,
 };
-use esp_zb::node::ChannelMask;
+
 //use hal::peripherals::Peripherals;
 
-mod lrouter;
+mod lcontroller;
 mod scheduler;
 
-use lrouter::LightRouter;
+use lcontroller::LightController;
 
 /**
 * The entry point.
@@ -63,7 +62,7 @@ async fn main2() -> Result<!, AppError> {
 
     // Initialize Zigbee
     //
-    let _ = LightRouter::new()?
+    let _ = LightController::new()?
         //R .core_action_handler_register()
         //
         .roll( false) .await;

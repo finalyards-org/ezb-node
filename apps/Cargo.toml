@@ -1,27 +1,30 @@
 [package]
-name = "esp-zb-examples"
+name = "esp-zb-apps"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.94"
 publish = false
 
 # Inform 'espflash'
-[package.metadata.espflash]
-partition_table = "partitions.csv"
+#
+# Not sure if this made a difference. We are anyways pointing the flashing command ('espflash') directly at the
+# partition table, so keeping this hidden, to avoid confusion. auth/3-May-26
+#
+#[package.metadata.espflash]
+#partition_table = "partitions.csv"
 
 [dependencies]
 esp-zb = { path = "../api" }
 
 log.workspace = true
 
-# 'esp-idf-svc' *is* needed for Embassy integration
-#   - 'embassy_time_driver' comes through there, which is a vital part in tying ESP-IDF and Embassy together.
+# 'esp-idf-svc' is *vital for Embassy integration*
+#   - 'embassy_time_driver' comes through there, which is essential in tying ESP-IDF and Embassy together.
 #   - 'alloc' is needed for logging
 #
 esp-idf-svc = { version = "0.52.1", features = ["embassy-time-driver", "alloc", "binstart"], default-features = false }
-    # defaults to: "binstart", "std"
     #
-    # Note: Do not hesitate from bringing 'std' in, if there are problems. The above is merely the *slimmest*
+    # Note: Do not hesitate bringing 'std' in, if there are problems. The above is merely the *slimmest*
     #       setup the author thinks will work. There may be unnoticed side effects in not bringing full 'std'.
 
 embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
@@ -31,8 +34,6 @@ embassy-time    = { workspace = true, features = ["generic-queue-8"] }
     # generic-queue-X: 'esp-idf-template' comments: "any 'generic-queue' implementation will work"
 
 # Note: No need for 'embassy-sync' or 'critical-section' because we use Embassy only on a single (FreeRTOS) thread.
-
-#!time = { version = "0.3.47" }
 
 [build-dependencies]
 embuild.workspace = true

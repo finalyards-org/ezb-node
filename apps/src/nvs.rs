@@ -4,25 +4,27 @@ use esp_idf_svc::sys;
 
 use sys::{
     nvs_flash_init,
-    nvs_flash_erase,
     ESP_ERR_NVS_NO_FREE_PAGES,
     ESP_ERR_NVS_NEW_VERSION_FOUND
 };
 
 use crate::AppError;
 
-// The logic was suggested by Copilot, to replace C 'nvs_flash_init()'.
-//
-// Note: The behaviour might be a bit different from that of the C demo; come back to this,
-//      eventually. tbd. figure a useful clearing pattern for us; document
-//
-pub fn init_nvs() -> Result<(),AppError> {
+pub fn init_nvs(partition_name: &'static str) -> Result<(),AppError> {
     unsafe {
         let err = nvs_flash_init();
+
+        // Additional logic suggested by
+        //
         if err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND {
             nvs_flash_erase();
             nvs_flash_init();
         }
     }
+
+    unsafe {
+        nvs_flash_init_partition(partition_name)?;
+    }
+
     Ok(())
 }
