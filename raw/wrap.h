@@ -11,10 +11,12 @@
 */
 #pragma once
 
-// Limit warnings in the 'cargo build -vv' output
-//  - Unfortunately, this is not where those warnings come from. It's likely ESP-IDF compilation.
-//#pragma clang diagnostic ignored "-Wexpansion-to-defined"
-
+// Bring in 'nvs_flash' ESP-IDF C component. This because it allows us to do 1:1 code parity with C examples.
+// Was NOT able to find the 'nvs_flash_init()' via 'esp-idf-svc::sys'; that's strange!
+//
+// Note: We might later do this in the 'esp-idf-svc' way; then we can remove the header here (and the Makefile).
+//
+#include "nvs_flash.h"
 #include "esp_zigbee.h"
 
 // #later
@@ -25,9 +27,6 @@
 // tbd. #ifdef if 'ep_color_dimmable_light' featured.
 //#include "esp_zigbee_ha_standard.h" // 1.x
 #include "ezbee/zha.h"
-
-//R#include "esp_zigbee_version.h"
-    // const char *esp_zigbee_get_version_string(void)
 
 // ColorDimmableLight
 //

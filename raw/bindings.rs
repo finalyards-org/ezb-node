@@ -36,6 +36,28 @@ mod a {
 }
 pub use a::*;
 
+use core::mem::MaybeUninit;
+
+// NVS
+//
+pub mod sys {
+    pub use super::{
+        nvs_flash_init,
+        nvs_flash_init_partition,
+    };
+}
+
+impl ezb_extpanid_t {
+    /**
+    * Provide an empty struct, e.g. to be used as a buffer.
+    */
+    pub fn empty() -> Self {
+        let un = MaybeUninit::zeroed();
+        unsafe { un.assume_init() }
+    }
+}
+
+/*** 1.x
 const STORAGE_PARTITION_NAME: &str = "zb_storage";    // from 'partitions.csv'; tbd. maybe bring in from TOML
 
 // typedef struct esp_zigbee_platform_config_s {
@@ -61,6 +83,7 @@ impl Default for esp_zigbee_platform_config_t {
         }
     }
 }
+***/
 
 //R
 #[cfg(false)]
@@ -182,6 +205,7 @@ impl Default for esp_zb_endpoint_config_t where Self: Clone {
 //     }
 //
 #[cfg(feature = "ep_color_dimmable_light")]
+#[cfg(false)]
 impl Default for esp_zigbee_color_dimmable_light_cfg_t {
     fn default() -> Self {
         unsafe {
@@ -189,3 +213,48 @@ impl Default for esp_zigbee_color_dimmable_light_cfg_t {
         }
     }
 }
+
+/***R
+impl ezb_nwk_network_status_t {
+    // with 'strum'
+    fn from_raw(v: u8) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+
+    // Note: '#[repr(u32)]' but signal carries only 'u8'.
+    #[cfg(false)]   // without 'strum'
+    fn from_raw(v: u8) -> Option<Self> {
+        use ezb_nwk_network_status_t::*;
+
+        match v {
+            EZB_NWK_NETWORK_STATUS_LEGACY_NO_ROUTE_AVAILABLE |
+            EZB_NWK_NETWORK_STATUS_LEGACY_LINK_FAILURE |
+            EZB_NWK_NETWORK_STATUS_LINK_FAILURE |
+            EZB_NWK_NETWORK_STATUS_LOW_BATTERY_LEVEL |
+            EZB_NWK_NETWORK_STATUS_NO_ROUTING_CAPACITY |
+            EZB_NWK_NETWORK_STATUS_NO_INDIRECT_CAPACITY |
+            EZB_NWK_NETWORK_STATUS_INDIRECT_TRANSACTION_EXPIRY |
+            EZB_NWK_NETWORK_STATUS_TARGET_DEVICE_UNAVAILABLE |
+            EZB_NWK_NETWORK_STATUS_TARGET_ADDRESS_UNALLOCATED |
+            EZB_NWK_NETWORK_STATUS_PARENT_LINK_FAILURE |
+            EZB_NWK_NETWORK_STATUS_VALIDATE_ROUTE |
+            EZB_NWK_NETWORK_STATUS_SOURCE_ROUTE_FAILURE |
+            EZB_NWK_NETWORK_STATUS_MANY_TO_ONE_ROUTE_FAILURE |
+            EZB_NWK_NETWORK_STATUS_ADDRESS_CONFLICT |
+            EZB_NWK_NETWORK_STATUS_VERIFY_ADDRESS |
+            EZB_NWK_NETWORK_STATUS_PAN_IDENTIFIER_UPDATE |
+            EZB_NWK_NETWORK_STATUS_NETWORK_ADDRESS_UPDATE |
+            EZB_NWK_NETWORK_STATUS_BAD_FRAME_COUNTER |
+            EZB_NWK_NETWORK_STATUS_BAD_KEY_SEQUENCE_NUMBER |
+            EZB_NWK_NETWORK_STATUS_UNKNOWN_COMMAND |
+            EZB_NWK_NETWORK_STATUS_PANID_CONFLICT => {
+                //Some( unsafe { core::mem::transmute::<u8, ezb_nwk_network_status_t>(v) } )
+                Some(v as ezb_nwk_network_status_t)
+            }
+            _ => {
+                None
+            }
+        }
+    }
+}
+***/

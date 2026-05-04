@@ -38,10 +38,8 @@ pub use bindings::{
 
     //esp_zb_app_signal_t,
     ezb_app_signal_type_t,
-    //? esp_err_t,
-        // note: just an 'i32'; should we pass it on?
-    //esp_zb_app_signal_get_params,
-    //esp_zb_stack_main_loop_iteration,   // 2.0: "deprecated"; RATHER DISCONTINUED: expands to a no-op; Q: How to get involved in the main loop, in 2.0???
+    ezb_app_signal_get_params,
+    //R ezb_stack_main_loop_iteration,   // 2.0: "deprecated"; RATHER DISCONTINUED: expands to a no-op; Q: How to get involved in the main loop, in 2.0???
 };
 
 // signals
@@ -54,22 +52,30 @@ pub use bindings::{
     ezb_zdo_signal_device_authorized_params_t,
     ezb_zdo_signal_device_update_params_t,
     //R ezb_zdo_signal_nwk_status_indication_params_t,
-    //R ezb_zdo_device_unavailable_params_t,
     //R ezb_nwk_leave_type_t,
+    ezb_zdo_signal_device_unavailable_params_t,
+    ezb_bdb_signal_simple_params_t,
+    ezb_nwk_signal_network_status_params_t,
+    ezb_nwk_network_status_t,
+    ezb_nwk_signal_permit_join_status_params_t,
+    ezb_app_signal_type_e,
 };
 
 // Node constants and methods (global in C API)
 pub use bindings::{
-    //ezb_bdb_commissioning_mode_t,
-    //
     ezb_bdb_start_top_level_commissioning,
+    ezb_bdb_comm_mode_t,
     ezb_bdb_is_factory_new,
-    //ezb_get_pan_id,
+    ezb_nwk_get_panid,
     ezb_get_current_channel,
-    ezb_get_short_address,
-    //ezb_get_extended_pan_id,
     //ezb_factory_reset,
     //ezb_set_primary_network_channel_set,
+    esp_zigbee_device_config_t,
+    ezb_nwk_get_extended_panid,
+    ezb_extpanid_t,
+    ezb_nwk_get_short_address,
+    ezb_nwk_get_current_channel,
+    ezb_app_signal_t,
 };
 
 // Endpoints
@@ -95,3 +101,6 @@ pub use bindings::{
     //    ESP_ZB_HA_COLOR_DIMMABLE_LIGHT_DEVICE_ID
     //},
 };
+
+// NVS access
+pub use bindings::sys::*;

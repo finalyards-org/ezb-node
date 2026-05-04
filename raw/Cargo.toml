@@ -19,6 +19,8 @@ esp-idf-sys = { workspace = true, features = [], default-features = false }
     # Carries ESP-IDF headers, libraries, and pulls in 'esp-zigbee-lib' headers.
     # Needs to be under '[dependencies]' since it carries libraries that end up in the product.
 
+strum = { version = "0.28.0", features = ["derive"] }
+
 # ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
 #
 # (The same will likely apply to "HA Automation Device Types" |2| as well.)

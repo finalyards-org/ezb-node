@@ -13,16 +13,14 @@
 #
 
 include .BUILD_ENV
-	# global:
-	#		DEP_ESP_IDF_EMBUILD_ENV_PATH=[ ... ]:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin:[ ... ]
-	# 	DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/.espressif/esp-idf/v5.5.3
-	# 	DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-185221e30d16ee04/out
-	# 	ESP_IDF_VERSION = "v5.5.3"
-  # 	MCU=esp32c6
-  #		OUT_DIR=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-zb-raw-e55700f8a301711e/out
-  #
-  # out:
-  #		... // we don't use this mode, currently (but could!)
+	# contains ("global" mode):
+	#		DEP_ESP_IDF_EMBUILD_ENV_PATH=[ ... ]:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin:[ ... ]
+	#		DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/.espressif/esp-idf/v5.5.4
+	#		DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-661d76f25670d30a/out
+	#		ESP_IDF_TOOLS_INSTALL_DIR=global
+	#		ESP_IDF_VERSION=5.5.4
+	#		MCU=esp32c6
+	#		OUT_DIR=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-zb-raw-4477ae593d752247/out
 
 _ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
 #_SDKCONFIG:=${DEP_ESP_IDF_ROOT}/sdkconfig
@@ -30,8 +28,11 @@ _ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
 _SDKCONFIG_H:=${DEP_ESP_IDF_ROOT}/build/config/sdkconfig.h
 _ESP_ZIGBEE_LIB_INCLUDE:=\
 	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include
+		# Note: for 'esp-zigbee-sdk' 1.x we needed more than one include path. Keep the setup, for now...
 
-	# Note: for 'esp-zigbee-sdk' 1.x we needed more than one include path. Keep the setup, for now...
+_NVS_COMPONENTS_INCLUDE:=\
+  ${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/components/nvs_flash/include \
+  ${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/components/esp_partition/include
 
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
 # section that we need.
@@ -110,19 +111,24 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --allowlist-function 'esp_zigbee_.+' \
 	    --allowlist-function 'esp_zb_.+' \
 			\
+	    --allowlist-function 'nvs_flash_init(?:|_partition)' \
+	    --allowlist-var 'ESP_ERR_.+' \
+	    \
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
 			\
-			--bitfield-enum 'esp_zb_bdb_commissioning_mode_t' \
+			--bitfield-enum 'ezb_bdb_comm_mode_e' \
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \
+	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\
 	  -I. -I${_TMP} -Ifake \
 	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
 		-I $(dir ${_SDKCONFIG_H}) \
+	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
 		-I ${_SYSROOT}/riscv32-esp-elf/include \
 		-I ${_ESP_IDF_PATH}/components/esp_common/include \
 		-I ${_ESP_IDF_PATH}/components/hal/include \
@@ -145,10 +151,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 		-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
 	  > $@
 
-#	    --allowlist-function 'abc' \
-#	    --allowlist-function 'abc_(?:(def)|(ghi))_klm' \
-#
-# --bitfield-enum "ESP_ZB_BLAH_.*"  // jos on enum-maskeja
+# Hints:
 #	    --raw-line '#![allow(non_camel_case_types)]' \
 #	    --raw-line '#![allow(non_snake_case)]' \
 #			--raw-line 'use strum::FromRepr;' \

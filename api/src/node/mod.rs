@@ -12,16 +12,38 @@
 * Note:
 *   C code supports both native and RCP (radio co-processor) implementations. We only native.
 */
+use core::mem::MaybeUninit;
 use embassy_time::{Timer, Duration};
 
 use bitflags::bitflags;
 use log;
 
-use esp_zb_raw::{esp_zb_cfg_t, esp_zb_init, esp_zb_start, esp_zb_stack_main_loop_iteration, esp_zb_app_signal_t, esp_zb_get_pan_id, esp_zb_get_current_channel, esp_zb_bdb_start_top_level_commissioning, esp_zb_bdb_commissioning_mode_t, esp_zb_get_extended_pan_id, esp_zb_bdb_is_factory_new, esp_zb_get_short_address, esp_zb_set_primary_network_channel_set, esp_zb_device_register, esp_zb_ep_list_t, esp_zb_ep_list_create, esp_zb_ep_list_add_ep, esp_zb_cluster_list_t, esp_zb_endpoint_config_t};
+use crate::raw::{
+    esp_zigbee_device_config_t, // tbd. "field name changes:   rename ``esp_zb_role`` to ``device_type`` - rename ``zczr_cfg`` to ``zczr_config`` - rename ``zed_cfg`` to ``zed_config`` - remove ``nwk_cfg``
+    esp_zigbee_init,
+    //ezb_start,
+    //ezb_stack_main_loop_iteration,
+    ezb_app_signal_t,
+    ezb_bdb_start_top_level_commissioning,
+    ezb_bdb_is_factory_new,
+    //ezb_set_primary_network_channel_set,
+    //ezb_device_register,
+    //ezb_ep_list_t,
+    //ezb_ep_list_create,
+    //ezb_ep_list_add_ep,
+    //ezb_cluster_list_t,
+    //ezb_endpoint_config_t,
+    ezb_nwk_get_panid,
+    ezb_nwk_get_extended_panid,
+    ezb_extpanid_t,
+    ezb_nwk_get_short_address,
+    ezb_nwk_get_current_channel,
+    ezb_bdb_comm_mode_t,
+};
 
 use esp_idf_sys::EspError;
 
-use crate::{Error, IeeeAddr, Signal};
+use crate::{Error, IeeeAddr, AppSignal};
 
 mod router;
 pub use router::Router;
@@ -33,7 +55,7 @@ mod node_config;
 pub use node_config::*;
 
 #[allow(non_upper_case_globals)]
-static mut G_nwk_cfg: Option<esp_zb_cfg_t> = None;
+static mut G_device_cfg: Option<esp_zigbee_device_config_t> = None;
     //
     // note: could use 'OnceLock' but it's 'std'. Also this works.
 
@@ -41,9 +63,9 @@ pub trait Node {
     /**
     * Take ownership of the Zigbee C stack. May only be called once.
     */
-    fn take_stack(nwk_cfg: esp_zb_cfg_t, cfg: NodeConfig) -> Result<(),crate::Error> {
+    fn take_stack(device_cfg: esp_zigbee_device_config_t, cfg: NodeConfig) -> Result<(),crate::Error> {
 
-        // If 'G_nwk_cfg' already used, fail.
+        // If 'G_device_cfg' already used, fail.
         // Note: This does not need to be atomic, since all access happens within the same
         //      FreeRTOS task (anything between '.await's is atomic).
         //
@@ -55,21 +77,18 @@ pub trait Node {
         //
         #[allow(static_mut_refs)]
         let ptr = unsafe {
-            if G_nwk_cfg.is_some() {
+            if G_device_cfg.is_some() {
                 return Err(Error::AlreadyInUse);
             }
-            G_nwk_cfg.insert(nwk_cfg)  // eats 'nwk_cfg'; well, not necessarily, since it's 'Copy'; #later
+            G_device_cfg.insert(device_cfg)  // #later: eat 'device_cfg' (currently it's 'Copy' so this doesn't matter); consider making it non-Copy in bindgen
         };
 
-        // void esp_zb_init(esp_zb_cfg_t *nwk_cfg);
+        // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
-        unsafe { esp_zb_init(ptr) };
+        unsafe { ezb_init(ptr) };
             //
             // 'esp_zb_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
-            //
-            // tbd. If we know how to avoid 'esp_zb_cfg_t' from being 'Copy' (moveable across
-            //      memory) in the 'bindgen' state, that'd be sweet..
 
         // 'esp-zigbee-lib' wants all the endpoints to be registered in one go (one 'esp_zb_device_register()' call) |based on google.ai
         {
@@ -112,6 +131,7 @@ pub trait Node {
             esp_zigbee_start(auto_start);
         }
 
+        #[cfg(false)]   // v 1.x; this will no longer work
         loop {
             unsafe { esp_zigbee_stack_main_loop_iteration() };
 
@@ -142,48 +162,48 @@ pub trait Node {
     }
 
     /**
-    * Get the Zigbee network PAN ID.
+    * Get the PAN ID of the network.
     */
-    fn get_pan_id(&self) -> u16 {
+    fn nwk_get_panid(&self) -> u16 {
         unsafe {
-            esp_zb_get_pan_id()
+            ezb_nwk_get_panid()
         }
     }
 
     /**
-    * Get extended PAN ID.
+    * Get the extended PAN ID of the network.
     */
-    fn get_extended_pan_id(&self) -> IeeeAddr {
-        let mut buf: [u8;8] = [0;_];
+    fn nwk_get_extended_panid(&self) -> IeeeAddr {
+        let mut buf: ezb_extpanid_t = ezb_extpanid_t::empty();
         unsafe {
-            esp_zb_get_extended_pan_id(buf.as_mut_ptr());
+            ezb_nwk_get_extended_panid(&mut buf);
         }
         IeeeAddr::from(buf)
     }
 
     /**
-    * Get the short address.
+    * Get the network (short) address of the device.
     */
-    fn get_short_address(&self) -> u16 {
+    fn nwk_get_short_address(&self) -> u16 {
         unsafe {
-            esp_zb_get_short_address()
+            ezb_nwk_get_short_address()
         }
     }
 
     /**
     * Get the currently used channel.
     */
-    fn get_current_channel(&self) -> u8 {
+    fn nwk_get_current_channel(&self) -> u8 {
         unsafe {
-            esp_zb_get_current_channel()
+            ezb_nwk_get_current_channel()
         }
     }
 
     /**
-    * Start commissioning.
+    * @brief  Start top level commissioning procedure with specified mode mask.
     *
-    * This function is intended to be a lower level, common tool. Applications should likely use
-    * node type -specific helper methods (and not directly the modes).
+    * @note This function is intended to be a lower level, common tool. Applications should likely use
+    *       node type -specific helper methods (and not directly the modes).
     *
     * Note: Some of the modes apply only to certain node types (NETWORK_FORMATION only to Coordinator
     *       role).
@@ -192,7 +212,7 @@ pub trait Node {
     */
     fn start_top_level_commissioning(&self, mask: CommissioningModesMask) -> Option<EspError> {
         let err= unsafe {
-            esp_zb_bdb_start_top_level_commissioning(mask.bits())
+            ezb_bdb_start_top_level_commissioning(mask.bits())
         };
         EspError::from(err) // provides 'Option'
     }
@@ -207,7 +227,7 @@ pub trait Node {
     */
     fn is_factory_new(&self) -> bool {
         unsafe {
-            esp_zb_bdb_is_factory_new()
+            ezb_bdb_is_factory_new()
         }
     }
 
@@ -223,20 +243,19 @@ pub trait Node {
     }
 }
 
-type BdbMode = esp_zb_bdb_commissioning_mode_t;
+type BdbMode = ezb_bdb_comm_mode_t;
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct CommissioningModesMask: u8 {
-        // 0 should ideally not be used as 'bitflags' (see bitflags docs); use '::empty()' instead.
-        //const INITIALIZATION = ESP_ZB_BDB_MODE_INITIALIZATION; // 0
-
+        const INITIALIZATION = EZB_BDB_MODE_INITIALIZATION; // 1
         #[cfg(feature = "touchlink")]
-        const TOUCHLINK = BdbMode::ESP_ZB_BDB_MODE_TOUCHLINK.0 as u8; // 1
-        const NETWORK_STEERING = BdbMode::ESP_ZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 2
+        const TOUCHLINK_INITIATOR = BdbMode::EZB_BDB_MODE_TOUCHLINK_INITIATOR.0 as u8; // 2
+        const NETWORK_STEERING = BdbMode::EZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 4
         #[cfg(feature = "controller")]
-        const NETWORK_FORMATION = BdbMode::ESP_ZB_BDB_MODE_NETWORK_FORMATION.0 as u8; // 4
+        const NETWORK_FORMATION = BdbMode::EZB_BDB_MODE_NETWORK_FORMATION.0 as u8; // 8
+        const FINDING_N_BINDING = BdbMode::EZB_BDB_MODE_FINDING_N_BINDING.0 as u8; // 16
         #[cfg(feature = "touchlink")]
-        const TOUCHLINK_TARGET = BdbMode::ESP_ZB_BDB_MODE_TOUCHLINK_TARGET.0 as u8; // 64
+        const TOUCHLINK_TARGET = BdbMode::EZB_BDB_MODE_TOUCHLINK_TARGET.0 as u8; // 32
 
         // Declare all bits as "known". Recommended for 'bitflags', when working with C library APIs.
         const _ = !0;
@@ -256,12 +275,14 @@ bitflags! {
 //      Rust enum, below, before providing to the application.
 //
 #[unsafe(no_mangle)]
-extern "C" fn esp_zb_app_signal_handler(ss: *mut esp_zb_app_signal_t) {
-    let ss: *const esp_zb_app_signal_t = ss;  // un-mut
+extern "C" fn esp_zb_app_signal_handler(ss: *mut ezb_app_signal_t) {
+    let ss: *const ezb_app_signal_t = ss;  // un-mut
 
-    let esp_zb_app_signal_t{ p_app_signal, esp_err_status: err_st } = unsafe { *ss };
+    let ezb_app_signal_t{ p_app_signal, esp_err_status: err_st } = unsafe { *ss };
 
-    Signal::from(p_app_signal as *const _, err_st)
+    assert!(err_st == 0);  //?? mitä sillä pitäisi tehdä?
+
+    AppSignal::from(p_app_signal as *const _)
         .map(|sig| {
             log::info!("Received: {}", sig);
         })
@@ -285,8 +306,6 @@ extern "C" fn esp_zb_app_signal_handler(ss: *mut esp_zb_app_signal_t) {
 * Internal helper.
 *
 * Collects about-to-be-registered endpoints, and passes them to the C 'esp-zigbee-lib', all at once.
-*
-* @note It's useful for us, how the C 'esp_zb_ep_list_t *' handles all end point types the same.
 */
 struct RegState(*mut esp_zb_ep_list_t);
 

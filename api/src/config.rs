@@ -11,23 +11,23 @@ use crate::node::ChannelMask;
 
 pub struct Config {
     // Network
-    primary_channel_mask: ChannelMask,
-    secondary_channel_mask: ChannelMask,
+    pub primary_channel_mask: ChannelMask,
+    pub secondary_channel_mask: ChannelMask,
 
     // NVRAM
-    storage_partition_name: String,   // e.g. "zb_storage" (but can be anything)
+    pub storage_partition_name: String,   // e.g. "zb_storage" (but can be anything)
 
     // Manufacturer info
-    manufacturer_name: String,
-    model_identifier: String,
+    pub manufacturer_name: String,
+    pub model_identifier: String,
 
-    endpoints: BTreeMap<u8, EndpointConfig>,
+    pub endpoints: BTreeMap<u8, EndpointConfig>,
 }
 
 impl Config {
     // Library should use this when getting one, before using any of it.
     //
-    pub(crate) fn assert_invariants(&self) {
+    pub(crate) fn check(&self) {
         let valid_ids = 1..=240;
 
         // Endpoint id's within the valid range
@@ -37,6 +37,8 @@ impl Config {
     }
 }
 
-pub struct EndpointConfig {
+pub enum EndpointConfig {
 
+    #[cfg(feature = "ep_color_dimmable_light")]
+    ColorDimmableLightEPC,
 }

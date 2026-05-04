@@ -4,13 +4,13 @@
 #[allow(unused_imports)]
 use log;
 
-use esp_zb_raw::{
-    esp_zb_cfg_t,
-    esp_zb_nwk_device_type_t,
-    esp_zb_cfg_s__bindgen_ty_1,
-    esp_zb_zczr_cfg_t,
+use crate::raw::{
+    ezb_cfg_t,
+    ezb_nwk_device_type_t,
+    ezb_cfg_s__bindgen_ty_1,
+    ezb_zczr_cfg_t,
 };
-use crate::Signal;
+use crate::AppSignal;
 use crate::node::{Node, NodeConfig};
 
 #[cfg(any(feature = "controller", feature = "router"))]
@@ -71,5 +71,5 @@ pub trait Router where Self: Node {
         Ok(())
     }
 
-    fn on_app_signal(&self, sig: Signal) /*-> Result<(), Self::Error>*/;
+    fn on_app_signal(&self, sig: AppSignal) /*-> Result<(), Self::Error>*/;
 }
