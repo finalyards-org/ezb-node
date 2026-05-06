@@ -93,6 +93,10 @@ manual: ${_BIND_RS}
 #				--opaque-type ".*_s" \
 #			<<
 #
+# Note 2:
+#		- '--no-copy' for config structs is merely cosmetic: having 'Copy' for said structs would not hurt
+#		  as such. The author just rather has them "move only".
+#
 _BLOCKLIST_VARS:=$(strip ESP_ZB_ZCL_VALUE_NaN)
 	# - 'ESP_ZB_ZCL_VALUE_NaN': avoid warning on its naming (we don't need it, either)
 
@@ -122,6 +126,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --generate-inline-functions \
 	    --default-enum-style rust \
 	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
+	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\

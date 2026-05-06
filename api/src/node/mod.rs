@@ -5,9 +5,9 @@
 * General (all nodes) are under 'Node' trait.
 *
 * Design:
-*   The C API implements all these as _global_ functions and constants. We are more specific,
+*   The C API implements all these as global functions and constants. We are more specific,
 *   which should help e.g. in IDE auto-completion (and generally not using weird stuff when it
-*   does not make sense!).
+*   does not make sense).
 *
 * Note:
 *   C code supports both native and RCP (radio co-processor) implementations. We only native.
@@ -21,12 +21,9 @@ use log;
 use crate::raw::{
     esp_zigbee_device_config_t, // tbd. "field name changes:   rename ``esp_zb_role`` to ``device_type`` - rename ``zczr_cfg`` to ``zczr_config`` - rename ``zed_cfg`` to ``zed_config`` - remove ``nwk_cfg``
     esp_zigbee_init,
-    //ezb_start,
-    //ezb_stack_main_loop_iteration,
     ezb_app_signal_t,
     ezb_bdb_start_top_level_commissioning,
     ezb_bdb_is_factory_new,
-    //ezb_set_primary_network_channel_set,
     //ezb_device_register,
     //ezb_ep_list_t,
     //ezb_ep_list_create,
@@ -39,6 +36,11 @@ use crate::raw::{
     ezb_nwk_get_short_address,
     ezb_nwk_get_current_channel,
     ezb_bdb_comm_mode_t,
+    esp_zigbee_config_t,
+    ezb_bdb_set_primary_channel_set,
+    ezb_bdb_set_secondary_channel_set,
+    esp_zigbee_launch_mainloop,
+    esp_zigbee_start,
 };
 
 use esp_idf_sys::EspError;
@@ -50,12 +52,13 @@ pub use router::Router;
 
 mod channel_mask;
 pub use channel_mask::ChannelMask;
+use esp_zb_raw::esp_zigbee_platform_config_t;
 
 mod node_config;
 pub use node_config::*;
 
 #[allow(non_upper_case_globals)]
-static mut G_device_cfg: Option<esp_zigbee_device_config_t> = None;
+static mut G_cfg: Option<esp_zigbee_config_t> = None;
     //
     // note: could use 'OnceLock' but it's 'std'. Also this works.
 
@@ -63,9 +66,9 @@ pub trait Node {
     /**
     * Take ownership of the Zigbee C stack. May only be called once.
     */
-    fn take_stack(device_cfg: esp_zigbee_device_config_t, cfg: NodeConfig) -> Result<(),crate::Error> {
+    fn take_stack(platform_cfg: &esp_zigbee_platform_config_t, device_cfg: &esp_zigbee_device_config_t, node_cfg: NodeConfig) -> Result<(),crate::Error> {
 
-        // If 'G_device_cfg' already used, fail.
+        // If 'G_cfg' already used, fail.
         // Note: This does not need to be atomic, since all access happens within the same
         //      FreeRTOS task (anything between '.await's is atomic).
         //
@@ -77,19 +80,25 @@ pub trait Node {
         //
         #[allow(static_mut_refs)]
         let ptr = unsafe {
-            if G_device_cfg.is_some() {
+            if G_cfg.is_some() {
                 return Err(Error::AlreadyInUse);
             }
-            G_device_cfg.insert(device_cfg)  // #later: eat 'device_cfg' (currently it's 'Copy' so this doesn't matter); consider making it non-Copy in bindgen
+
+            let cfg = esp_zigbee_config_t {
+                device_config,
+                platform_config
+            };
+            G_cfg.insert(cfg) as &esp_zigbee_config_t   // non-mut
         };
 
         // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
-        unsafe { ezb_init(ptr) };
+        unsafe { esp_zigbee_init(ptr) };
             //
-            // 'esp_zb_init()' takes a pointer, so we must assume it can read that memory, later.
+            // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
 
+        /***r 1.x
         // 'esp-zigbee-lib' wants all the endpoints to be registered in one go (one 'esp_zb_device_register()' call) |based on google.ai
         {
             let acc = RegState::new();
@@ -99,20 +108,36 @@ pub trait Node {
                 acc.add(a,b)?;
             }
            acc.register();
-        }
+        }***/
+        todo!();    // 2.0: init endpoints
 
-        // "should be called [...] after 'esp_zb_init()' and before 'esp_zb_start()'"
-        // "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available."
+        // Set primary/secondary channel scan sets.
         //
-        cfg.channel_mask.map(|ChannelMask(x)| {
-            unsafe {
-                esp_zb_set_primary_network_channel_set(x);  // tbd. check error code!!
-            }
-        }).unwrap_or_else(|| {
-            // Note: Perhaps we want to warn if default behaviour is used???
-            //
-            log::warn!("ChannelMask not provided: scanning all channels or reading from NVRAM.");
-        });
+        // For primary:
+        //      "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'"
+        //      "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x)
+        //
+        for primary in [true,false] {
+            node_cfg.channel_mask.map(|ChannelMask(x)| {
+                let err = unsafe {
+                    if primary {
+                        ezb_bdb_set_primary_channel_set(x)
+                    } else {
+                        ezb_bdb_set_secondary_channel_set(x)
+                    }
+                };
+                // EZB_ERR_NONE
+                // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
+                assert!(err == 0);
+
+            }).unwrap_or_else(|| {
+                if primary {
+                    log::info!("Primary channels mask not provided: scanning all channels or reading from NVRAM.");
+                } else {
+                    log::info!("Secondary channels mask not provided: scanning all channels.");
+                }
+            });
+        }
 
         Ok(())
     }
@@ -124,12 +149,19 @@ pub trait Node {
     *   'true' for automatic start of the Zigbee stack
     *   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
     */
-    #[allow(async_fn_in_trait)] // "you can suppress this lint if you plan to use the trait only in your own code"
-    async fn launch(self: Self, auto_start: bool) -> ! where Self: Sized {
+    fn launch(self: Self, auto_start: bool) -> Result<!,EspError> {
 
-        unsafe {
-            esp_zigbee_start(auto_start);
-        }
+        let err = unsafe {
+            esp_zigbee_start(auto_start)
+        };
+        EspError::from(err).map_or(Ok(()), Err)?;
+
+        let err = unsafe {
+            esp_zigbee_launch_mainloop()
+        };
+        EspError::from(err).map_or(Ok(()), Err)?;
+
+        unreachable!();
 
         #[cfg(false)]   // v 1.x; this will no longer work
         loop {
@@ -247,7 +279,7 @@ type BdbMode = ezb_bdb_comm_mode_t;
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct CommissioningModesMask: u8 {
-        const INITIALIZATION = EZB_BDB_MODE_INITIALIZATION; // 1
+        const INITIALIZATION = BdbMode::EZB_BDB_MODE_INITIALIZATION.0 as u8; // 1
         #[cfg(feature = "touchlink")]
         const TOUCHLINK_INITIATOR = BdbMode::EZB_BDB_MODE_TOUCHLINK_INITIATOR.0 as u8; // 2
         const NETWORK_STEERING = BdbMode::EZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 4
@@ -307,8 +339,10 @@ extern "C" fn esp_zb_app_signal_handler(ss: *mut ezb_app_signal_t) {
 *
 * Collects about-to-be-registered endpoints, and passes them to the C 'esp-zigbee-lib', all at once.
 */
+#[cfg(false)]   // is it needed in 2.0?
 struct RegState(*mut esp_zb_ep_list_t);
 
+#[cfg(false)]
 impl RegState {
     fn new() -> Self {
         let l = unsafe { esp_zb_ep_list_create() };

@@ -5,10 +5,10 @@
 use log;
 
 use crate::raw::{
-    ezb_cfg_t,
+    esp_zigbee_device_config_t,
     ezb_nwk_device_type_t,
-    ezb_cfg_s__bindgen_ty_1,
-    ezb_zczr_cfg_t,
+    esp_zigbee_zczr_config_s,
+    esp_zigbee_device_config_s__bindgen_ty_1,
 };
 use crate::AppSignal;
 use crate::node::{Node, NodeConfig};
@@ -44,23 +44,24 @@ pub trait Router where Self: Node {
         //
         const INSTALLCODE_NOT_YET: bool = false;
 
-        //typedef struct esp_zb_cfg_s {
-        //    esp_zb_nwk_device_type_t esp_zb_role; /*!< The nwk device type */
-        //    bool install_code_policy;             /*!< Allow install code security policy or not */
-        //    union {
-        //        esp_zb_zczr_cfg_t zczr_cfg; /*!< The Zigbee zc/zr device configuration */
-        //        esp_zb_zed_cfg_t zed_cfg;   /*!< The Zigbee zed device configuration */
-        //    } nwk_cfg;                      /*!< Union of the network configuration */
-        //} esp_zb_cfg_t;
+        // 2.0
+        //typedef struct esp_zigbee_device_config_s {
+        //     ezb_nwk_device_type_t device_type;          /*!< The nwk device type, @ref ezb_nwk_device_type_t */
+        //     bool install_code_policy;                   /*!< Allow install code security policy or not */
+        //     union {
+        //         struct esp_zigbee_zczr_config_s zczr_config; /*!< The Zigbee zc/zr device configuration */
+        //         struct esp_zigbee_zed_config_s  zed_config;  /*!< The Zigbee zed device configuration */
+        //     };
+        // } esp_zigbee_device_config_t;
         //
-        //typedef struct {
-        //    uint8_t max_children; /*!< Max number of the children */
-        //} esp_zb_zczr_cfg_t;
+        //struct esp_zigbee_zczr_config_s {
+        //     uint8_t max_children; /*!< Max number of the children */
+        // };
         //
-        let tmp = esp_zb_cfg_t {
-            esp_zb_role: esp_zb_nwk_device_type_t::ESP_ZB_DEVICE_TYPE_ROUTER,
+        let tmp = esp_zigbee_device_config_t {
+            device_type: ezb_nwk_device_type_t::EZB_NWK_DEVICE_TYPE_ROUTER,
             install_code_policy: INSTALLCODE_NOT_YET,
-            nwk_cfg: esp_zb_cfg_s__bindgen_ty_1 {
+            __bindgen_anon_1: esp_zigbee_device_config_s__bindgen_ty_1 {
                 zczr_cfg: esp_zb_zczr_cfg_t {
                     max_children
                 }

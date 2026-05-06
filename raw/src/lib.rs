@@ -30,16 +30,13 @@ pub use bindings::{
 // Router; main loop; signal hook
 pub use bindings::{
     esp_zigbee_init,
-    //esp_zb_cfg_t,
     //esp_zb_nwk_device_type_t,
     esp_zigbee_start,
-    //esp_zb_cfg_s__bindgen_ty_1,
     esp_zigbee_zczr_config_s,
-
     //esp_zb_app_signal_t,
     ezb_app_signal_type_t,
     ezb_app_signal_get_params,
-    //R ezb_stack_main_loop_iteration,   // 2.0: "deprecated"; RATHER DISCONTINUED: expands to a no-op; Q: How to get involved in the main loop, in 2.0???
+    esp_zigbee_launch_mainloop,
 };
 
 // signals
@@ -69,13 +66,16 @@ pub use bindings::{
     ezb_nwk_get_panid,
     ezb_get_current_channel,
     //ezb_factory_reset,
-    //ezb_set_primary_network_channel_set,
     esp_zigbee_device_config_t,
     ezb_nwk_get_extended_panid,
     ezb_extpanid_t,
     ezb_nwk_get_short_address,
     ezb_nwk_get_current_channel,
     ezb_app_signal_t,
+    ezb_nwk_device_type_t,
+    esp_zigbee_config_t,
+    ezb_bdb_set_primary_channel_set,
+    ezb_bdb_set_secondary_channel_set,
 };
 
 // Endpoints

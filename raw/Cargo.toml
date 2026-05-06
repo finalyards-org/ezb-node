@@ -34,6 +34,9 @@ default = [
     #"zcl_identify",
 ]
 
+# Note: NO feature flags for "router", "coordinator": the raw level supports all, we differentiate
+#       at the API level.
+
 # Endpoint support
 ep_color_dimmable_light = []
 

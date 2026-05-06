@@ -110,7 +110,7 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
 BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 
 #---
-# Trim down the set of components (~1050 -> ~910). This is OPTIONAL, but does reduce the build time.
+# Trim down the set of components (~1050 -> ~930). OPTIONAL, but reduces the build time.
 #
 # List of 'esp-idf-sys' default components:
 #   <<
@@ -119,7 +119,12 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #   <<
 #   ..plus some that were figured out, experimentally.
 #
-ESP_IDF_COMPONENTS = "cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;nvs_flash;wear_levelling;fatfs;spiffs;"
+#   Note: 'fatfs' now removed (May'26). Remove this line if 2.0 really works without it. TEMP
+#
+ESP_IDF_COMPONENTS = """\
+  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
+  nvs_flash;wear_levelling;spiffs;\
+"""
 
 [alias]
 "apps:light:build" = "build --manifest-path apps/Cargo.toml --release --bin light --features esp-zb/ep_color_dimmable_light"
