@@ -1,0 +1,26 @@
+#!/usr/bin/env just --justfile
+
+#
+# Development helper targets. Optional.
+#
+# Usage:
+#   <<
+#     $ just {--list|{..target..}}
+#   <<
+#
+default:
+    @just --list
+
+light_features := "esp-zb/ep_color_dimmable_light"
+
+# Light-sovelluksen kääntäminen
+[group('light')]
+lb: light-build
+light-build:
+    cargo build --release -vv --bin light --features {{light_features}}
+
+# Light-sovelluksen ajaminen
+[group('light')]
+lr: light-run
+light-run:
+    cargo run --release -vv --bin light --features {{light_features}}

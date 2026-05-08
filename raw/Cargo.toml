@@ -21,26 +21,22 @@ esp-idf-sys = { workspace = true, features = [], default-features = false }
 
 strum = { version = "0.28.0", features = ["derive"] }
 
-# ZCL clusters |1| are presented as features. This helps you clearly see, which clusters are implemented.
-#
-# (The same will likely apply to "HA Automation Device Types" |2| as well.)
+[features]
+default = []
+
+# ESP32 devices with Zigbee support (currently targeting only C6).
+# tbd. Can we drive 'esp-idf-sys' and the ESP-IDF toolchain with this, i.e. choose MCU from above?
+esp32c6 = []
+
+# ZCL clusters |1| _may_be_ presented as features. This helps you clearly see, which clusters are implemented.
 #
 #   |1|: https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html#zcl-clusters
 #   |2|: https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html#ha-automation-device-types
 #
-[features]
-default = [
-    #"zcl_basic",
-    #"zcl_identify",
-]
-
-# Note: NO feature flags for "router", "coordinator": the raw level supports all, we differentiate
-#       at the API level.
-
-# Endpoint support
-ep_color_dimmable_light = []
-
-# Supported Zigbee clusters; based on 'esp_zigbee_attribute.h':
+# However, the use of features is NOT INTENDED FOR EXTERNAL USE. Only 'api' is steered by features.
+# See 'DESIGN.md'.
+#
+#R Supported Zigbee clusters; based on 'esp_zigbee_attribute.h':
 #zcl_basic = []
 #zcl_identify = []
 #zcl_groups = []
@@ -88,24 +84,3 @@ ep_color_dimmable_light = []
 #zcl_poll_control = []
 #zcl_device_temp_config = []
 #zcl_alarms = []
-
-#custom_cluster = []
-
-# ESP32 devices with Zigbee support (currently targeting only C6).
-# tbd. Can we drive 'esp-idf-sys' and the ESP-IDF toolchain with this, i.e. choose MCU from above?
-esp32c6 = []
-
-#---
-# C '#ifdef's to consider porting as Rust features:
-#
-#   - CONFIG_ZB_ZED             { tbd. explain }
-#   - CONFIG_ZB_GP_ENABLED      { tbd. explain }
-#   - ZB_ENABLE_ZGB             Whether "green power" is enabled {...tbd. better explanation; is this a top-level ifdef?}
-#   - ZB_DISTRIBUTED_SECURITY_ON { tbd. explain }
-#
-#   - CONFIG_ZB_ZCZR            "compile light (Router) source code"
-#   - CONFIG_ESP_ZB_TRACE_ENABLE
-#   - CONFIG_PM_ENABLE=y
-#
-#zb_zed = []     # 'CONFIG_ZB_ZED'   todo is?
-# ...

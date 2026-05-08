@@ -4,7 +4,7 @@
 use alloc::collections::BTreeMap;
 
 use esp_zb::{
-    node::{Node, Controller, Router, ChannelMask, NodeConfig},
+    node::{Node, Controller, Router, ChannelMask, TOMLConfig},
     AppSignal,
     utils::PascalString,
 };

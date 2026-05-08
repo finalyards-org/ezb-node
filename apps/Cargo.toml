@@ -14,7 +14,7 @@ publish = false
 #partition_table = "partitions.csv"
 
 [dependencies]
-esp-zb = { path = "../api", features = ["controller"] }
+esp-zb = { path = "../api", features = ["coordinator", "router"] }
 
 log.workspace = true
 

@@ -1,13 +1,15 @@
 /*
-* A Router, Controller and/or EndDevice.
+* A Node.
 *
-* Node type specific methods and constants are defined each in their own source file.
-* General (all nodes) are under 'Node' trait.
+* The foundational, singleton part of the 'esp-zb' system. The things that the C API keeps global
+* are provided as methods of the 'Node'.
+*
+*?> Node type specific methods and constants are defined each in their own source file.
+*?> General (all nodes) are under 'Node' trait.
 *
 * Design:
-*   The C API implements all these as global functions and constants. We are more specific,
-*   which should help e.g. in IDE auto-completion (and generally not using weird stuff when it
-*   does not make sense).
+*   Having methods, not globals, helps in e.g. IDE auto-completion (and generally not being able to see weird stuff
+*   outside their context).
 *
 * Note:
 *   C code supports both native and RCP (radio co-processor) implementations. We only native.
@@ -19,7 +21,7 @@ use bitflags::bitflags;
 use log;
 
 use crate::raw::{
-    esp_zigbee_device_config_t, // tbd. "field name changes:   rename ``esp_zb_role`` to ``device_type`` - rename ``zczr_cfg`` to ``zczr_config`` - rename ``zed_cfg`` to ``zed_config`` - remove ``nwk_cfg``
+    esp_zigbee_device_config_t,
     esp_zigbee_init,
     ezb_app_signal_t,
     ezb_bdb_start_top_level_commissioning,
@@ -57,60 +59,59 @@ use esp_zb_raw::esp_zigbee_platform_config_t;
 mod node_config;
 pub use node_config::*;
 
-#[allow(non_upper_case_globals)]
-static mut G_cfg: Option<esp_zigbee_config_t> = None;
-    //
-    // note: could use 'OnceLock' but it's 'std'. Also this works.
+use alloc::boxed::Box;
+use once_cell::sync::OnceCell;
 
-pub trait Node {
+static SINGLETON_CHECK: OnceCell<()> = OnceCell::new();
+
+/**
+* Node keeps the configuration entries in-place; C side *may* be looking into them even after the initialization.
+*
+* The Node exists for *every* node type: controller, router and end device. They may have additional traits added
+* to use, for node-type specific functionality.
+*
+* Note: Bindgen helps us by having made config structs non-Copy.
+*/
+pub struct Node {
+    cfg: &'static esp_zigbee_config_t,
+}
+
+impl Node {
     /**
-    * Take ownership of the Zigbee C stack. May only be called once.
+    * Initialize a 'Node' from a given configuration.
     */
-    fn take_stack(platform_cfg: &esp_zigbee_platform_config_t, device_cfg: &esp_zigbee_device_config_t, node_cfg: NodeConfig) -> Result<(),crate::Error> {
+    // This is the entry point for the applications.
+    pub fn from_config(cfg: NodeView) -> Self {
 
-        // If 'G_cfg' already used, fail.
-        // Note: This does not need to be atomic, since all access happens within the same
-        //      FreeRTOS task (anything between '.await's is atomic).
-        //
-        // NOTE: IF THERE ARE PROBLEMS, have a look at how to use "raw borrow" instead of the
-        //      intermediate '&mut' we now have. |1|
-        //
-        //      |1|: "Raw pointers" (The Rust Edition Guide)
-        //          https://doc.rust-lang.org/edition-guide/rust-2024/static-mut-references.html#raw-pointers
-        //
-        #[allow(static_mut_refs)]
-        let ptr = unsafe {
-            if G_cfg.is_some() {
-                return Err(Error::AlreadyInUse);
-            }
+        let (platform_cfg, device_cfg) = cfg.expand();
+    }
 
-            let cfg = esp_zigbee_config_t {
-                device_config,
-                platform_config
-            };
-            G_cfg.insert(cfg) as &esp_zigbee_config_t   // non-mut
+    /**
+    * Set up a node. Can be called only once.
+    */
+    fn new(platform_cfg: esp_zigbee_platform_config_t, device_cfg: esp_zigbee_device_config_t) -> Self {
+        SINGLETON_CHECK.set(()).unwrap_or_else(|_| {
+            panic!("node already in use.");
+        });
+
+        let cfg = esp_zigbee_config_t {
+            device_config,
+            platform_config
         };
+        let cfg = Box::leak(Box::new(cfg));
 
         // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
-        unsafe { esp_zigbee_init(ptr) };
+        unsafe { esp_zigbee_init(cfg) };
             //
             // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
 
-        /***r 1.x
-        // 'esp-zigbee-lib' wants all the endpoints to be registered in one go (one 'esp_zb_device_register()' call) |based on google.ai
-        {
-            let acc = RegState::new();
+        Self { cfg }
+    }
 
-            for (id, ref ep_cfg) in cfg.endpoints {
-                let (a,b) = ep_cfg.expand(id);
-                acc.add(a,b)?;
-            }
-           acc.register();
-        }***/
-        todo!();    // 2.0: init endpoints
-
+    fn with_endpoint(&self, ) -> Self {
+        /*** tbd. MOVE TO ANOTHER
         // Set primary/secondary channel scan sets.
         //
         // For primary:
@@ -139,7 +140,7 @@ pub trait Node {
             });
         }
 
-        Ok(())
+        Ok(())***/
     }
 
     /**

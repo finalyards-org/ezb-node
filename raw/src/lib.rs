@@ -79,7 +79,6 @@ pub use bindings::{
 };
 
 // Endpoints
-#[cfg(false)]
 pub use bindings::{
     //ezb_zcl_basic_attr_t,
     //ezb_ep_list_t,
@@ -100,6 +99,21 @@ pub use bindings::{
     //    self,
     //    ESP_ZB_HA_COLOR_DIMMABLE_LIGHT_DEVICE_ID
     //},
+    ezb_zha_color_dimmable_light_config_t,
+    ezb_af_ep_desc_t,
+    ezb_zha_create_color_dimmable_light,
+    ezb_zcl_cluster_id_e,
+    EZB_ZCL_CLUSTER_CLIENT,
+    EZB_ZCL_CLUSTER_SERVER,
+    ezb_zcl_cluster_desc_t,
+    ezb_af_endpoint_get_cluster_desc,
+    ezb_zcl_basic_cluster_desc_add_attr,
+    ezb_zcl_basic_server_attr_t,
+    ezb_af_device_add_endpoint_desc,
+    ezb_af_device_desc_register,
+    ezb_zcl_core_action_handler_register,
+    ezb_af_create_device_desc,
+    ezb_af_device_desc_t,
 };
 
 // NVS access

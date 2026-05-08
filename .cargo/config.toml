@@ -119,11 +119,11 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #   <<
 #   ..plus some that were figured out, experimentally.
 #
-#   Note: 'fatfs' now removed (May'26). Remove this line if 2.0 really works without it. TEMP
+#   Note: 'esp-idf-svc-0.52.1' seems to need 'fatfs' (on apps level).
 #
 ESP_IDF_COMPONENTS = """\
   cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
-  nvs_flash;wear_levelling;spiffs;\
+  nvs_flash;wear_levelling;spiffs;fatfs;\
 """
 
 [alias]

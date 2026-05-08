@@ -16,13 +16,11 @@ pub use version::*;
 mod error;
 pub use error::Error;
 
-//pub mod endpoint;
-//pub use endpoint::{
-//    Endpoint,
-//};
-
 pub mod utils;
 pub use utils::IeeeAddr;
+
+mod device_descriptor;
+pub use device_descriptor::*;
 
 // Prelude-like experience with 'use esp_zb::router::*'
 //

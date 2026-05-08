@@ -7,13 +7,15 @@ use alloc::collections::BTreeMap;
 
 use esp_zb::{node::ChannelMask, Config, EndpointConfig};
 
+// Note: Eventually this will get read from a TOML file.
+//
+// Note 2: Storage partition name ('zb_storage') is not here; is it passed on to 'esp_zigbee_lib'??? tbd.
+//
 pub(crate) fn my_config() -> Config {
 
-    let ep_10 = EndpointConfig::ColorDimmableLightEPC {
+    let ep_10 = EndpointConfig::ColorDimmableLightEPC {};
 
-    };
-
-    let c = Config {
+    Config {
         primary_channel_mask: ChannelMask::from([13]),  // as in C sample
         secondary_channel_mask: ChannelMask::ALL,
 
@@ -23,7 +25,5 @@ pub(crate) fn my_config() -> Config {
         model_identifier: "Your model".into(),
 
         endpoints: BTreeMap::from([(10, ep_10)])
-    };
-
-    c
+    }
 }

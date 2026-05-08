@@ -97,8 +97,8 @@ manual: ${_BIND_RS}
 #		- '--no-copy' for config structs is merely cosmetic: having 'Copy' for said structs would not hurt
 #		  as such. The author just rather has them "move only".
 #
-_BLOCKLIST_VARS:=$(strip ESP_ZB_ZCL_VALUE_NaN)
-	# - 'ESP_ZB_ZCL_VALUE_NaN': avoid warning on its naming (we don't need it, either)
+_BLOCKLIST_VARS:=$(strip EZB_ZCL_VALUE_NaN)
+	# '.._VALUE_NaN' avoid warning on its naming (we don't need it, either)
 
 # Typedefs to zero-size structs. Trying to suppress warnings.
 _OPAQUE_TYPES:=$(strip \
@@ -114,9 +114,10 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --allowlist-function 'ezb_.+' \
 	    --allowlist-function 'esp_zigbee_.+' \
 	    --allowlist-function 'esp_zb_.+' \
-			\
 	    --allowlist-function 'nvs_flash_init(?:|_partition)' \
+			\
 	    --allowlist-var 'ESP_ERR_.+' \
+	    --allowlist-var 'EZB_ZCL_.+' \
 	    \
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \

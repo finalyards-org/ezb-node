@@ -11,7 +11,7 @@ use crate::raw::{
     esp_zigbee_device_config_s__bindgen_ty_1,
 };
 use crate::AppSignal;
-use crate::node::{Node, NodeConfig};
+use crate::node::{Node, TOMLConfig};
 
 #[cfg(any(feature = "controller", feature = "router"))]
 const MAX_CHILDREN_DEFAULT: u8 = 10;
@@ -35,7 +35,7 @@ const MAX_CHILDREN_DEFAULT: u8 = 0; // end device
 pub trait Router where Self: Node {
     type Error;
 
-    fn init(cfg: NodeConfig) -> Result<(), crate::Error> {
+    fn init(cfg: TOMLConfig) -> Result<(), crate::Error> {
 
         let max_children = cfg.max_children.unwrap_or(MAX_CHILDREN_DEFAULT);
 

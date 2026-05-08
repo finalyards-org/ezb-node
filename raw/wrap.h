@@ -28,9 +28,13 @@
 //#include "esp_zigbee_ha_standard.h" // 1.x
 #include "ezbee/zha.h"
 
-// ColorDimmableLight
+// Manifest device type specific configurations (macros in C) to 'const'.
+// Further used by 'bindings.rs' to make them 'Default' for said type.
 //
-// Manifest 'ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG()' macro into a 'const', so we can bring it to Rust.
-//
-// tbd. use '#ifdef' to conditionally bake this in only if Rust 'ep_color_dimmable_light' featured.
-//?2.0 const ezb_zha_color_dimmable_light_config_t ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
+const ezb_zha_color_dimmable_light_config_t EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG = EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG();
+
+//R // Force these to be 'u8'; in C header they are uncasted and thus end up in Rust as 'u32',
+//R // though C function parameters for them take 'uint8_t'.
+//R //
+//R #define EZB_ZCL_CLUSTER_SERVER ((uint8_t)EZB_ZCL_CLUSTER_SERVER) // 1
+//R #define EZB_ZCL_CLUSTER_CLIENT ((uint8_t)EZB_ZCL_CLUSTER_CLIENT) // 2

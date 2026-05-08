@@ -33,8 +33,8 @@ mod scheduler;
 
 use my_controller::LightController;
 
-mod config;
-use config::my_config;
+mod my_config_temp;
+use my_config_temp::my_config;
 
 /**
 * The entry point.
