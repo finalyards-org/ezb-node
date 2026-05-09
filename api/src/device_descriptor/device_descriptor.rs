@@ -22,30 +22,31 @@ use crate::raw::{
     }
 };
 
-use crate::utils::PascalString;
+use crate::{
+    config::DeviceDescriptorView,
+    utils::PascalString
+};
 
 /**
-* Gathers multiple Application Framework (AF) endpoints and maps the logical device properties to a physical 'Node'.
+* Gathers multiple Application Framework (AF) endpoints.
 *
 * It acts as a builder for the underlying C endpoint lists, ensuring that clusters and attributes are correctly
 * associated before registration with the Zigbee stack.
 */
 pub(crate) struct DeviceDescriptor{
     inner: ezb_af_device_desc_t,
-    manufacturer_name: &'static PascalString,
-    model_info: &'static PascalString,
+    //manufacturer_name: &'static PascalString,
+    //model_info: &'static PascalString,
 }
 
 impl DeviceDescriptor {
 
-    pub(crate) fn new(manufacturer_name: String, model_info: String) -> Self {
+    pub(crate) fn new(cv: &DeviceDescriptorView) -> Self {
         let inner = unsafe {
             ezb_af_create_device_desc()
         };
         Self{
             inner,
-            manufacturer_name: Box::leak(Box::new(PascalString::from(manufacturer_name))),
-            model_info: Box::leak(Box::new(PascalString::from(model_info)),
         }
     }
 

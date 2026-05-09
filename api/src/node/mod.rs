@@ -1,18 +1,15 @@
 /*
 * A Node.
 *
-* The foundational, singleton part of the 'esp-zb' system. The things that the C API keeps global
-* are provided as methods of the 'Node'.
-*
-*?> Node type specific methods and constants are defined each in their own source file.
-*?> General (all nodes) are under 'Node' trait.
+* Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
 *
 * Design:
-*   Having methods, not globals, helps in e.g. IDE auto-completion (and generally not being able to see weird stuff
-*   outside their context).
+*   - Singleton; there's only one Node in a running system
+*   - Methods, not globals. Helps e.g. in IDE auto-completion (and generally not being able to see weird stuff
+*       outside their context). In comparison, C API has everything as global functions, which is overwhelming.
 *
 * Note:
-*   C code supports both native and RCP (radio co-processor) implementations. We only native.
+*   - Native mode only; no RCP (radio co-processor) implementation. C API has both.
 */
 use core::mem::MaybeUninit;
 use embassy_time::{Timer, Duration};
@@ -26,12 +23,6 @@ use crate::raw::{
     ezb_app_signal_t,
     ezb_bdb_start_top_level_commissioning,
     ezb_bdb_is_factory_new,
-    //ezb_device_register,
-    //ezb_ep_list_t,
-    //ezb_ep_list_create,
-    //ezb_ep_list_add_ep,
-    //ezb_cluster_list_t,
-    //ezb_endpoint_config_t,
     ezb_nwk_get_panid,
     ezb_nwk_get_extended_panid,
     ezb_extpanid_t,
@@ -56,91 +47,61 @@ mod channel_mask;
 pub use channel_mask::ChannelMask;
 use esp_zb_raw::esp_zigbee_platform_config_t;
 
-mod node_config;
-pub use node_config::*;
-
 use alloc::boxed::Box;
 use once_cell::sync::OnceCell;
+
+use crate::config::{
+    PlatformDeviceNodeView,
+    NodeType
+};
 
 static SINGLETON_CHECK: OnceCell<()> = OnceCell::new();
 
 /**
-* Node keeps the configuration entries in-place; C side *may* be looking into them even after the initialization.
+* Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
 *
-* The Node exists for *every* node type: controller, router and end device. They may have additional traits added
-* to use, for node-type specific functionality.
+* Configuration-wise this includes: network, platform and node categories.
 *
-* Note: Bindgen helps us by having made config structs non-Copy.
+* A **singleton** - you can create only one and it has "endless" (static) lifespan.
 */
 pub struct Node {
-    cfg: &'static esp_zigbee_config_t,
+    _cfg: &'static esp_zigbee_config_t,
+        // anchored for the C side to use it; it's leaked so whether it's here or not does not really matter.
 }
 
 impl Node {
     /**
     * Initialize a 'Node' from a given configuration.
     */
-    // This is the entry point for the applications.
-    pub fn from_config(cfg: NodeView) -> Self {
+    pub fn from_config(cv: &PlatformDeviceNodeView) -> Self {
+        let (cc, channel_masks) = cv.expand();
 
-        let (platform_cfg, device_cfg) = cfg.expand();
-    }
-
-    /**
-    * Set up a node. Can be called only once.
-    */
-    fn new(platform_cfg: esp_zigbee_platform_config_t, device_cfg: esp_zigbee_device_config_t) -> Self {
         SINGLETON_CHECK.set(()).unwrap_or_else(|_| {
             panic!("node already in use.");
         });
 
-        let cfg = esp_zigbee_config_t {
-            device_config,
-            platform_config
-        };
-        let cfg = Box::leak(Box::new(cfg));
+        // Move the C-side configuration structure to heap (from stack), and leak it. Note: we wouldn't need to leak,
+        // if we just place it as a member in 'Node', but this also works. We are singleton, after all.
+        //
+        // The point is to keep the contents from being moved around: 'esp_zigbee_init()' might read it, even after the
+        // initial call.
+        //
+        let cc: &'static esp_zigbee_config_t = Box::leak(Box::new(cc));
 
         // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
-        unsafe { esp_zigbee_init(cfg) };
+        let err = unsafe { esp_zigbee_init(cc) };
             //
             // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
 
-        Self { cfg }
-    }
+        EspError::from(err).unwrap_or_else(|e| {
+            panic!("Initializing node failed: {}", e);
+        });
 
-    fn with_endpoint(&self, ) -> Self {
-        /*** tbd. MOVE TO ANOTHER
-        // Set primary/secondary channel scan sets.
-        //
-        // For primary:
-        //      "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'"
-        //      "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x)
-        //
-        for primary in [true,false] {
-            node_cfg.channel_mask.map(|ChannelMask(x)| {
-                let err = unsafe {
-                    if primary {
-                        ezb_bdb_set_primary_channel_set(x)
-                    } else {
-                        ezb_bdb_set_secondary_channel_set(x)
-                    }
-                };
-                // EZB_ERR_NONE
-                // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
-                assert!(err == 0);
+        set_channel_sets(&channel_masks);
 
-            }).unwrap_or_else(|| {
-                if primary {
-                    log::info!("Primary channels mask not provided: scanning all channels or reading from NVRAM.");
-                } else {
-                    log::info!("Secondary channels mask not provided: scanning all channels.");
-                }
-            });
-        }
-
-        Ok(())***/
+        Self { _cfg: cc }
     }
 
     /**
@@ -273,6 +234,32 @@ impl Node {
         unsafe {
             esp_zb_factory_reset()
         }
+    }
+}
+
+/**
+* Set the primary and secondary channel mask, on the C library side.
+*
+* @note This (for primary) "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'".
+*       "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x docs)
+*       -- but we call it every time.
+*/
+fn set_channel_sets(channel_masks: &[ChannelMask;2]) {
+    let mut primary = true;
+
+    for cm in channel_masks {
+        let err = unsafe {
+            if primary {
+                ezb_bdb_set_primary_channel_set(cm.into())
+            } else {
+                ezb_bdb_set_secondary_channel_set(cm.into())
+            }
+        };
+        // EZB_ERR_NONE
+        // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
+        assert!((err == 0));
+
+        primary = false;
     }
 }
 

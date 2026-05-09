@@ -1,5 +1,6 @@
 /*
 */
+use alloc::string::String;
 use core::fmt::{
     Display,
     Formatter,
@@ -7,7 +8,8 @@ use core::fmt::{
 
 #[derive(Debug, Clone)]
 pub enum Error {
-    AlreadyInUse,     // only one Controller/Router/EndDevice allowed
+    AlreadyInUse,       // only one Controller/Router/EndDevice allowed
+    BadConfig(String),  // the configuration (TOML) has a problem
 }
 
 impl Display for Error {
