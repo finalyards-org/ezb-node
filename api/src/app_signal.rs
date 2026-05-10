@@ -5,9 +5,9 @@ use core::{
 };
 
 use crate::raw::{
-    ezb_app_signal_type_t,
+    //ezb_app_signal_type_t,
     ezb_zdo_signal_device_annce_params_t,
-    ezb_app_signal_get_params,
+    //zb_app_signal_get_params,
     ezb_zdo_signal_leave_params_t,
     //ezb_nwk_signal_device_associated_params_t,
     ezb_zdo_signal_leave_indication_params_t,
@@ -21,6 +21,7 @@ use crate::raw::{
     ezb_nwk_network_status_t,
     ezb_nwk_signal_permit_join_status_params_t,
     ezb_app_signal_type_e,
+    //ezb_app_signal_t,
 };
 
 #[cfg(feature = "touchlink")]
@@ -28,10 +29,6 @@ use crate::raw::{
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
     esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
-};
-
-use esp_idf_sys::{
-    EspError,
 };
 
 use crate::utils::IeeeAddr;
@@ -157,7 +154,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_zdo_signal_device_unavailable_params_t
-    ZdoDeviceUnavailable{
+    ZdoSignalDeviceUnavailable{
         device_addr: IeeeAddr,
         short_addr: u16
     },
@@ -462,47 +459,24 @@ pub enum AppSignal {
 
 impl AppSignal {
     /**
-    * Convert the application signal from Zigbee C level to Rust so that all information is self-contained
-    * within the 'AppSignal'.
-    *
-    * For some signals, this means fetching extraneous information, using the C API global functions.
+    * Convert the application signal from C level to Rust so that type and params are contained within the
+    * same enum.
     */
-    pub(crate) fn from(p_app_signal: *const ezb_app_signal_type_t) -> Option<Self> {
+    pub(crate) fn from(p_type: ezb_app_signal_type_e, p_params: *const ::core::ffi::c_void) -> Option<Self> {
         use ezb_app_signal_type_e::*;    // signal values
 
-        assert!(!p_app_signal.is_null());
-        let app_signal: ezb_app_signal_type_t = unsafe { *p_app_signal };
-            // ..but keep 'p_app_signal', may be used to claim more info
-
-        /*R Helpers. Apply given value or closure when 'err' is known. Otherwise, provide 'None'.
-        */
-       #[cfg(false)]
-       macro_rules! if_ok {
-            (|| $body:expr) => {
-                err.is_none().then(|| $body)
-            };
-        }
-
-        let happy_res = match app_signal {
-            #[cfg(false)]   // 1.x
-            EZB_ZDO_SIGNAL_DEFAULT_START => { // 0
-                // assert: 'st' ∈ ESP_OK, ESP_FAIL
-                if_ok_fail!( |joined| Self::ZdoSignalDefaultStart { joined } )
-            },
+        let happy_res = match p_type {
             EZB_ZDO_SIGNAL_SKIP_STARTUP => { // 1
                 Self::ZdoSignalSkipStartup
             },
-            ESP_ZB_ZDO_SIGNAL_ERROR => { // 2
-                Self::ZdoSignalError
-            },
             EZB_ZDO_SIGNAL_LEAVE => { // 3
-                let x = get_param::<ezb_zdo_signal_leave_params_t>(p_app_signal);
+                let x = get_param::<ezb_zdo_signal_leave_params_t>(p_params);
                 Self::ZdoSignalLeave {
                     leave_type_X: x.leave_type
                 }
             },
             EZB_ZDO_SIGNAL_LEAVE_INDICATION => { // 4
-                let x = get_param::<ezb_zdo_signal_leave_indication_params_t>(p_app_signal);
+                let x = get_param::<ezb_zdo_signal_leave_indication_params_t>(p_params);
                 Self::ZdoSignalLeaveIndication {
                     short_addr: x.short_addr,
                     device_addr: x.device_addr.into(),
@@ -513,22 +487,22 @@ impl AppSignal {
                 }
             },
             EZB_ZDO_SIGNAL_DEVICE_ANNCE => { // 5
-                let x = get_param::<ezb_zdo_signal_device_annce_params_t>(p_app_signal);
+                let x = get_param::<ezb_zdo_signal_device_annce_params_t>(p_params);
                 Self::ZdoSignalDeviceAnnce {
                     short_addr: x.short_addr,
                     device_addr: x.device_addr.into(),
                     capability_X: x.capability
                 }
             },
-            EZB_ZDO_DEVICE_UNAVAILABLE => { // 6
-                let x = get_param::<ezb_zdo_signal_device_unavailable_params_t>(p_app_signal);
-                Self::ZdoDeviceUnavailable {
+            EZB_ZDO_SIGNAL_DEVICE_UNAVAILABLE => { // 6
+                let x = get_param::<ezb_zdo_signal_device_unavailable_params_t>(p_params);
+                Self::ZdoSignalDeviceUnavailable {
                     device_addr: x.device_addr.into(),
                     short_addr: x.short_addr
                 }
             },
-            ESP_ZB_ZDO_SIGNAL_DEVICE_UPDATE => { // 7
-                let x = get_param::<ezb_zdo_signal_device_update_params_t>(p_app_signal);
+            EZB_ZDO_SIGNAL_DEVICE_UPDATE => { // 7
+                let x = get_param::<ezb_zdo_signal_device_update_params_t>(p_params);
                 Self::ZdoSignalDeviceUpdate {
                     device_addr: x.device_addr.into(),
                     short_addr: x.short_addr,
@@ -538,7 +512,7 @@ impl AppSignal {
                 }
             },
             EZB_ZDO_SIGNAL_DEVICE_AUTHORIZED => { // 8
-                let x = get_param::<ezb_zdo_signal_device_authorized_params_t>(p_app_signal);
+                let x = get_param::<ezb_zdo_signal_device_authorized_params_t>(p_params);
                 Self::ZdoSignalDeviceAuthorized {
                     device_addr: x.device_addr.into(),
                     short_addr: x.short_addr,
@@ -547,42 +521,42 @@ impl AppSignal {
                 }
             },
             EZB_BDB_SIGNAL_DEVICE_FIRST_START => { // 256
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_app_signal);
+                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalDeviceFirstStart {
                     status: x.status
                 }
                 //r if_ok_fail!(|success| Self::BdbSignalDeviceFirstStart { success })
             },
             EZB_BDB_SIGNAL_DEVICE_REBOOT => { // 257
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_app_signal);
+                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalDeviceReboot {
                     status: x.status
                 }
                 //r if_ok_fail!(|success| Self::BdbSignalDeviceReboot { success })
             },
             EZB_BDB_SIGNAL_STEERING => { // 258
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_app_signal);
+                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalSteering {
                     status: x.status
                 }
                 //r if_ok_fail!(|success| Self::BdbSignalSteering { success })
             },
             EZB_BDB_SIGNAL_FORMATION => { // 259
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_app_signal);
+                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalFormation {
                     status: x.status
                 }
                 //r if_ok_fail!(|success| Self::BdbSignalFormation { success })
             },
             EZB_BDB_SIGNAL_FINDING_AND_BINDING_INITIATOR_FINISHED => { // 0x0d
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_app_signal);
+                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalFindingAndBindingInitiatorFinished {
                     status: x.status
                 }
                 //r if_ok_fail!(|success| Self::BdbSignalFindingAndBindingInitiatorFinished { success })
             },
             EZB_BDB_SIGNAL_FINDING_AND_BINDING_TARGET_FINISHED => { // 260
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_app_signal);
+                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalFindingAndBindingTargetFinished {
                     status: x.status
                 }
@@ -600,7 +574,7 @@ impl AppSignal {
             EZB_NWK_SIGNAL_DEVICE_ASSOCIATED => { // 512
                 log::warn!("Caught {} marked 'obsolete' by C side docs", sig);
 
-                let x = get_param::<ezb_nwk_signal_device_associated_params_t>(p_app_signal);
+                let x = get_param::<ezb_nwk_signal_device_associated_params_t>(p_params);
                 Self::NwkSignalDeviceAssociated {
                     device_addr: x.device_addr.into(),
                 }
@@ -612,7 +586,7 @@ impl AppSignal {
                 Self::NwkSignalPanidConflictDetected
             },
             EZB_NWK_SIGNAL_NETWORK_STATUS => { // 515
-                let x = get_param::<ezb_nwk_signal_network_status_params_t>(p_app_signal);
+                let x = get_param::<ezb_nwk_signal_network_status_params_t>(p_params);
 
                 // tbd. Instead of panicking, we _could_ just not match a signal which does not carry a valid enum.
                 //      On the other hand, such a case would not arise from unexpected wire(less) traffic, but be a bug
@@ -630,41 +604,13 @@ impl AppSignal {
                 }
             },
             EZB_NWK_SIGNAL_PERMIT_JOIN_STATUS => { // 516
-                let ezb_nwk_signal_permit_join_status_params_t{ duration: x } = get_param(p_app_signal);
+                let ezb_nwk_signal_permit_join_status_params_t{ duration: x /*secs*/ } = get_param(p_params);
                     // YIEEEE!!!! ;)
 
-                let iof = (x > 0).then(|| Duration::from_secs(x));
+                let iof = (x > 0).then(|| Duration::from_secs(x as _));
                 Self::NwkSignalPermitJoinStatus{ is_opened_for: iof }
             },
-
-            #[cfg(false)]   // not generated by v2.x
-            ESP_ZB_COMMON_SIGNAL_CAN_SLEEP => { // 0x16
-                let x = get_param::<ezb_zdo_signal_can_sleep_params_t>(p_app_signal);
-                Self::CommonSignalCanSleep {
-                    sleep_duration: Duration::from_millis(x.sleep_duration as u64)
-                }
-            },
-            #[cfg(false)]   //R not generated by v2.x
-            ESP_ZB_BDB_SIGNAL_TC_REJOIN_DONE => { // 0x35
-                // assert: 'st' ∈ ESP_OK, ESP_FAIL
-                if_ok_fail!(|success| Self::BdbSignalTcRejoinDone { success })
-            },
-            #[cfg(false)]   //R not generated by v2.x
-            ESP_ZB_BDB_SIGNAL_STEERING_CANCELLED => { // 0x37
-                // assert: 'st' ∈ ESP_OK, ESP_FAIL, ESP_ERR_INVALID_STATE
-                //
-                if_ok_fail_invalidstate!(|res| {
-                    Self::BdbSignalSteeringCancelled(res)
-                })
-            },
-            #[cfg(false)]   //R not generated by v2.x
-            ESP_ZB_BDB_SIGNAL_FORMATION_CANCELLED => { // 0x38
-                // assert: 'st' ∈ ESP_OK, ESP_FAIL, ESP_ERR_INVALID_STATE
-                //
-                if_ok_fail_invalidstate!(|res| {
-                    Self::BdbSignalFormationCancelled(res)
-                })
-            },
+            //
             EZB_APP_SIGNAL_END => { // 517
                 Self::End
             },
@@ -686,11 +632,12 @@ impl fmt::Display for AppSignal {
 }
 
 /*
-* The 'p_app_signal' pointer points to signal specific structures with more information. Get them.
+* The 'p_params' pointer points to signal specific structures with more information. Get them.
 */
-fn get_param<T: Copy>(p_app_signal: *const ezb_app_signal_type_t) -> T {
-    let p = unsafe { ezb_app_signal_get_params(p_app_signal as *mut _) } as *const T;
-
-    assert!(!p.is_null());  // 'esp-zigbee-lib' wouldn't, would it..
-    unsafe { *p }
+fn get_param<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
+    assert!(!vp.is_null());
+    unsafe {
+        let typed_ptr = vp as *const T;
+        typed_ptr.read_unaligned()  // do the right thing if the struct is "packed" ('esp-zigbee-lib' 2.0 API has 15 occurrences)
+    }
 }

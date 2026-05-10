@@ -50,6 +50,7 @@ pub mod sys {
     };
 }
 
+#[cfg(false)]
 impl ezb_extpanid_t {
     /**
     * Provide an empty struct, e.g. to be used as a buffer.
@@ -183,47 +184,66 @@ impl esp_zigbee_platform_config_t {
     }
 }
 
-/***R
-impl ezb_nwk_network_status_t {
-    // with 'strum'
-    fn from_raw(v: u8) -> Option<Self> {
-        Self::from_repr(v as u32)
+// About the 'esp_zigbee_lib' (2.0) API design:
+//  - for 'ezb_eui64_s' (used e.g. for IEEE addresses), could it not be passed by-value, also in the C API?
+//  - the use of 'union' is low friction within C, but burdensome for Rust.
+//
+// For these reasons, we overwrite certain C side functions:
+//
+
+/// @brief Get the IEEE (extended) address of the device.
+/// @anchor ezb_nwk_get_extended_panid
+///
+/// @return Slice of 64-bit IEEE address, little-endian.
+// note: Returning the slice, and not 'u64', because: - it makes the little-endianess more explicit,
+//      - C API has the union "packed", meaning it can be 1-byte aligned. Though we provide the buffer
+//        here, it still carries that packed attribute with it. So ... slice is likely having less surprises!
+//
+pub unsafe fn ezb_nwk_get_extended_panid() -> [u8;8] {
+    let mut buf: ezb_extpanid_t = empty();
+    unsafe {
+        a::ezb_nwk_get_extended_panid(&mut buf)
+    };
+
+    unsafe { buf.__bindgen_anon_1.u8_ }
+}
+
+/// @brief Obtains the type of the application signal
+///
+// Wrapped so that API layer gets a Rust enum, straight up (without it needing to use 'strum').
+pub unsafe fn ezb_app_signal_get_type(signal: *const ezb_app_signal_t) -> ezb_app_signal_type_e {
+    let v = unsafe { a::ezb_app_signal_get_type(signal) };
+    ezb_app_signal_type_e::from_repr(v as u32).unwrap_or_else(|| {
+        panic!("No such 'ezb_app_signal_type_e': {v}")
+    })
+}
+
+// 'ezb_eui64_s' is a rather unremarkable union, in the C API. It does, however, cause headache
+// in Rust conversion. Here are helper methods!
+//
+// The issues are twofold: that it's a union, and that it's "packed". Packed means that it would be unsafe
+// (as in, potentially invoking Undefined Behaviour) to simply read the '._u64' field of the union. We counteract
+// this here, in the 'raw' layer, to avoid such concerns in the API.
+//
+impl ezb_eui64_s {
+    pub fn to_le_bytes(self) -> [u8; 8] {
+        unsafe {
+            self.__bindgen_anon_1.u8_
+        }
     }
+    pub fn to_u64(self) -> u64 {
+        // NOTE: NOT ENCOURAGED. 'google.ai' says it's UB, even when the compiler knows the struct is "packed".
+        //|unsafe { self.__bindgen_anon_1.u64_ }
 
-    // Note: '#[repr(u32)]' but signal carries only 'u8'.
-    #[cfg(false)]   // without 'strum'
-    fn from_raw(v: u8) -> Option<Self> {
-        use ezb_nwk_network_status_t::*;
-
-        match v {
-            EZB_NWK_NETWORK_STATUS_LEGACY_NO_ROUTE_AVAILABLE |
-            EZB_NWK_NETWORK_STATUS_LEGACY_LINK_FAILURE |
-            EZB_NWK_NETWORK_STATUS_LINK_FAILURE |
-            EZB_NWK_NETWORK_STATUS_LOW_BATTERY_LEVEL |
-            EZB_NWK_NETWORK_STATUS_NO_ROUTING_CAPACITY |
-            EZB_NWK_NETWORK_STATUS_NO_INDIRECT_CAPACITY |
-            EZB_NWK_NETWORK_STATUS_INDIRECT_TRANSACTION_EXPIRY |
-            EZB_NWK_NETWORK_STATUS_TARGET_DEVICE_UNAVAILABLE |
-            EZB_NWK_NETWORK_STATUS_TARGET_ADDRESS_UNALLOCATED |
-            EZB_NWK_NETWORK_STATUS_PARENT_LINK_FAILURE |
-            EZB_NWK_NETWORK_STATUS_VALIDATE_ROUTE |
-            EZB_NWK_NETWORK_STATUS_SOURCE_ROUTE_FAILURE |
-            EZB_NWK_NETWORK_STATUS_MANY_TO_ONE_ROUTE_FAILURE |
-            EZB_NWK_NETWORK_STATUS_ADDRESS_CONFLICT |
-            EZB_NWK_NETWORK_STATUS_VERIFY_ADDRESS |
-            EZB_NWK_NETWORK_STATUS_PAN_IDENTIFIER_UPDATE |
-            EZB_NWK_NETWORK_STATUS_NETWORK_ADDRESS_UPDATE |
-            EZB_NWK_NETWORK_STATUS_BAD_FRAME_COUNTER |
-            EZB_NWK_NETWORK_STATUS_BAD_KEY_SEQUENCE_NUMBER |
-            EZB_NWK_NETWORK_STATUS_UNKNOWN_COMMAND |
-            EZB_NWK_NETWORK_STATUS_PANID_CONFLICT => {
-                //Some( unsafe { core::mem::transmute::<u8, ezb_nwk_network_status_t>(v) } )
-                Some(v as ezb_nwk_network_status_t)
-            }
-            _ => {
-                None
-            }
+        // Safe way to read a potentially unaligned 'u64'
+        unsafe {
+            let ptr = core::ptr::addr_of!(self.__bindgen_anon_1.u64_);
+            ptr.read_unaligned()
         }
     }
 }
-***/
+
+fn empty<T>() -> T {
+    let un = MaybeUninit::zeroed();
+    unsafe { un.assume_init() }
+}

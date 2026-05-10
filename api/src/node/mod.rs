@@ -1,8 +1,4 @@
 /*
-* A Node.
-*
-* Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
-*
 * Design:
 *   - Singleton; there's only one Node in a running system
 *   - Methods, not globals. Helps e.g. in IDE auto-completion (and generally not being able to see weird stuff
@@ -11,21 +7,22 @@
 * Note:
 *   - Native mode only; no RCP (radio co-processor) implementation. C API has both.
 */
-use core::mem::MaybeUninit;
-use embassy_time::{Timer, Duration};
+use alloc::boxed::Box;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use bitflags::bitflags;
+use esp_idf_sys::EspError;
 use log;
 
 use crate::raw::{
-    esp_zigbee_device_config_t,
     esp_zigbee_init,
     ezb_app_signal_t,
+    //ezb_app_signal_type_t,
     ezb_bdb_start_top_level_commissioning,
     ezb_bdb_is_factory_new,
     ezb_nwk_get_panid,
     ezb_nwk_get_extended_panid,
-    ezb_extpanid_t,
+    //ezb_extpanid_t,
     ezb_nwk_get_short_address,
     ezb_nwk_get_current_channel,
     ezb_bdb_comm_mode_t,
@@ -34,28 +31,25 @@ use crate::raw::{
     ezb_bdb_set_secondary_channel_set,
     esp_zigbee_launch_mainloop,
     esp_zigbee_start,
+    ezb_app_signal_get_params,
+    ezb_app_signal_get_type,
 };
 
-use esp_idf_sys::EspError;
-
-use crate::{Error, IeeeAddr, AppSignal};
-
-mod router;
-pub use router::Router;
+use crate::{
+    IeeeAddr,
+    AppSignal,
+    config::{
+        PlatformDeviceNodeView,
+    }
+};
 
 mod channel_mask;
 pub use channel_mask::ChannelMask;
-use esp_zb_raw::esp_zigbee_platform_config_t;
 
-use alloc::boxed::Box;
-use once_cell::sync::OnceCell;
-
-use crate::config::{
-    PlatformDeviceNodeView,
-    NodeType
-};
-
-static SINGLETON_CHECK: OnceCell<()> = OnceCell::new();
+static SINGLETON_CHECK: AtomicBool = AtomicBool::new(false);
+    //
+    // Note: 'OnceCell' gives warnings if used '::unsync' - and require 'std' if used '::sync'. All we need is to
+    //      stop the app if it were to enter twice.
 
 /**
 * Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
@@ -76,9 +70,9 @@ impl Node {
     pub fn from_config(cv: &PlatformDeviceNodeView) -> Self {
         let (cc, channel_masks) = cv.expand();
 
-        SINGLETON_CHECK.set(()).unwrap_or_else(|_| {
+        if SINGLETON_CHECK.swap(true, Ordering::SeqCst) {
             panic!("node already in use.");
-        });
+        }
 
         // Move the C-side configuration structure to heap (from stack), and leak it. Note: we wouldn't need to leak,
         // if we just place it as a member in 'Node', but this also works. We are singleton, after all.
@@ -95,7 +89,7 @@ impl Node {
             // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
 
-        EspError::from(err).unwrap_or_else(|e| {
+        EspError::from(err).map(|e| {
             panic!("Initializing node failed: {}", e);
         });
 
@@ -168,11 +162,10 @@ impl Node {
     * Get the extended PAN ID of the network.
     */
     fn nwk_get_extended_panid(&self) -> IeeeAddr {
-        let mut buf: ezb_extpanid_t = ezb_extpanid_t::empty();
-        unsafe {
-            ezb_nwk_get_extended_panid(&mut buf);
-        }
-        IeeeAddr::from(buf)
+        let v = unsafe {
+            ezb_nwk_get_extended_panid()
+        };
+        IeeeAddr::from(v)
     }
 
     /**
@@ -250,9 +243,9 @@ fn set_channel_sets(channel_masks: &[ChannelMask;2]) {
     for cm in channel_masks {
         let err = unsafe {
             if primary {
-                ezb_bdb_set_primary_channel_set(cm.into())
+                ezb_bdb_set_primary_channel_set(cm.bits())
             } else {
-                ezb_bdb_set_secondary_channel_set(cm.into())
+                ezb_bdb_set_secondary_channel_set(cm.bits())
             }
         };
         // EZB_ERR_NONE
@@ -271,7 +264,7 @@ bitflags! {
         #[cfg(feature = "touchlink")]
         const TOUCHLINK_INITIATOR = BdbMode::EZB_BDB_MODE_TOUCHLINK_INITIATOR.0 as u8; // 2
         const NETWORK_STEERING = BdbMode::EZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 4
-        #[cfg(feature = "controller")]
+        #[cfg(feature = "coordinator")]
         const NETWORK_FORMATION = BdbMode::EZB_BDB_MODE_NETWORK_FORMATION.0 as u8; // 8
         const FINDING_N_BINDING = BdbMode::EZB_BDB_MODE_FINDING_N_BINDING.0 as u8; // 16
         #[cfg(feature = "touchlink")]
@@ -285,40 +278,22 @@ bitflags! {
 /*
 * Handler for Zigbee APP signals.
 */
-//  typedef struct esp_zb_app_signal_s {
-//      uint32_t *p_app_signal;   /*!< Application pointer signal type, refer to esp_zb_app_signal_type_t */
-//      esp_err_t esp_err_status; /*!< The error status of the each signal event, refer to esp_err_t */
-//  } esp_zb_app_signal_t;
-//
-// NOTE: In addition to pointing to the signal type, 'p_app_signal' can be given to 'esp_zb_app_signal_get_params()',
-//      in order to fetch more, signal specific, information. We bake those into a single value
-//      Rust enum, below, before providing to the application.
+// typedef void *ezb_app_signal_t;
+// typedef uint16_t ezb_app_signal_type_t;
 //
 #[unsafe(no_mangle)]
-extern "C" fn esp_zb_app_signal_handler(ss: *mut ezb_app_signal_t) {
-    let ss: *const ezb_app_signal_t = ss;  // un-mut
+extern "C" fn esp_zb_app_signal_handler(p_app_signal: *const ezb_app_signal_t) {
 
-    let ezb_app_signal_t{ p_app_signal, esp_err_status: err_st } = unsafe { *ss };
+    let p_type = unsafe { ezb_app_signal_get_type(p_app_signal) };
+    let p_params = unsafe { ezb_app_signal_get_params(p_app_signal) };
 
-    assert!(err_st == 0);  //?? mitä sillä pitäisi tehdä?
-
-    AppSignal::from(p_app_signal as *const _)
+    AppSignal::from(p_type, p_params)
         .map(|sig| {
             log::info!("Received: {}", sig);
         })
         .unwrap_or_else(|| {
-            let sig_type = unsafe { *p_app_signal };
 
-            // 'EspError' is 'Display': we can use it to give a wording for the error code.
-            //  Note: Handling became a bit elaborate: 'Option<EspError>' is not 'Display'.
-            //
-            let ee = EspError::from(err_st);
-            let display_ee: &dyn core::fmt::Display = match ee {
-                Some(ref e) => e,
-                None => &"ESP_OK",
-            };
-
-            log::error!("Unexpected app signal: {}, {}", sig_type, display_ee);
+            log::error!("Unexpected app signal: {}, {:?}", p_type, p_params);
         });
 }
 

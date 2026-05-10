@@ -42,11 +42,11 @@ pub struct Config {
     pub node: NodeType,
         // CoordinatorConfig | RouterConfig | EndDeviceConfig
 
-    // Manufacturer info (defaults: we should allow endpoints to carry their own)
-    pub manufacturer_name: &'static PascalString,
-    pub model_identifier: &'static PascalString,
+    //r // Manufacturer info (defaults: we should allow endpoints to carry their own)
+    //r pub manufacturer_name: &'static PascalString,
+    //r pub model_identifier: &'static PascalString,
 
-    pub endpoints: BTreeMap<u8, EndpointConfig>,
+    pub endpoints: BTreeMap<u8, (EndpointConfig, BaseConfig)>,
 }
 
 impl Config {
@@ -71,7 +71,7 @@ impl Config {
 * Note: while there's duplication in the fields, that's not that bad. If we'll read these
 *       from a TOML, there's little value in trying to normalize their keys.
 */
-pub(crate) enum NodeType {
+pub enum NodeType {
     #[cfg(feature = "coordinator")]
     CoordinatorConfig {
         install_code_policy: bool,
@@ -94,4 +94,13 @@ pub(crate) enum NodeType {
 pub enum EndpointConfig {
     #[cfg(feature = "ep_color_dimmable_light")]
     ColorDimmableLightEPC,
+}
+
+/**
+* Carries the base endpoint [tbd. is that the right term?] (0) configuration. This can be different for each endpoint
+* though often the same values would be used.
+*/
+pub struct BaseConfig {
+    pub manufacturer_name: &'static PascalString,
+    pub model_identifier: &'static PascalString,
 }

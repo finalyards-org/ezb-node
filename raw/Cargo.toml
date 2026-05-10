@@ -20,6 +20,7 @@ esp-idf-sys = { workspace = true, features = [], default-features = false }
     # Needs to be under '[dependencies]' since it carries libraries that end up in the product.
 
 strum = { version = "0.28.0", features = ["derive"] }
+    # allows '::from_repr()' on enum types
 
 [features]
 default = []

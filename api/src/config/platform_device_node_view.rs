@@ -22,8 +22,13 @@ pub(crate) struct PlatformDeviceNodeView<'a>(&'a Config);
 impl<'a> PlatformDeviceNodeView<'a> {
 
     pub(crate) fn expand(&self) -> (esp_zigbee_config_t, [ChannelMask;2]) {
-        // All 'network', 'platform' and 'node' entries are baked together, to form the C side 'esp_zigbee_config_t'.
 
+        // | TOML     | struct                       |
+        // |----------|------------------------------|
+        // | network  | channel_masks                |
+        // | platform | esp_zigbee_platform_config_t |
+        // | node     | esp_zigbee_device_config_t   |
+        //
         let nt = self.0.node;
         let channel_masks = self.0.channel_masks;
 
@@ -42,11 +47,11 @@ impl<'a> PlatformDeviceNodeView<'a> {
         //
         let dev_cfg = match nt {
             #[cfg(feature = "coordinator")]
-            CoordinatorConfig { install_code_policy: bool, max_children: u8 } => {
+            CoordinatorConfig { install_code_policy, max_children } => {
                 esp_zigbee_device_config_t::for_zczr(EZB_NWK_DEVICE_TYPE_COORDINATOR, install_code_policy, max_children)
             },
             #[cfg(feature = "router")]
-            RouterConfig { install_code_policy: bool, max_children: u8 } => {
+            RouterConfig { install_code_policy, max_children } => {
                 esp_zigbee_device_config_t::for_zczr(EZB_NWK_DEVICE_TYPE_ROUTER, install_code_policy, max_children)
             },
             #[cfg(false)]
@@ -70,17 +75,14 @@ impl<'a> PlatformDeviceNodeView<'a> {
         //
         let storage_partition_name = self.0.storage_partition_name.as_ref();
 
-        let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(storage_partition_name);
+        let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
+            storage_partition_name
+        );
 
         let cc = esp_zigbee_config_t {
             device_config: dev_cfg,
             platform_config: platform_cfg,
         };
-
-        //? // Do a bit of leak; this does not matter since configuration is intended to be a singleton, just did not have
-        //? // a suitable place where to store this (it *can* be part of 'Config' itself).
-        //? //
-        //? Box::leak(Box::new(cc))
 
         (cc, channel_masks)
     }

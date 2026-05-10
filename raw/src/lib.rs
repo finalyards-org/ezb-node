@@ -56,6 +56,7 @@ pub use bindings::{
     ezb_nwk_network_status_t,
     ezb_nwk_signal_permit_join_status_params_t,
     ezb_app_signal_type_e,
+    ezb_extaddr_t,
 };
 
 // Node constants and methods (global in C API)
@@ -76,6 +77,7 @@ pub use bindings::{
     esp_zigbee_config_t,
     ezb_bdb_set_primary_channel_set,
     ezb_bdb_set_secondary_channel_set,
+    ezb_app_signal_get_type,
 };
 
 // Endpoints

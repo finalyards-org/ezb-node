@@ -100,7 +100,7 @@ manual: ${_BIND_RS}
 _BLOCKLIST_VARS:=$(strip EZB_ZCL_VALUE_NaN)
 	# '.._VALUE_NaN' avoid warning on its naming (we don't need it, either)
 
-# Typedefs to zero-size structs. Trying to suppress warnings.
+# Typedefs to zero-size structs. Suppresses warnings.
 _OPAQUE_TYPES:=$(strip \
 	esp_zb_diagnostics_cluster_cfg_t \
 	esp_zb_price_cluster_cfg_t \
@@ -118,6 +118,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 			\
 	    --allowlist-var 'ESP_ERR_.+' \
 	    --allowlist-var 'EZB_ZCL_.+' \
+	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
@@ -127,6 +128,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --generate-inline-functions \
 	    --default-enum-style rust \
 	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \

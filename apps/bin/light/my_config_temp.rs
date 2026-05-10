@@ -5,7 +5,13 @@
 */
 use alloc::collections::BTreeMap;
 
-use esp_zb::{node::ChannelMask, Config, EndpointConfig};
+use esp_zb::{
+    node::ChannelMask,
+    Config,
+    EndpointConfig,
+    NodeType,
+    BaseConfig,
+};
 
 // Note: Eventually this will get read from a TOML file.
 //
@@ -13,17 +19,27 @@ use esp_zb::{node::ChannelMask, Config, EndpointConfig};
 //
 pub(crate) fn my_config() -> Config {
 
+    let channel_masks = [ChannelMask::from([13]), ChannelMask::ALL]; // same as in C example
+
+    let install_code_policy = false;
+    let max_children = 10;
+
     let ep_10 = EndpointConfig::ColorDimmableLightEPC {};
 
-    Config {
-        primary_channel_mask: ChannelMask::from([13]),  // as in C sample
-        secondary_channel_mask: ChannelMask::ALL,
-
-        storage_partition_name: "zb_storage".into(),
-
+    let bc = BaseConfig{
         manufacturer_name: "Your name".into(),
         model_identifier: "Your model".into(),
+    };
 
-        endpoints: BTreeMap::from([(10, ep_10)])
+    Config {
+        channel_masks,
+        storage_partition_name: "zb_storage".into(),
+
+        node: NodeType::CoordinatorConfig{
+            install_code_policy,
+            max_children
+        },
+
+        endpoints: BTreeMap::from([(10, (ep_10, bc))])
     }
 }

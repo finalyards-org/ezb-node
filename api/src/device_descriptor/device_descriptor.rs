@@ -1,9 +1,4 @@
 
-use alloc::{
-    boxed::Box,
-    string::String
-};
-
 //r use esp_idf_sys::error::EspError;
 
 use crate::raw::{
@@ -24,7 +19,6 @@ use crate::raw::{
 
 use crate::{
     config::DeviceDescriptorView,
-    utils::PascalString
 };
 
 /**
@@ -35,8 +29,6 @@ use crate::{
 */
 pub(crate) struct DeviceDescriptor{
     inner: ezb_af_device_desc_t,
-    //manufacturer_name: &'static PascalString,
-    //model_info: &'static PascalString,
 }
 
 impl DeviceDescriptor {

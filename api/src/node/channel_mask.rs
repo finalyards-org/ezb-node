@@ -9,25 +9,35 @@ use core::fmt;
 const VALID_CHANNELS: core::ops::RangeInclusive<u8> = 11..=26;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct ChannelMask(pub(crate) u32);
+pub struct ChannelMask(u32);
 
 impl ChannelMask {
-    pub const PREFERRED: Self = ChannelMask::from([11,15,20,25]);
-    pub const ALL: Self = ChannelMask(0x07FFF800);    // channels 11..26 enabled
-}
+    pub const PREFERRED: Self = ChannelMask({
+        1 << 11 | 1 << 15 | 1 << 20 | 1 << 25
+    });     // note: '::new()' would not be 'const fn', because of the for loop
+    pub const ALL: Self = ChannelMask(0x07FFF800_u32);    // channels 11..26 enabled
 
-impl From<[u8;_]> for ChannelMask {
-    fn from(channels: &[u8;_]) -> Self {
+    fn new(channels: &[u8]) -> Self {
         let mut mask: u32 = 0;
 
-        for ch in channels {
-            if VALID_CHANNELS.contains(ch) {
+        for &ch in channels {
+            if VALID_CHANNELS.contains(&ch) {
                 mask |= 1 << ch;
             } else {
-                panic!("Invalid Zigbee channel (not within {}): {}", &VALID_CHANNELS, ch);
+                panic!("Invalid Zigbee channel (not within {:?}): {}", &VALID_CHANNELS, ch);
             }
         }
         Self(mask)
+    }
+
+    pub(crate) fn bits(&self) -> u32 {
+        self.0
+    }
+}
+
+impl From<&[u8]> for ChannelMask {
+    fn from(channels: &[u8]) -> Self {
+        Self::new(channels)
     }
 }
 

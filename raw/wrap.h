@@ -33,8 +33,15 @@
 //
 const ezb_zha_color_dimmable_light_config_t EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG = EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG();
 
-//R // Force these to be 'u8'; in C header they are uncasted and thus end up in Rust as 'u32',
-//R // though C function parameters for them take 'uint8_t'.
-//R //
-//R #define EZB_ZCL_CLUSTER_SERVER ((uint8_t)EZB_ZCL_CLUSTER_SERVER) // 1
-//R #define EZB_ZCL_CLUSTER_CLIENT ((uint8_t)EZB_ZCL_CLUSTER_CLIENT) // 2
+// Version
+//
+// Version 2.0 brings 'esp_zigbee_get_version_string()' but that's a function. It's nicer to expose this as a 'const'.
+//
+#define _STRINGIZE(x) #x
+#define _TO_STR(x) _STRINGIZE(x)
+
+const char *ESP_ZIGBEE_VER = \
+  _TO_STR(ESP_ZIGBEE_VER_MAJOR) "." \
+  _TO_STR(ESP_ZIGBEE_VER_MINOR) "." \
+  _TO_STR(ESP_ZIGBEE_VER_PATCH);
+  // "2.0.0"
