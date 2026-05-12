@@ -38,6 +38,9 @@ embassy-time    = { workspace = true, features = ["generic-queue-8"] }
 [build-dependencies]
 embuild.workspace = true
 
+anyhow = { version = "1.0" }
+esp-zb-toml = { path = "../toml" }
+
 [features]
 default = ["esp32c6"]
 

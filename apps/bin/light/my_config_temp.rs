@@ -15,11 +15,11 @@ use esp_zb::{
 
 // Note: Eventually this will get read from a TOML file.
 //
-// Note 2: Storage partition name ('zb_storage') is not here; is it passed on to 'esp_zigbee_lib'??? tbd.
-//
 pub(crate) fn my_config() -> Config {
 
     let channel_masks = [ChannelMask::from([13]), ChannelMask::ALL]; // same as in C example
+
+    let storage_partition_name= "zb_storage";
 
     let install_code_policy = false;
     let max_children = 10;
@@ -33,7 +33,7 @@ pub(crate) fn my_config() -> Config {
 
     Config {
         channel_masks,
-        storage_partition_name: "zb_storage".into(),
+        storage_partition_name,
 
         node: NodeType::CoordinatorConfig{
             install_code_policy,

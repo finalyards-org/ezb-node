@@ -36,15 +36,11 @@ pub struct Config {
     pub channel_masks: [ChannelMask; 2],
 
     // Platform
-    pub storage_partition_name: String,   // e.g. "zb_storage" (but can be anything)
+    pub storage_partition_name: &'static str,   // e.g. "zb_storage" (but can be anything)
 
     // Node
     pub node: NodeType,
         // CoordinatorConfig | RouterConfig | EndDeviceConfig
-
-    //r // Manufacturer info (defaults: we should allow endpoints to carry their own)
-    //r pub manufacturer_name: &'static PascalString,
-    //r pub model_identifier: &'static PascalString,
 
     pub endpoints: BTreeMap<u8, (EndpointConfig, BaseConfig)>,
 }

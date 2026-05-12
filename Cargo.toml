@@ -1,8 +1,9 @@
 [workspace]
 members = [
-  "raw",
-  "api",
-  "apps",
+    "raw",
+    "api",
+    "apps",
+    "toml"
 ]
 resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
