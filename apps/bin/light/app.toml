@@ -3,7 +3,7 @@
 #
 [network]
 primary_channels = [13]
-#secondary_channels = [..]  # default: all channels (11..=26)
+secondary_channels = "all"
 
 [platform]
 storage_partition_name = "zb_storage"
@@ -19,4 +19,3 @@ model_identifier = "Your model"
 
 [endpoint.10]
 device_type = "color_dimmable_light"
-# default config

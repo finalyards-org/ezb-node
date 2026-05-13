@@ -52,11 +52,6 @@ esp32c6 = [
 workspace = true
 
 [[bin]]
-name = "a"
-path = "bin/a.rs"
-required-features = ["esp32c6"]
-
-[[bin]]
 name = "light"
 path = "bin/light/main.rs"
 required-features = ["esp32c6", "esp-zb/ep_color_dimmable_light"]

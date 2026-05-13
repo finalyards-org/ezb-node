@@ -96,14 +96,18 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 - ESP32-C6 devkit
 - Rust installed
 	<!-- tbd. give instructions here that show the right toolchain etc.-->
-- ~7 GB disk space
-- `bindgen` CLI
+- 10 GB disk space
+
+- C compilers and `bindgen` CLI
 
 	```
+	$ sudo apt install build-essential clang
+	[...]
+
 	$ cargo install --locked bindgen-cli
 	```
-	
-	>Note: DO NOT use the `apt` package - it lags behind (0.66 vs. 0.72.1 at the time of writing).
+
+	>Note: DO NOT use the bindgen CLI `apt` package - it lags behind the `cargo` one.
 
 - ESP-IDF requirements:
 
@@ -112,8 +116,9 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 	However, not all of these are really required. The author has these installed:
 	
 	```
-	$ sudo apt install git wget python3 python3-venv cmake libssl-dev libusb-1.0-0 pkg-config
+	$ sudo apt install git python3 python3-venv cmake pkg-config
 	```
+	<!-- wget? libssl-dev? libusb-1.0-0? -->
 
 - Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
 
@@ -153,7 +158,7 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 Developed with:
 - bindgen 0.72.1
 - ldproxy 0.3.4
-- espflash 4.3.0
+- espflash 4.4.0 (remotely)
 -->
 
 ## Preparation
@@ -178,6 +183,8 @@ To change this, edit `.cargo/config.toml`:
 ```
 ESP_IDF_TOOLS_INSTALL_DIR = "out"
 ```
+
+>Note: The build script (`build.rs`) is not necessarily up to using `out`. You might need to fix that.
 
 
 <!-- hide

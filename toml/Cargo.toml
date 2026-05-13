@@ -1,16 +1,24 @@
 [package]
-name = "esp-zb-toml"
+name = "ezb-node-config"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-humantime-serde = { version = "1.1.1" }
-quote = { version = "1.0" }
-prettyplease = { version = "0.2" }
-serde = { version = "1.0", features = ["derive"] }
-syn = { version = "2.0", features = ["full"] }
-toml = { version = "1.1.2", features = ["serde"] }
-    #
-    # Note: 'google.ai' suggests staying at 0.8. On the other hand, if we don't use other crates
-    #       (e.g. 'serde_with'), 1.x might be fine. todo remove comment if works like this
+#humantime-serde = { version = "1.1.1", optional = true }
+quote = { version = "1.0", optional = true }
+prettyplease = { version = "0.2", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+syn = { version = "2.0", features = ["full"], optional = true }
+toml = { version = "1.1.2", features = ["serde"], optional = true }
+
+[features]
+default = []
+# Publish a converter from TOML -> Config. Use this in build scripts
+toml = ["quote", "prettyplease", "serde", "syn"]
+
+coordinator = []
+router = []
+end_device_UNTESTED = []
+
+ep_color_dimmable_light = []

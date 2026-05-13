@@ -1,3 +1,4 @@
+#![cfg(feature = "toml")]
 
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -20,8 +21,14 @@ pub struct RootConfig {
 #[derive(Deserialize, Debug)]
 pub struct NetworkSection {
     pub primary_channels: Vec<u8>,
-    //pub secondary_channels: Option<Vec<u8>>,
-        // tbd. consider giving cheats like "PREFERRED" | "ALL" | (do we even want full mask liberties, here?)
+    pub secondary_channels: SecondaryChannels,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum SecondaryChannels {
+    All,
+    Preferred
 }
 
 #[derive(Deserialize, Debug)]

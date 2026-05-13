@@ -7,7 +7,7 @@
 */
 use anyhow::*;
 
-use std::env;
+use std::{env, fs};
 
 use esp_zb_toml;
 
@@ -29,36 +29,41 @@ fn main() -> Result<()> {
     // Needed for linking of executables to succeed.
     embuild::espidf::sysenv::output();
 
-    const OUT_DIR: String = env::var("OUT_DIR").unwrap();
+    let out_dir: String = env::var("OUT_DIR")
+        .expect("OUT_DIR environment variable not set");
 
     // Turn 'bin/{name}/app.toml' -> 'tmp/{name}_conf.rs'
     {
         use std::fs;
+        use std::result::Result::Ok;
 
         // Process the app config (iff building a 'bin')
-        if let Ok(bin_name) = std::env::var("CARGO_BIN_NAME") {
+        if let Ok(bin_name) = env::var("CARGO_BIN_NAME") {
             let toml_path = format!("bin/{}/app.toml", bin_name);
 
             let content = fs::read_to_string(&toml_path)
                 .with_context(|| format!("Not found: {}", toml_path))?;
 
-            let snippet = esp_zb_toml::parse_config(&content)
+            let snippet = esp_zb_toml::convert_toml(&content)
                 .context("TOML parsing")?;
 
-            let _fn = format!("{OUT_DIR}/{app}_conf.in");
+            let ref _fn = format!("{out_dir}/{bin_name}_conf.in");
             fs::write(_fn, snippet).with_context(
                 || format!("Unable to write {_fn}")
             )?;
         }
+    }
 
-        // Rerun 'build.rs' if _any_ 'bin/*/app.toml' changes
-        //
-        if let Ok(entries) = fs::read_dir("bin") {
-            for entry in entries.flatten() {
-                let toml_path = entry.path().join("app.toml");
-                if toml_path.exists() {
-                    println!("cargo::rerun-if-changed={}", toml_path.display());
-                }
+    // Rerun 'build.rs' if _any_ 'bin/*/app.toml' changes
+    {
+        let dir_entries = fs::read_dir("bin")?
+            .flatten()
+            .filter(|e| e.file_type().map(|ft| ft.is_dir()).unwrap_or(false));
+
+        for entry in dir_entries {
+            let toml_path = entry.path().join("app.toml");
+            if toml_path.exists() {
+                println!("cargo::rerun-if-changed={}", toml_path.display());
             }
         }
     }
