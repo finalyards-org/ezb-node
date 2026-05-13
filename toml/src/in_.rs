@@ -34,6 +34,7 @@ pub struct PlatformSection {
 pub enum NodeSection {
     Coordinator{ install_code_policy: bool, max_children: u8 },
     Router{ install_code_policy: bool, max_children: u8 },
+    #[cfg(false)]
     EndDevice{ install_code_policy: bool }, // tbd. there's more fields
 }
 
@@ -47,8 +48,8 @@ pub struct EndpointConfig {
 
 #[derive(Deserialize, Debug)]
 pub struct EndpointDefaults {
-    manufacturer_name: Option<String>,
-    model_identifier: Option<String>,
+    pub manufacturer_name: Option<String>,
+    pub model_identifier: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

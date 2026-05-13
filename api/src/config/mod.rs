@@ -79,7 +79,7 @@ pub enum NodeType {
         max_children: u8,
     },
     // tbd. consider, whether we wish to expose 'ezb_new_ed_timeout_e' in the API? (if enum, make our own!)
-    #[cfg(false)]
+    #[cfg(feature = "end_device_UNTESTED")]
     EndDeviceConfig {
         install_code_policy: bool,
         ed_timeout: ezb_nwk_ed_timeout_e,
