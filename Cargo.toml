@@ -3,8 +3,9 @@ members = [
     "raw",
     "api",
     "apps",
-    "toml"
 ]
+#"config",  Must NOT be among the workspace; it does not need/want the common '.cargo/config.toml'
+
 resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 

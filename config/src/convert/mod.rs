@@ -3,6 +3,15 @@
 mod in_;
 use in_::*;
 
+mod error;
+use error::ConfigError::{
+    self,
+    FeatureConflict,
+    //ContentError
+};
+
+use std::string::String;
+
 use quote::{format_ident, quote};
 use toml;
 use crate::Config;
@@ -11,11 +20,9 @@ use crate::Config;
 * Convert TOML input string to Rust snippet that generates an 'esp_zb::Config' instance, when read in.
 */
 // tbd. make it return _our_ error (no panics); one of which is Toml wrapper.
-pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
+pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
-    let c: RootConfig = toml::from_str(toml)?;
-
-    // Flatten things
+    let c: RootConfig = toml::from_str(toml)?;  // may return a 'ParseError'
 
     //--- network
     // tbd. Secondary channel masks from the TOML. Should we? What options to give?
@@ -23,10 +30,23 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
     // [ChannelMask::from([13]), ChannelMask::ALL];
     //
     let q_channel_masks = {
+        if c.network.primary_channels.is_empty() {
+            Err("'network.primary_channels' is empty: please provide at least one channel to scan.")?;
+        }
+
         let primary_channels = c.network.primary_channels;
+        let secondary_channels = match c.network.secondary_channels {
+            SecondaryChannels::Preferred => {
+                quote!{ ChannelMask::PREFERRED }
+            },
+            SecondaryChannels::All => {
+                quote!{ ChannelMask::ALL }
+            },
+        };
+
         quote! { [
             ChannelMask::from( [ #(#primary_channels),* ] ),
-            ChannelMask::ALL
+            #secondary_channels
         ] }
     };
 
@@ -47,22 +67,26 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
     let q_node = {
         match c.node {
             NodeSection::Coordinator { install_code_policy, max_children} => {
-                #[cfg(not(feature = "coordinator"))]
-                panic!("'node.type' \"coordinator\" but that feature is not enabled.");
-                quote! {
-                    NodeType::CoordinatorConfig {
-                        install_code_policy: #install_code_policy,
-                        max_children: #max_children,
+                if cfg!(not(feature = "coordinator")) {
+                    return Err(FeatureConflict("coordinator"));
+                } else {
+                    quote! {
+                        NodeType::CoordinatorConfig {
+                            install_code_policy: #install_code_policy,
+                            max_children: #max_children,
+                        }
                     }
                 }
             },
             NodeSection::Router { install_code_policy, max_children} => {
-                #[cfg(not(feature = "router"))]
-                panic!("'node.type' \"router\" but that feature is not enabled.");
-                quote! {
-                    NodeType::RouterConfig {
-                        install_code_policy: #install_code_policy,
-                        max_children: #max_children,
+                if cfg!(not(feature = "router")) {
+                    return Err(FeatureConflict("router"));
+                } else {
+                    quote! {
+                        NodeType::RouterConfig {
+                            install_code_policy: #install_code_policy,
+                            max_children: #max_children,
+                        }
                     }
                 }
             },
@@ -94,13 +118,13 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
         let mut q_lets = quote!{};
         let mut q_arr_contents = quote!{};
 
-        if c.endpoints.is_empty() {
-            panic!("Need at least one end point. Please define an '[endpoint.{{id}}]' section.");
+        if c.endpoint.instances.is_empty() {
+            Err("Need at least one end point. Please define an '[endpoint.{id}]' section.")?;
         }
 
-        c.endpoint.instances.iter().for_each(|(k,v)| {
-            if !Config::VALID_ENDPOINT_IDS.contains(k) {
-                panic!("Invalid endpoint ID: {}", k);
+        c.endpoint.instances.iter().try_for_each(|(&k,v)| -> Result<(),ConfigError> {
+            if !Config::is_valid_endpoint(k) {
+                Err(format!("Invalid endpoint ID: {}", k))?;
             }
 
             let ident = format_ident!("ep_{}", k);
@@ -114,12 +138,16 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
             };
 
             q_lets.extend(quote!{ let #ident = #value; });
-            q_arr_contents.extend(quote!{ (#k, (#ident, bc)) })
-        });
+            q_arr_contents.extend(quote!{ (#k, (#ident, bc)) });
+
+            Ok(())  // next
+        })?;
 
         let q_bc = {
-            let mfn = c.endpoint.defaults.manufacturer_name;
-            let mid = c.endpoint.defaults.model_identifier;
+            let endpoint_defaults = c.endpoint.defaults;
+
+            let mfn = endpoint_defaults.manufacturer_name;
+            let mid = endpoint_defaults.model_identifier;
             quote! {
                 BaseConfig{
                     manufacturer_name: #mfn,
@@ -151,12 +179,9 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
         }
     };
 
-    // We can now either:
-    #[cfg(false)]
-    let s = q_all.to_string();
-
-    Ok({
+    let neat = {
         let syntax_tree = syn::parse2(q_all).unwrap();
         prettyplease::unparse(&syntax_tree)
-    })
+    };
+    Ok(neat)
 }

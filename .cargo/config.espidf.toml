@@ -1,13 +1,26 @@
+#
+# /.cargo/config.espidf.toml
+#
+# This is a repo specific workaround for 'cargo' not allowing to stop the '.cargo/config.toml'
+# cascade.
+#
+# The problem we fix:
+#   - insulating 'config' (which is not part of the larger workspace, and does not need esp-idf) from getting
+#     these changes, *while* keeping its folder in the same level as other (which are part of the workspace)
+#     sub-projects.
+#
+# How we fix it:
+#   - This file has another name ('config.espidf.toml'); we symbolically link to it from all the workspace
+#     folders, allowing us to distribute settings, without duplicating them.
+#
 [build]
 target = "riscv32imac-esp-espidf"
 
 # Instructions on what kind of library to build for the target.
 #   - 'ldproxy' requires "std" even if our application would not.
-#       - ..though our "apps/bin" do require "std", for Embassy + IDF to coexist ('embassy_time_driver'; long story...)
-#   - panic type does not really matter: we catch it with a hook
-#       .. to avoid a reset-loop if there is a repeating reason for a panic
+#   - "apps/bin" do require it (even when 'no_std' + alloc), for Embassy + IDF to coexist ('embassy_time_driver'; long story...)
+#   - panic type does not really matter: we catch it with a hook anyways to avoid a reset-loop
 #
-# This works.
 [unstable]
 build-std = ["std", "panic_abort"]
 
@@ -125,8 +138,3 @@ ESP_IDF_COMPONENTS = """\
   cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
   nvs_flash;wear_levelling;spiffs;fatfs;\
 """
-
-[alias]
-"apps:light:build" = "build --manifest-path apps/Cargo.toml --release --bin light --features esp-zb/ep_color_dimmable_light"
-#"apps:switch:build" = "build --manifest-path apps/Cargo.toml --release --bin switch --features ..."
-    #tbd.

@@ -1,7 +1,11 @@
 #![cfg(feature = "toml")]
 
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{
+    collections::BTreeMap,
+    string::String,
+    vec::Vec,
+};
 
 //use core::time::Duration;
 
@@ -21,7 +25,7 @@ pub struct RootConfig {
 #[derive(Deserialize, Debug)]
 pub struct NetworkSection {
     pub primary_channels: Vec<u8>,
-    pub secondary_channels: SecondaryChannels,
+    pub secondary_channels: SecondaryChannels,  // want to keep it compulsory
 }
 
 #[derive(Deserialize, Debug)]
@@ -55,13 +59,14 @@ pub enum NodeSection {
 
 #[derive(Deserialize, Debug)]
 pub struct EndpointConfig {
-    pub defaults: Option<EndpointDefaults>,     // whole section may be omitted
+    #[serde(default)]
+    pub defaults: EndpointDefaults,
 
     #[serde(flatten)]
-    pub instances: HashMap<u8, EndpointInstance>,
+    pub instances: BTreeMap<u8, EndpointInstance>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct EndpointDefaults {
     pub manufacturer_name: Option<String>,
     pub model_identifier: Option<String>,

@@ -1,5 +1,5 @@
 [package]
-name = "esp-zb-raw"
+name = "ezb-esp32-raw"
     # name used in 'api' and 'apps'
 edition = "2024"
 rust-version = "1.94"

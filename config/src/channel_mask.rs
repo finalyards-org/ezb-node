@@ -18,7 +18,7 @@ impl ChannelMask {
         let mut mask: u32 = 0;
 
         for &ch in channels {
-            if VALID_CHANNELS.contains(ch) {
+            if is_valid_channel(ch) {
                 mask |= 1 << ch;
             } else {
                 panic!("Invalid Zigbee channel (not within {:?}): {}", &VALID_CHANNELS, ch);
@@ -32,7 +32,8 @@ impl ChannelMask {
     }
 }
 
-#[deprecated(note="just use 'new'")]
+//#[deprecated(note="just use 'new'")]
+#[cfg(false)]  //r
 impl From<&[u8]> for ChannelMask {
     fn from(channels: &[u8]) -> Self {
         Self::new(channels)
@@ -57,4 +58,4 @@ impl fmt::Debug for ChannelMask {
     }
 }
 
-//? fn is_valid_channel(ch: u8) -> bool { VALID_CHANNELS.contains(&ch) }
+fn is_valid_channel(ch: u8) -> bool { VALID_CHANNELS.contains(&ch) }

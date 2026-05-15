@@ -1,11 +1,12 @@
 [package]
-name = "esp-zb"
+name = "ezb-node"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-esp-zb-raw = { path = "../raw" }
+ezb-esp32-raw = { path = "../raw" }
+ezb-node-config = { path = "../config" }
 
 log.workspace = true
 
@@ -18,21 +19,14 @@ esp-idf-sys = { workspace = true, default-features = false }
 
 bitflags = { version = "2.11.1" }
 
-#r [dev-dependencies]
-#r esp-idf-sys = { workspace = true, features = ["alloc_handler", "binstart"], default-features = false }
-#r    # just core
-
 [build-dependencies]
 embuild.workspace = true
 
 [features]
 default = ["esp32c6"]
-coordinator = []    # enable building as a Coordinator (in addition to Router and EndDevice)
-router = []     # enable building as a Router (in addition to EndDevice)
-    # Note: while a Coordinator can always also be a Router, we don't do feature-level derivation.
-    #       This is partly for code clarity, but also we opt out the *creation level code* that is not
-    #       specifically opted-in for. WIP...
-end_device_UNTESTED = []
+coordinator = ["ezb-node-config/coordinator"]
+router = ["ezb-node-config/router"]
+end_device_UNTESTED = [] #["ezb-node-config/end_device"]
     # NOT TESTED; to allow speculative coding. Enable to create a node in EndDevice (only) role.
 
 touchlink = []
@@ -41,7 +35,7 @@ touchlink = []
 ep_color_dimmable_light = []
 
 esp32c6 = [
-    "esp-zb-raw/esp32c6",
+    "ezb-esp32-raw/esp32c6",
 ]
 
 [lints]

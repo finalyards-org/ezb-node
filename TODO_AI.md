@@ -2,6 +2,11 @@ Things to do with `google.ai`
 
 ---
 
+## Markdown session aloitukseen
+
+Tee lyhyt kooste, mistä projektissa on kyse. Sen voi antaa sitten liitteenä uuden session alkaessa.
+
+
 ## Zigbee Network Logic & Factory New Status
 
 - [ ] **Elinkaaren hallinta**: Hyödynnä `esp_zb_bdb_is_factory_new()` Routerin alustuksessa.

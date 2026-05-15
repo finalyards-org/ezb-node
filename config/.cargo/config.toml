@@ -1,6 +1,0 @@
-[build]
-# Overriding the target to allow local 'cargo build' to succeed. We are a build tool; when being built
-# as such, cargo uses the host target but when built/tested locally, it would not.
-#
-# Note: To get the target: `rustc -vV | grep host:`
-target = "x86_64-unknown-linux-gnu"

@@ -17,3 +17,8 @@ indent_size = 4
 # tbd.
 [rustfmt.toml]
 indent_size = 2
+
+# Using 'Justfile' is optional, but let's make the indentations proper.
+[Justfile]
+indent_style = tab
+indent_size = 4

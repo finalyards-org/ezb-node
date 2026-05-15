@@ -14,7 +14,7 @@ publish = false
 #partition_table = "partitions.csv"
 
 [dependencies]
-esp-zb = { path = "../api", features = ["coordinator", "router"] }
+ezb-node = { path = "../api", features = [] }   # "coordinator", "router"
 
 log.workspace = true
 
@@ -36,16 +36,20 @@ embassy-time    = { workspace = true, features = ["generic-queue-8"] }
 # Note: No need for 'embassy-sync' or 'critical-section' because we use Embassy only on a single (FreeRTOS) thread.
 
 [build-dependencies]
-embuild.workspace = true
-
 anyhow = { version = "1.0" }
-esp-zb-toml = { path = "../toml" }
+
+embuild.workspace = true
+ezb-node-config = { path = "../config", features = ["toml"] }
 
 [features]
-default = ["esp32c6"]
+# Note: By defining the creation features like this, we get them in one place.
+_coordinator = ["ezb-node-config/coordinator", "ezb-node/coordinator"]
+_router = ["ezb-node-config/router", "ezb-node/router"]
+
+default = ["esp32c6", "_coordinator", "_router"]
 
 esp32c6 = [
-    "esp-zb/esp32c6",
+    "ezb-node/esp32c6",
 ]
 
 [lints]

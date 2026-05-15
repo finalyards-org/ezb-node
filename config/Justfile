@@ -1,0 +1,17 @@
+#
+# Development helper targets. Optional.
+#
+# Usage:
+#   <<
+#     $ just {--list|{..target..}}
+#   <<
+#
+default:
+	@just --list
+
+#R light_features := "esp-zb/ep_color_dimmable_light"
+
+#[group('xx')]
+b: build
+build:
+	cargo build --release --features toml

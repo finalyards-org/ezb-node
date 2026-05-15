@@ -13,13 +13,11 @@ default:
 
 light_features := "esp-zb/ep_color_dimmable_light"
 
-# Light-sovelluksen kääntäminen
 [group('light')]
 lb: light-build
 light-build:
     cargo build --release -vv --bin light --features {{light_features}}
 
-# Light-sovelluksen ajaminen
 [group('light')]
 lr: light-run
 light-run:

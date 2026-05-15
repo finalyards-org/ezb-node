@@ -5,6 +5,8 @@ use core::ops::RangeInclusive;
 
 use crate::ChannelMask;
 
+pub(crate) const VALID_ENDPOINT_IDS: RangeInclusive<u8> = 1..=240;
+
 /**
 * Configuration for the 'ezb_node'.
 *
@@ -28,16 +30,18 @@ pub struct Config {
 }
 
 impl Config {
-    pub(crate) const VALID_ENDPOINT_IDS: RangeInclusive<u8> = 1..=240;
+    pub(crate) fn is_valid_endpoint(id: u8) -> bool {
+        VALID_ENDPOINT_IDS.contains(&id)
+    }
 
     // Commentary; TOML->str code generation also checks against invalid indices.
     #[allow(dead_code)]
     fn invariant_check(&self) {
 
-        self.endpoints.keys().for_each(|id| {
-            assert!(Self::VALID_ENDPOINT_IDS.contains(id), "Invalid endpoint ID: {}", id);
+        self.endpoints.keys().for_each(|&id| {
+            assert!(Self::is_valid_endpoint(id), "Invalid endpoint ID: {}", id);
         });
-        assert!(!self.endpoints.is_empty(), "Missing '[endpoints.{id}]'")
+        assert!(!self.endpoints.is_empty(), "Missing '[endpoints.{{id}}]'")
     }
 }
 
@@ -70,6 +74,16 @@ pub struct BaseConfig {
     pub manufacturer_name: Option<&'static str>,
     pub model_identifier: Option<&'static str>,
 }
+
+/***R nope
+impl Default for BaseConfig {
+    fn default() -> Self {
+        Self {
+            manufacturer_name: None,
+            model_identifier: None,
+        }
+    }
+}***/
 
 pub enum EndpointConfig {
     #[cfg(feature = "ep_color_dimmable_light")]
