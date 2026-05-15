@@ -39,15 +39,23 @@ pub struct PlatformSection {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum NodeSection {
+    // Note: on input, we wish to allow all values, and err at the 'Config' construction.
+    //      This allows us to be in charge of the error messages.
     Coordinator{ install_code_policy: bool, max_children: u8 },
     Router{ install_code_policy: bool, max_children: u8 },
     #[cfg(false)]
-    EndDevice{ install_code_policy: bool }, // tbd. there's more fields
+    EndDevice{
+        install_code_policy: bool,
+        ed_timeout: Duration, // tbd. use humantime (or perhaps a custom enum?), but allow only certain
+            // durations: "10s", ... "16384 minutes"; see 'ezb_new_ed_timeout_e'
+        #[serde(with = "humantime_serde")]
+        keep_alive: Duration,
+    },
 }
 
 #[derive(Deserialize, Debug)]
 pub struct EndpointConfig {
-    pub defaults: EndpointDefaults,
+    pub defaults: Option<EndpointDefaults>,     // whole section may be omitted
 
     #[serde(flatten)]
     pub instances: HashMap<u8, EndpointInstance>,

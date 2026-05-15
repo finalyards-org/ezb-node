@@ -5,10 +5,12 @@ use in_::*;
 
 use quote::{format_ident, quote};
 use toml;
+use crate::Config;
 
 /**
 * Convert TOML input string to Rust snippet that generates an 'esp_zb::Config' instance, when read in.
 */
+// tbd. make it return _our_ error (no panics); one of which is Toml wrapper.
 pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
 
     let c: RootConfig = toml::from_str(toml)?;
@@ -37,27 +39,16 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
 
     //--- node
 
-    // #[cfg(not(feature = "coordinator"))]
-    // compile_error!("Use of Coordinator in TOML: please enable the 'coordinator' feature for your app crate.");
+    // Note: We don't need to create '#[cfg]' barriers in the output; we assume that the features
+    //      given to us are the same the application carries.
+    //
     // NodeType::CoordinatorConfig{ install_code_policy: false, max_children: 10 }
     //
     let q_node = {
-        let q_feature_test = {
-            let (node_type, node_feature) = match c.node {
-                NodeSection::Coordinator {..} => ("coordinator", "coordinator"),
-                NodeSection::Router {..} => ("router", "router"),
-                //NodeSection::EndDevice {..} => ("end_device_UNTESTED", "end_device")
-            };
-
-            let msg = format!("TOML has: 'node.type = {node_type}' but feature \"{node_feature}\" is not enabled.");
-            quote! {
-            #[cfg(not(feature = #node_feature))]
-            compile_error!(#msg);
-        }
-        };
-
-        let q2 = match c.node {
+        match c.node {
             NodeSection::Coordinator { install_code_policy, max_children} => {
+                #[cfg(not(feature = "coordinator"))]
+                panic!("'node.type' \"coordinator\" but that feature is not enabled.");
                 quote! {
                     NodeType::CoordinatorConfig {
                         install_code_policy: #install_code_policy,
@@ -66,6 +57,8 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
                 }
             },
             NodeSection::Router { install_code_policy, max_children} => {
+                #[cfg(not(feature = "router"))]
+                panic!("'node.type' \"router\" but that feature is not enabled.");
                 quote! {
                     NodeType::RouterConfig {
                         install_code_policy: #install_code_policy,
@@ -75,6 +68,9 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
             },
             #[cfg(false)]
             NodeSection::EndDevice { install_code_policy } => {
+                #[cfg(not(feature = "end_device_UNTESTED"))]
+                panic!("'node.type' \"end_device\" but that feature is not enabled.");
+
                 unimplemented!();
                 /*** just giving a taste; implement only if we *actually* do devices that are only EndDevice role.
                 quote! {
@@ -85,9 +81,7 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
                     }
                 }***/
             }
-        };
-
-        quote!{ { #q_feature_test #q2 } }
+        }
     };
 
     //--- endpoint
@@ -100,7 +94,15 @@ pub fn convert_toml(toml: &str) -> Result<String,toml::de::Error> {
         let mut q_lets = quote!{};
         let mut q_arr_contents = quote!{};
 
+        if c.endpoints.is_empty() {
+            panic!("Need at least one end point. Please define an '[endpoint.{{id}}]' section.");
+        }
+
         c.endpoint.instances.iter().for_each(|(k,v)| {
+            if !Config::VALID_ENDPOINT_IDS.contains(k) {
+                panic!("Invalid endpoint ID: {}", k);
+            }
+
             let ident = format_ident!("ep_{}", k);
 
             // tbd. when this grows, detach to a function

@@ -3,8 +3,6 @@ extern crate alloc;
 use alloc::collections::BTreeMap;
 use core::ops::RangeInclusive;
 
-pub(crate) const VALID_ENDPOINT_IDS: RangeInclusive<u8> = 1..=240;
-
 use crate::ChannelMask;
 
 /**
@@ -23,17 +21,21 @@ pub struct Config {
     pub node: NodeType,
 
     // Endpoints
+    /// @note Always has one. If config didn't have this section, all its fields are 'None'.
     pub endpoint_defs: BaseConfig,
+
     pub endpoints: BTreeMap<u8, EndpointConfig>,
 }
 
 impl Config {
+    pub(crate) const VALID_ENDPOINT_IDS: RangeInclusive<u8> = 1..=240;
+
     // Commentary; TOML->str code generation also checks against invalid indices.
     #[allow(dead_code)]
     fn invariant_check(&self) {
 
         self.endpoints.keys().for_each(|id| {
-            assert!(VALID_ENDPOINT_IDS.contains(id), "Invalid endpoint ID: {}", id);
+            assert!(Self::VALID_ENDPOINT_IDS.contains(id), "Invalid endpoint ID: {}", id);
         });
         assert!(!self.endpoints.is_empty(), "Missing '[endpoints.{id}]'")
     }
@@ -43,12 +45,12 @@ impl Config {
 * Node type, and what parameters for it.
 */
 pub enum NodeType {
-    //#[cfg(feature = "coordinator")]
+    #[cfg(feature = "coordinator")]
     CoordinatorConfig {
         install_code_policy: bool,
         max_children: u8,
     },
-    //#[cfg(feature = "router")]
+    #[cfg(feature = "router")]
     RouterConfig {
         install_code_policy: bool,
         max_children: u8,
@@ -65,8 +67,8 @@ pub enum NodeType {
 * Carries the basic cluster information, often shared with all endpoints.
 */
 pub struct BaseConfig {
-    pub manufacturer_name: &'static str,
-    pub model_identifier: &'static str,
+    pub manufacturer_name: Option<&'static str>,
+    pub model_identifier: Option<&'static str>,
 }
 
 pub enum EndpointConfig {

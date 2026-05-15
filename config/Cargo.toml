@@ -14,8 +14,7 @@ toml = { version = "1.1.2", features = ["serde"], optional = true }
 
 [features]
 default = []
-# Publish a converter from TOML -> Config. Use this in build scripts
-toml = ["quote", "prettyplease", "serde", "syn"]
+toml = ["quote", "prettyplease", "serde", "syn", "dep:toml"]
 
 coordinator = []
 router = []
