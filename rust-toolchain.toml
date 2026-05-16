@@ -1,4 +1,11 @@
 # needed for building 'riscv32imac-esp-espidf' core
 [toolchain]
-channel = "nightly"
-components = ["rust-src"]
+# Note: For some time (15-May-26), keep the pinned version. Later versions (as of now) introduce a 'SIGKILL' conflict
+#       between Rust 'std' and ESP32 'newlib'.
+channel = "nightly-2026-05-01"
+components = [ "rust-src", "clippy", "rustfmt" ]
+
+# Automatically installs the target, if you don't have it, yet.
+# However. ESP32 don't come with pre-built std libraries. In fact, this causes a warning in the build output.
+# Let's omit it.
+#targets = [ "riscv32imac-esp-espidf" ]

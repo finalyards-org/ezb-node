@@ -23,5 +23,9 @@ end_device_UNTESTED = []
 ep_color_dimmable_light = []
 
 #[[test]]
-#name=
-#features=toml,coordinator,router,ep_color_dimmable_light
+#name="a"
+#features="toml,coordinator,router,ep_color_dimmable_light"
+#
+#[[test]]
+#name="b"
+#features="toml,coordinator,router,ep_color_dimmable_light"

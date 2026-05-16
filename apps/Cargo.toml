@@ -1,5 +1,5 @@
 [package]
-name = "esp-zb-apps"
+name = "ezb-node-apps"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.94"
@@ -7,8 +7,8 @@ publish = false
 
 # Inform 'espflash'
 #
-# Not sure if this made a difference. We are anyways pointing the flashing command ('espflash') directly at the
-# partition table, so keeping this hidden, to avoid confusion. auth/3-May-26
+# We are anyways pointing the flashing command ('espflash') directly at the partition table, so keeping this hidden,
+# to avoid confusion. auth/3-May-26
 #
 #[package.metadata.espflash]
 #partition_table = "partitions.csv"
@@ -33,24 +33,25 @@ embassy-sync     = { version = "0.8.0" }
 embassy-time    = { workspace = true, features = ["generic-queue-8"] }
     # generic-queue-X: 'esp-idf-template' comments: "any 'generic-queue' implementation will work"
 
-# Note: No need for 'embassy-sync' or 'critical-section' because we use Embassy only on a single (FreeRTOS) thread.
-
 [build-dependencies]
 anyhow = { version = "1.0" }
 
 embuild.workspace = true
+
 ezb-node-config = { path = "../config", features = ["toml"] }
 
 [features]
-# Note: By defining the creation features like this, we get them in one place.
-_coordinator = ["ezb-node-config/coordinator", "ezb-node/coordinator"]
-_router = ["ezb-node-config/router", "ezb-node/router"]
-
-default = ["esp32c6", "_coordinator", "_router"]
+default = ["esp32c6", "_coordinator", "_router", "_eps"]
 
 esp32c6 = [
     "ezb-node/esp32c6",
 ]
+
+# Note: By defining the creation features like this, we get them in one place.
+_coordinator = ["ezb-node-config/coordinator", "ezb-node/coordinator"]
+_router = ["ezb-node-config/router", "ezb-node/router"]
+
+_eps = ["ezb-node/ep_color_dimmable_light"]
 
 [lints]
 workspace = true
@@ -58,4 +59,4 @@ workspace = true
 [[bin]]
 name = "light"
 path = "bin/light/main.rs"
-required-features = ["esp32c6", "esp-zb/ep_color_dimmable_light"]
+required-features = ["esp32c6", "ezb-node/ep_color_dimmable_light"]

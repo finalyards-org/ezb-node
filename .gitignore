@@ -10,3 +10,6 @@
 
 # 'sdkconfig.defaults' is in version control; this not
 /sdkconfig
+
+# esp-idf-sys generates these (can be ignored)
+*/components_esp32c6.lock

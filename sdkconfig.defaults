@@ -34,7 +34,7 @@ CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
     # Controller/Router code included (can also do EndDevices with this)
 CONFIG_ZB_RADIO_NATIVE=y
-#CONFIG_ZB_GP_ENABLED=y
+#CONFIG_ZB_GP_ENABLED=y     # tbd. is this still a setting in 2.0?
 
 # Partition Table
 # based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light

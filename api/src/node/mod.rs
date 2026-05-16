@@ -14,7 +14,7 @@ use bitflags::bitflags;
 use esp_idf_sys::EspError;
 use log;
 
-use crate::raw::{
+use ezb_node_raw::{
     esp_zigbee_init,
     ezb_app_signal_t,
     //ezb_app_signal_type_t,
@@ -38,18 +38,12 @@ use crate::raw::{
 use crate::{
     IeeeAddr,
     AppSignal,
-    config::{
-        PlatformDeviceNodeView,
-    }
+    config_views::PlatformDeviceView,
 };
 
-mod channel_mask;
-pub use channel_mask::ChannelMask;
+use ezb_node_config::ChannelMask;
 
 static SINGLETON_CHECK: AtomicBool = AtomicBool::new(false);
-    //
-    // Note: 'OnceCell' gives warnings if used '::unsync' - and require 'std' if used '::sync'. All we need is to
-    //      stop the app if it were to enter twice.
 
 /**
 * Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
@@ -67,7 +61,7 @@ impl Node {
     /**
     * Initialize a 'Node' from a given configuration.
     */
-    pub fn from_config(cv: &PlatformDeviceNodeView) -> Self {
+    pub fn new(cv: &PlatformDeviceView) -> Self {
         let (cc, channel_masks) = cv.expand();
 
         if SINGLETON_CHECK.swap(true, Ordering::SeqCst) {
@@ -93,7 +87,7 @@ impl Node {
             panic!("Initializing node failed: {}", e);
         });
 
-        set_channel_sets(&channel_masks);
+        Self::set_channel_sets(&channel_masks);
 
         Self { _cfg: cc }
     }
@@ -228,31 +222,31 @@ impl Node {
             esp_zb_factory_reset()
         }
     }
-}
 
-/**
-* Set the primary and secondary channel mask, on the C library side.
-*
-* @note This (for primary) "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'".
-*       "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x docs)
-*       -- but we call it every time.
-*/
-fn set_channel_sets(channel_masks: &[ChannelMask;2]) {
-    let mut primary = true;
+    /**
+    * Set the primary and secondary channel mask, on the C library side. Called only by '::new()'.
+    *
+    * @note This (for primary) "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'".
+    *       "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x docs)
+    *       -- but we call it every time.
+    */
+    fn set_channel_sets(channel_masks: &[ChannelMask;2]) {
 
-    for cm in channel_masks {
-        let err = unsafe {
-            if primary {
-                ezb_bdb_set_primary_channel_set(cm.bits())
-            } else {
-                ezb_bdb_set_secondary_channel_set(cm.bits())
-            }
-        };
-        // EZB_ERR_NONE
-        // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
-        assert!((err == 0));
+        for (primary,cm) in [true,false].into_iter().zip(channel_masks) {
+            let err = unsafe {
+                if primary {
+                    ezb_bdb_set_primary_channel_set(cm.bits())
+                } else {
+                    ezb_bdb_set_secondary_channel_set(cm.bits())
+                }
+            };
+            // EZB_ERR_NONE
+            // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
 
-        primary = false;
+            EspError::from(err).map(|e| {
+                panic!("Setting {} channel set failed: {}", if primary {"primary"} else {"secondary"}, e);
+            });
+        }
     }
 }
 

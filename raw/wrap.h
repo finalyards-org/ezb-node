@@ -24,8 +24,6 @@
 
 #include "ezbee/secur.h"
 
-// tbd. #ifdef if 'ep_color_dimmable_light' featured.
-//#include "esp_zigbee_ha_standard.h" // 1.x
 #include "ezbee/zha.h"
 
 // Manifest device type specific configurations (macros in C) to 'const'.

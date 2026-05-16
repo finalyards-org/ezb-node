@@ -21,9 +21,9 @@ use esp_zb_apps::{
 };
 
 use log::LevelFilter;
-use esp_zb::{
+use ezb_node::{
     node::ChannelMask,
-    router::prelude::*,
+    //router::prelude::*,
 };
 
 //use hal::peripherals::Peripherals;
@@ -69,18 +69,4 @@ async fn main2() -> Result<!, AppError> {
         //R .core_action_handler_register()
         //
         .roll(false) .await;
-
-    /*** next
-    esp_zb_color_dimmable_light_cfg_t light_cfg = ESP_ZB_DEFAULT_COLOR_DIMMABLE_LIGHT_CONFIG();
-    esp_zb_ep_list_t *esp_zb_color_dimmable_light_ep = esp_zb_color_dimmable_light_ep_create(HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &light_cfg);
-    zcl_basic_manufacturer_info_t info = {
-        .manufacturer_name = ESP_MANUFACTURER_NAME,
-        .model_identifier = ESP_MODEL_IDENTIFIER,
-    };
-
-    esp_zcl_utility_add_ep_basic_manufacturer_info(esp_zb_color_dimmable_light_ep, HA_COLOR_DIMMABLE_LIGHT_ENDPOINT, &info);
-    esp_zb_device_register(esp_zb_color_dimmable_light_ep);
-    esp_zb_core_action_handler_register(zb_action_handler);
-    esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
-    ***/
 }

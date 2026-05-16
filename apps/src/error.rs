@@ -11,7 +11,7 @@ use core::fmt::{
 #[derive(Debug, Clone)]
 pub enum AppError {
     Other(&'static str),
-    ApiError(esp_zb::Error),
+    ApiError(ezb_node::Error),
 }
 
 impl Display for AppError {
@@ -20,8 +20,8 @@ impl Display for AppError {
     }
 }
 
-impl From<esp_zb::Error> for AppError {
-    fn from(err: esp_zb::Error) -> Self {
+impl From<ezb_node::Error> for AppError {
+    fn from(err: ezb_node::Error) -> Self {
         Self::ApiError(err)
     }
 }

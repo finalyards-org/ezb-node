@@ -15,3 +15,7 @@ default:
 b: build
 build:
 	cargo build --release --features toml
+
+t: test
+test:
+	cargo test --features toml

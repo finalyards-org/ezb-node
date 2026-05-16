@@ -27,10 +27,16 @@ Do not have a top-level `.cargo/config.toml`.
 
 We could do this with symbolic links. Just distribute a file to all `api`, `apps`, `raw` (the workspace sub-folders) *without* it being a top tier `.cargo/config.toml`. Considering.
 
+>Edit: Went with this. Works.
 
 
+## `nightly` vs. `newlib`
 
+- ["Build failing on latest nightly: SIGKILL not found in libc (unix::process)"](https://github.com/esp-rs/esp-idf-sys/issues/419) (GitHub; not the upstream issue)
 
+A mismatch between Rust `nightly` (roughly 2026-05-15), and the `newlib` used in `esp-idf-sys`. 
+
+- [ ] Once there's a fix, remove the `nightly` pin in `rust-toolchain.toml`. <!-- and some Justfile's -->
 
 
 ## `esp-zigbee-sdk` ESP-IDF 6.0 compatibility

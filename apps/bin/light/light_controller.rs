@@ -3,12 +3,12 @@
 */
 use alloc::collections::BTreeMap;
 
-use esp_zb::{
+use ezb_node::{
     node::{Node, Controller, Router, ChannelMask, TOMLConfig},
     AppSignal,
     utils::PascalString,
 };
-use esp_zb::node::{CommissioningModesMask};
+use ezb_node::node::{CommissioningModesMask};
 
 use embassy_time::{Duration};
 

@@ -1,6 +1,6 @@
 [package]
-name = "ezb-esp32-raw"
-    # name used in 'api' and 'apps'
+name = "ezb-node-raw"
+    # name used in 'api' and the 'ESP_IDF_SYS_ROOT_CRATE' env.var. ('.cargo/config.toml')
 edition = "2024"
 rust-version = "1.94"
 publish = false

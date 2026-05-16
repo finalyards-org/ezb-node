@@ -96,16 +96,28 @@ ESP_IDF_SDKCONFIG = { value = ".no-such", relative = true }
 
 ESP_IDF_SDKCONFIG_DEFAULTS = { value = "sdkconfig.defaults", relative = true }
 
-# MUST point to the subfolder that has '[[package.metadata.esp-idf-sys.extra_components]]' section,
-# listing:
+# The name of the sub-project that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
 #   - esp_zigbee_lib
 #
-# The content is the _name_ of the package, _not_ a folder name!
+# The content is the name of the package, _not_ a folder name!
 #
-# MANUAL TEST: To see all this is correct, see that 'extra_components: [ ... ]' in build output is not empty!!!
+# NOTE! If this is out of sync, the 'raw' build will break but not in any decent, helpful manner!  You will see this
+#       warning somewhere in the output:
+#           <<
+#               [esp-idf-sys 0.37.2] cargo:warning=the crate given by `ESP_IDF_SYS_ROOT_CRATE` does not exist in this workspace
+#           <<
 #
-# Note: Undecided, whether this is better as 'raw' or 'apps'.
-ESP_IDF_SYS_ROOT_CRATE = "esp-zb-raw"
+#       The best way is to check the output JSON starting "Build configuration: BuildConfig {", every now and then.
+#       If things work, you did get this right! ⛱️☀️
+#
+# Note: Undecided, whether this is better at 'raw' or 'apps'.
+#
+# Note 3: The _real_ error you'll get if this is wrong is:
+#       <<
+#           $ make manual
+#           Makefile:68: *** No 'managed_components' pulled by Rust build.  Stop.
+#       <<
+ESP_IDF_SYS_ROOT_CRATE = "ezb-node-raw"
 
 #---
 # Have this if you use Multipass VM, and a global 'target' folder.

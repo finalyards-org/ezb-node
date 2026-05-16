@@ -9,7 +9,7 @@ use anyhow::*;
 
 use std::{env, fs};
 
-use esp_zb_toml;
+use ezb_node_config::convert_toml;
 
 fn main() -> Result<()> {
 
@@ -29,10 +29,10 @@ fn main() -> Result<()> {
     // Needed for linking of executables to succeed.
     embuild::espidf::sysenv::output();
 
-    let out_dir: String = env::var("OUT_DIR")
+    let out_dir = env::var("OUT_DIR")
         .expect("OUT_DIR environment variable not set");
 
-    // Turn 'bin/{name}/app.toml' -> 'tmp/{name}_conf.rs'
+    // Turn 'bin/{name}/app.toml' -> '{OUT_DIR}/{name}_conf.rs'
     {
         use std::fs;
         use std::result::Result::Ok;
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
             let content = fs::read_to_string(&toml_path)
                 .with_context(|| format!("Not found: {}", toml_path))?;
 
-            let snippet = esp_zb_toml::convert_toml(&content)
+            let snippet = convert_toml(&content)
                 .context("TOML parsing")?;
 
             let ref _fn = format!("{out_dir}/{bin_name}_conf.in");

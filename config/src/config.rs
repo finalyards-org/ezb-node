@@ -75,16 +75,6 @@ pub struct BaseConfig {
     pub model_identifier: Option<&'static str>,
 }
 
-/***R nope
-impl Default for BaseConfig {
-    fn default() -> Self {
-        Self {
-            manufacturer_name: None,
-            model_identifier: None,
-        }
-    }
-}***/
-
 pub enum EndpointConfig {
     #[cfg(feature = "ep_color_dimmable_light")]
     ColorDimmableLightEPC,

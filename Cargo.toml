@@ -9,15 +9,12 @@ members = [
 resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
-# Both 'raw' and '_' will need these.
 [workspace.dependencies]
-esp-idf-sys = { version = "0.37.2", default-features = false }
-    # steer the version, subprojects will add appropriate features (e.g. 'binstart' for examples)
+esp-idf-sys = { version = "0.37", default-features = false }
 log = { version = "0.4" }
 
 embassy-time = { version = "0.5", features = ["log"] }
 
-# _Seems_ only to be needed when creating executable output (bin, examples); i.e. '_/examples/...'.
 embuild = { version = "0.33.1", features = ["espidf"] }
 
 # These are references among '{main|x}/Cargo.toml' by:
@@ -34,4 +31,3 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5
 
 [profile.release]
 opt-level = "s"
-#panic = "unwind"

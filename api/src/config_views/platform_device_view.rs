@@ -1,36 +1,29 @@
-use super::{
+use ezb_node_config::{
+    ChannelMask,
     Config,
     NodeType::*,
 };
 
-use crate::raw::{
+use ezb_node_raw::{
     esp_zigbee_config_t,
     esp_zigbee_device_config_t,
     esp_zigbee_platform_config_t,
     ezb_nwk_device_type_t::*,
 };
 
-use crate::node::{
-    ChannelMask
-};
-
 /**
 * A view to a 'Config' struct used in initializing 'Node'.
+*
+* Covers TOML sections '[network]', '[platform]' and '[node]'.
 */
-pub(crate) struct PlatformDeviceNodeView<'a>(&'a Config);
+pub(crate) struct PlatformDeviceView<'a>(&'a Config);
 
-impl<'a> PlatformDeviceNodeView<'a> {
+impl<'a> PlatformDeviceView<'a> {
 
     pub(crate) fn expand(&self) -> (esp_zigbee_config_t, [ChannelMask;2]) {
-
-        // | TOML     | struct                       |
-        // |----------|------------------------------|
-        // | network  | channel_masks                |
-        // | platform | esp_zigbee_platform_config_t |
-        // | node     | esp_zigbee_device_config_t   |
-        //
-        let nt = self.0.node;
         let channel_masks = self.0.channel_masks;
+        let storage_partition_name = self.0.storage_partition_name.as_ref();
+        let nt = self.0.node;
 
         //typedef struct esp_zigbee_device_config_s {
         //     ezb_nwk_device_type_t device_type;          /*!< The nwk device type, @ref ezb_nwk_device_type_t */
@@ -73,8 +66,6 @@ impl<'a> PlatformDeviceNodeView<'a> {
         //     };
         // } esp_zigbee_radio_config_t;
         //
-        let storage_partition_name = self.0.storage_partition_name.as_ref();
-
         let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
             storage_partition_name
         );

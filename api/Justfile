@@ -15,12 +15,7 @@ default:
 #	For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
 nightly := ""
 
-[group('light')]
-lb: light-build
-light-build:
-	cargo {{nightly}} build --release -vv --bin light
-
-[group('light')]
-lr: light-run
-light-run:
-	cargo {{nightly}} run --release -vv --bin light
+b: build
+build:
+	cargo {{nightly}} build --release -vv \
+		--jobs 1

@@ -11,4 +11,4 @@ mod channel_mask;
 pub use channel_mask::ChannelMask;
 
 mod config;
-pub use config::Config;
+pub use config::*;
