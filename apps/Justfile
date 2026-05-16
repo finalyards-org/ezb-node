@@ -18,7 +18,8 @@ nightly := ""
 [group('light')]
 lb: light-build
 light-build:
-	cargo {{nightly}} build --release -vv --bin light
+	cargo {{nightly}} build --release -vv --bin light \
+		--jobs 1
 
 [group('light')]
 lr: light-run

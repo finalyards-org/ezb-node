@@ -4,7 +4,7 @@ use ezb_node::{
     AppSignal,
     BdbStatus,
     Config,
-    Platform,
+    PlatformDeviceView,
     node::{
         CommissioningModesMask,
         Node
@@ -24,7 +24,10 @@ pub(crate) struct LightController where Self: Node {
 
 impl LightController {
     pub fn new(c: &Config) -> Result<Self,ezb_node::Error> {
-        Self::init(c)
+        Self::init(c)?;
+        Self::add_endpoints(c)?;
+
+        Ok(Self)
     }
 }
 

@@ -18,4 +18,5 @@ nightly := ""
 b: build
 build:
 	cargo {{nightly}} build --release -vv \
-		--jobs 1
+		--jobs 1 \
+		--features coordinator,router

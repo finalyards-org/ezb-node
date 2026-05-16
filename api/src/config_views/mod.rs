@@ -5,7 +5,7 @@
 * These are all internal details.
 */
 mod platform_device_view;
-pub(crate) use platform_device_view::PlatformDeviceView;
+pub use platform_device_view::*;
 
 mod device_descriptor_view;
-pub(crate) use device_descriptor_view::DeviceDescriptorView;
+pub use device_descriptor_view::*;

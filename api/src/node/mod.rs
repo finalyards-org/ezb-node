@@ -9,10 +9,9 @@
 */
 use alloc::boxed::Box;
 
-use core::{
-    cell::OnceCell,
-    sync::atomic::{AtomicBool, Ordering}
-};
+//use core::{
+    //sync::atomic::{AtomicBool, Ordering}
+//};
 
 use bitflags::bitflags;
 use esp_idf_sys::EspError;
@@ -40,18 +39,20 @@ use ezb_node_raw::{
 };
 
 use crate::{
-    IeeeAddr,
     AppSignal,
+    DeviceDescriptorView,
+    IeeeAddr,
     Error::{
         AlreadyInUse,
         InitializationFailed
     },
     config_views::PlatformDeviceView,
+    utils::DareOnceCell,
 };
 
 use ezb_node_config::ChannelMask;
 
-static SINGLETON: OnceCell<esp_zigbee_config_t> = OnceCell::new();
+static SINGLETON: DareOnceCell<esp_zigbee_config_t> = DareOnceCell::new();
     // 'esp_zigbee_config_t' is the struct itself (not a pointer)
     //
     //  - mostly here for documentary intention (to show the singleton state); it's leaked
@@ -68,10 +69,10 @@ pub trait Node {
     /**
     * Initialize a 'Node' from a given configuration.
     */
-    fn init(cv: &PlatformDeviceView) -> Result<(),crate::Error> {
-        let (cc, channel_masks) = cv.expand();
+    fn init<'a>(cv: impl Into<PlatformDeviceView<'a>>) -> Result<(),crate::Error> {
+        let (cc, channel_masks) = cv.into().expand();
 
-        SINGLETON.set(cc).map_err( AlreadyInUse )?;
+        SINGLETON.set(cc).map_err(|_| AlreadyInUse )?;
 
         let cc: &'static esp_zigbee_config_t = SINGLETON.get().unwrap();
 
@@ -91,14 +92,24 @@ pub trait Node {
     }
 
     /**
+    * Add endpoints to an initialized 'Node' (before starting it).
+    */
+    fn add_endpoints<'a>(cv: impl Into<DeviceDescriptorView<'a>>) -> Result<(),crate::Error> {
+        todo!()
+    }
+
+    /**
     * Process Zigbee messages.
     *
     * @param auto_start
     *   'true' for automatic start of the Zigbee stack
     *   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
     */
-    fn launch(self: Self, auto_start: bool) -> Result<!,EspError> {
-
+    // tbd. could do so that the 'init', add endpoints, 'start' order is enforced by the type system. Currently,
+    //      it's not, but it would take active malpractice to steer away from the suggested model.
+    //
+    fn launch(self: Self, auto_start: bool) -> Result<!,EspError>
+    where Self: Sized {
         let err = unsafe {
             esp_zigbee_start(auto_start)
         };

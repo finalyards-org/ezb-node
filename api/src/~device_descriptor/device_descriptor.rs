@@ -1,7 +1,5 @@
 
-//r use esp_idf_sys::error::EspError;
-
-use crate::raw::{
+use ezb_node_raw::{
     ezb_af_device_desc_t,
     ezb_af_create_device_desc,
     ezb_af_ep_desc_t,
@@ -18,7 +16,7 @@ use crate::raw::{
 };
 
 use crate::{
-    config::DeviceDescriptorView,
+    DeviceDescriptorView,
 };
 
 /**

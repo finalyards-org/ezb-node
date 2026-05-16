@@ -61,16 +61,13 @@ async fn main(_spawner: Spawner) {
 async fn main2(c: Config) -> Result<!, AppError> {
     //#later let _ = Peripherals::take()?;
 
-    init_nvs(c.storage_partition_name)?;
+    let _keep = init_nvs(c.storage_partition_name)?;
 
     // Initialize Zigbee
     //
-    let node = LightController::new(&c);
-        // tbd. view that automatically kicks in
+    let node = LightController::new(&c)?;
 
-    node.add_endpoints(&c);
-
-    let _ = LightController::new()?
-        //
-        .roll(false) .await;
+    node
+        .launch(false) .await
+            .expect("Failed to launch node");
 }

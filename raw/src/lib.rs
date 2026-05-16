@@ -4,7 +4,7 @@ extern crate alloc;
 #[path = "../bindings.rs"]
 mod bindings;
 
-#[path = "../stubs.rs"]
+#[path = "../~stubs.rs"]
 mod stubs;
 
 pub use bindings::{

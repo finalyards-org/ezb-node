@@ -16,7 +16,7 @@ use ezb_node_raw::{
 *
 * Covers TOML sections '[network]', '[platform]' and '[node]'.
 */
-pub(crate) struct PlatformDeviceView<'a>(&'a Config);
+pub struct PlatformDeviceView<'a>(&'a Config);
 
 impl<'a> PlatformDeviceView<'a> {
 
@@ -80,8 +80,8 @@ impl<'a> PlatformDeviceView<'a> {
 }
 
 // This allows an app to provide '&Config' where the needing party only takes a view.
-impl From<&Config> for PlatformDeviceView {
-    fn from(c: &Config) -> Self {
+impl<'a> From<&'a Config> for PlatformDeviceView<'a> {
+    fn from(c: &'a Config) -> Self {
         Self(c)
     }
 }

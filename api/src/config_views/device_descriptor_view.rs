@@ -16,12 +16,12 @@ use ezb_node_config::{
 *
 * Covers TOML sections '[endpoint.defaults]' and '[endpoint.{id}]'.
 */
-pub(crate) struct DeviceDescriptorView<'a>(&'a Config);
+pub struct DeviceDescriptorView<'a>(&'a Config);
 
 impl<'a> DeviceDescriptorView<'a> {
 
     pub(crate) fn expand(&self) -> ! /*(BaseConfig, btree_map::Iter<u8, EndpointConfig>)*/ {
-        let a = self.0.endpoint_defs;
+        let a = &self.0.endpoint_defs;
         let b = self.0.endpoints.iter();
 
         // tbd. provide 'ezb_zigbee_lib' entities
@@ -31,8 +31,8 @@ impl<'a> DeviceDescriptorView<'a> {
 }
 
 // This allows an app to provide '&Config' where the needing party only takes a view.
-impl From<&Config> for DeviceDescriptorView {
-    fn from(c: &Config) -> Self {
+impl<'a> From<&'a Config> for DeviceDescriptorView<'a> {
+    fn from(c: &'a Config) -> Self {
         Self(c)
     }
 }

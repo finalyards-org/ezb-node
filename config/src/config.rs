@@ -48,6 +48,7 @@ impl Config {
 /**
 * Node type, and what parameters for it.
 */
+#[derive(Debug, Copy, Clone)]
 pub enum NodeType {
     #[cfg(feature = "coordinator")]
     CoordinatorConfig {

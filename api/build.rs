@@ -22,6 +22,11 @@ fn main() {
         }
     }
 
+    #[cfg(not(any(feature = "coordinator", feature = "router", feature = "end_device_UNTESTED")))]
+    {
+        panic!("Must have at least one feature: 'coordinator', 'router', 'end_device'");
+    }
+
     // Needed for 'ldproxy' linking (of examples) to succeed.
     embuild::espidf::sysenv::output();
 

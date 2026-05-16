@@ -4,6 +4,9 @@
 extern crate alloc;
 
 mod config_views;
+pub use config_views::*;
+    // DeviceDescriptorView,
+    // PlatformDeviceView,
 
 pub mod node;
 
@@ -16,8 +19,8 @@ pub use error::Error;
 pub mod utils;
 pub use utils::IeeeAddr;
 
-mod device_descriptor;
-pub use device_descriptor::*;
+//mod device_descriptor;
+//pub use device_descriptor::*;
 
 // Apps might like getting this.
 pub use ezb_node_config::Config;
