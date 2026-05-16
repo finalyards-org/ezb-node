@@ -78,3 +78,10 @@ impl<'a> PlatformDeviceView<'a> {
         (cc, channel_masks)
     }
 }
+
+// This allows an app to provide '&Config' where the needing party only takes a view.
+impl From<&Config> for PlatformDeviceView {
+    fn from(c: &Config) -> Self {
+        Self(c)
+    }
+}

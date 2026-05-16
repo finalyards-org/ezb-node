@@ -4,7 +4,9 @@ use core::{
     time::Duration
 };
 
-use crate::raw::{
+use strum;
+
+use ezb_node_raw::{
     //ezb_app_signal_type_t,
     ezb_zdo_signal_device_annce_params_t,
     //zb_app_signal_get_params,
@@ -22,6 +24,7 @@ use crate::raw::{
     ezb_nwk_signal_permit_join_status_params_t,
     ezb_app_signal_type_e,
     //ezb_app_signal_t,
+    ezb_bdb_comm_status_e,
 };
 
 #[cfg(feature = "touchlink")]
@@ -206,8 +209,11 @@ pub enum AppSignal {
     * - Upon the basic device behavior has been initialization
     */
     // Payload:
-    //  - Refer to ezb_bdb_signal_simple_params_t   (i.e. 'status: u8')
-    BdbSignalDeviceFirstStart{ status: u8 },
+    //  - Refer to ezb_bdb_status_simple_params_t (which has '.status: u8').
+    //      Note: The 'u8' is commented to "refer to 'ezb_bdb_status_t' but such a type does not exist. It may mean
+    //          'ezb_bdb_comm_status_e'.
+    //
+    BdbSignalDeviceFirstStart(BdbStatus),
 
     /**
     * Overview:
@@ -218,7 +224,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    BdbSignalDeviceReboot{ status: u8 },
+    BdbSignalDeviceReboot(BdbStatus),
 
     /**
     * Overview:
@@ -230,7 +236,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    BdbSignalSteering { status: u8 },
+    BdbSignalSteering(BdbStatus),
 
     /**
     * Overview:
@@ -242,7 +248,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    BdbSignalFormation { status: u8 },
+    BdbSignalFormation(BdbStatus),
 
     /**
     * Overview:
@@ -253,7 +259,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    BdbSignalFindingAndBindingInitiatorFinished { status: u8 },
+    BdbSignalFindingAndBindingInitiatorFinished(BdbStatus),
 
     /**
     * Overview:
@@ -264,7 +270,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    BdbSignalFindingAndBindingTargetFinished { status: u8 },
+    BdbSignalFindingAndBindingTargetFinished(BdbStatus),
 
     /**
     * Overview:
@@ -275,7 +281,7 @@ pub enum AppSignal {
     *  - EZB_BDB_STATUS_NO_SCAN_RESPONSE: If no scan response is received while scanning for targets.
     *  - EZB_BDB_STATUS_NOT_PERMITTED: If the network type is centralized, or the initiator is in an incorrect commissioning state.
     *  - EZB_BDB_STATUS_NO_NETWORK: If the Touchlink initiator fails during the network_start process.
-    *  - EZB_BDB_STATUS_NOT_AA_CAPABLE: If the initiator is not address assignment capable during touchlink.
+    *  - EzbBdbStatusNotAaCapable: If the initiator is not address assignment capable during touchlink.
     *  - EZB_BDB_STATUS_TARGET_FAILURE: If the touchlink initiator fails during the join_router or join_ed process.
     */
     // Payload:
@@ -522,45 +528,39 @@ impl AppSignal {
             },
             EZB_BDB_SIGNAL_DEVICE_FIRST_START => { // 256
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalDeviceFirstStart {
-                    status: x.status
-                }
-                //r if_ok_fail!(|success| Self::BdbSignalDeviceFirstStart { success })
+                Self::BdbSignalDeviceFirstStart(
+                    BdbStatus::from_repr(x.status).unwrap()
+                )
             },
             EZB_BDB_SIGNAL_DEVICE_REBOOT => { // 257
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalDeviceReboot {
-                    status: x.status
-                }
-                //r if_ok_fail!(|success| Self::BdbSignalDeviceReboot { success })
+                Self::BdbSignalDeviceReboot (
+                    BdbStatus::from_repr(x.status).unwrap()
+                )
             },
             EZB_BDB_SIGNAL_STEERING => { // 258
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalSteering {
-                    status: x.status
-                }
-                //r if_ok_fail!(|success| Self::BdbSignalSteering { success })
+                Self::BdbSignalSteering (
+                    BdbStatus::from_repr(x.status).unwrap()
+                )
             },
             EZB_BDB_SIGNAL_FORMATION => { // 259
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalFormation {
-                    status: x.status
-                }
-                //r if_ok_fail!(|success| Self::BdbSignalFormation { success })
+                Self::BdbSignalFormation (
+                    BdbStatus::from_repr(x.status).unwrap()
+                )
             },
             EZB_BDB_SIGNAL_FINDING_AND_BINDING_INITIATOR_FINISHED => { // 0x0d
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalFindingAndBindingInitiatorFinished {
-                    status: x.status
-                }
-                //r if_ok_fail!(|success| Self::BdbSignalFindingAndBindingInitiatorFinished { success })
+                Self::BdbSignalFindingAndBindingInitiatorFinished (
+                    BdbStatus::from_repr(x.status).unwrap()
+                )
             },
             EZB_BDB_SIGNAL_FINDING_AND_BINDING_TARGET_FINISHED => { // 260
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalFindingAndBindingTargetFinished {
-                    status: x.status
-                }
-                //r if_ok_fail!(|success| Self::BdbSignalFindingAndBindingTargetFinished { success })
+                Self::BdbSignalFindingAndBindingTargetFinished (
+                    BdbStatus::from_repr(x.status).unwrap()
+                )
             },
             #[cfg(feature = "touchlink")]
             EZB_BDB_SIGNAL_TOUCHLINK_INITIATOR_FINISHED => { // 262
@@ -641,3 +641,61 @@ fn get_param<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
         typed_ptr.read_unaligned()  // do the right thing if the struct is "packed" ('esp-zigbee-lib' 2.0 API has 15 occurrences)
     }
 }
+
+use ezb_bdb_comm_status_e::*;
+
+// Replication of 'ezb_bdb_comm_status_e' - so we don't need to leak 'raw' API.
+//
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, strum :: FromRepr, strum :: Display)]
+pub enum BdbStatus {
+    ///< The commissioning sub-procedure was successful.
+    Success = 0,
+    ///< One of the commissioning sub-procedures has started but is not yet
+    /// complete.
+    StatusInProgress = EZB_BDB_STATUS_IN_PROGRESS as _,
+    ///< The initiator is not address assignment capable during touchlink.
+    EzbBdbStatusNotAaCapable = EZB_BDB_STATUS_NOT_AA_CAPABLE as _,
+    ///< A network has not been found during network steering or touchlink.
+    EzbBdbStatusNoNetwork = EZB_BDB_STATUS_NO_NETWORK as _,
+    ///< A node has not joined a network when requested during touchlink.
+    TargetFailure = EZB_BDB_STATUS_TARGET_FAILURE as _,
+    ///< A network could not be formed during network formation.
+    FormationFailure = EZB_BDB_STATUS_FORMATION_FAILURE as _,
+    ///< No response to an identify query command has been received during
+    /// finding and binding.
+    NoIdentifyQueryResponse = EZB_BDB_STATUS_NO_IDENTIFY_QUERY_RESPONSE as _,
+    ///< A binding table entry could not be created due to insufficient space
+    /// in the binding table during finding and binding.
+    BindingTableFull = EZB_BDB_STATUS_BINDING_TABLE_FULL as _,
+    ///< No response to a scan request inter-PAN command has been received
+    /// during touchlink.
+    NoScanResponse = EZB_BDB_STATUS_NO_SCAN_RESPONSE as _,
+    ///< A touchlink (steal) attempt was made when a node is already connected
+    /// to a centralized security network. A node was instructed to form a
+    /// network when it did not have a logical type of either Zigbee coordinator
+    /// or Zigbee router.
+    NotPermitted = EZB_BDB_STATUS_NOT_PERMITTED as _,
+    ///< The Trust Center link key exchange procedure has failed attempting to
+    /// join a centralized security network.
+    TclkExFailure = EZB_BDB_STATUS_TCLK_EX_FAILURE as _,
+    ///< A commissioning procedure was forbidden since the node was not
+    /// currently on a network.
+    NotOnANetwork = EZB_BDB_STATUS_NOT_ON_A_NETWORK as _,
+    ///< A commissioning procedure was forbidden since the node was currently
+    /// on a network.
+    OnANetwork = EZB_BDB_STATUS_ON_A_NETWORK as _,
+    ///< The current operation (steering or formation) was cancelled by an app
+    Cancelled = EZB_BDB_STATUS_CANCELLED as _,
+    ///< A device announce sending has been failed (e.g. device announce
+    /// haven't acked by parent router).
+    DevAnnceSendFailure = EZB_BDB_STATUS_DEV_ANNCE_SEND_FAILURE as _,
+}
+
+/***r
+pub(crate) impl From<ezb_bdb_comm_status_e> for BdbStatus {
+    fn from(value: ezb_bdb_comm_status_e) -> Self {
+        Self(value as _)
+    }
+}
+***/

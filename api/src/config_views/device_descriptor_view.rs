@@ -29,3 +29,10 @@ impl<'a> DeviceDescriptorView<'a> {
         //(a,b)
     }
 }
+
+// This allows an app to provide '&Config' where the needing party only takes a view.
+impl From<&Config> for DeviceDescriptorView {
+    fn from(c: &Config) -> Self {
+        Self(c)
+    }
+}

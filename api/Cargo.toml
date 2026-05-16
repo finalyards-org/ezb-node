@@ -18,6 +18,8 @@ esp-idf-sys = { workspace = true, default-features = false }
 
 bitflags = { version = "2.11.1" }
 
+strum = { version = "0.28", features = ["derive"] }
+
 [build-dependencies]
 embuild.workspace = true
 

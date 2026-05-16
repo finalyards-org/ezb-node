@@ -14,27 +14,26 @@ use esp_idf_svc::{
     //hal,
 };
 
-use esp_zb_apps::{
+use log::LevelFilter;
+
+use ezb_node::{
+    Config,
+};
+
+use ezb_node_apps::{
     init_nvs,
     set_panic_hook,
     AppError,
 };
-
-use log::LevelFilter;
-use ezb_node::{
-    node::ChannelMask,
-    //router::prelude::*,
-};
+use crate::light_controller::LightController;
+//r use ezb_node::ChannelMask;
 
 //use hal::peripherals::Peripherals;
 
-mod my_controller;
+mod light_controller;
 mod scheduler;
 
-use my_controller::LightController;
-
-mod my_config_temp;
-use my_config_temp::my_config;
+//use my_controller::LightController;
 
 /**
 * The entry point.
@@ -48,7 +47,10 @@ async fn main(_spawner: Spawner) {
 
     log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
-    let _ = main2().await .map_err(async |e| {
+    let config =
+        include!("light_conf.in");
+
+    main2(config).await .unwrap_or_else(|e| {
         panic!("Fatal error: {:?}", e);
     });
 }
@@ -56,17 +58,19 @@ async fn main(_spawner: Spawner) {
 /**
 * An inner 'main()' that may fail its initialization.
 */
-async fn main2() -> Result<!, AppError> {
+async fn main2(c: Config) -> Result<!, AppError> {
     //#later let _ = Peripherals::take()?;
 
-    let c = my_config();
-
-    init_nvs(c.storage_partition_name.as_str())?;
+    init_nvs(c.storage_partition_name)?;
 
     // Initialize Zigbee
     //
+    let node = LightController::new(&c);
+        // tbd. view that automatically kicks in
+
+    node.add_endpoints(&c);
+
     let _ = LightController::new()?
-        //R .core_action_handler_register()
         //
         .roll(false) .await;
 }

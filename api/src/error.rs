@@ -1,18 +1,20 @@
 /*
 */
-use alloc::string::String;
 use core::fmt::{
     Display,
     Formatter,
 };
 
+use esp_idf_sys::EspError;
+
 #[derive(Debug, Clone)]
 pub enum Error {
     AlreadyInUse,       // only one Controller/Router/EndDevice allowed
-    BadConfig(String),  // the configuration (TOML) has a problem
+    InitializationFailed(EspError),
 }
 
 impl Display for Error {
+    // tbd. more details in the messages
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:?}", self)
     }

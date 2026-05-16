@@ -11,7 +11,7 @@ use esp_idf_svc::sys;
 //        ESP_ERR_NVS_NEW_VERSION_FOUND
 //    };
 //  <<
-use esp_zb::sys::{
+use ezb_node::sys::{
     nvs_flash_init,
     nvs_flash_init_partition,
     ESP_ERR_NVS_NO_FREE_PAGES,

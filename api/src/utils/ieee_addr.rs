@@ -1,7 +1,7 @@
 use core::fmt;
 
-use crate::raw::{
-    //r ezb_eui64_s,
+use ezb_node_raw::{
+    ezb_extaddr_t,
 };
 
 /**
@@ -34,7 +34,6 @@ impl From<[u8; 8]> for IeeeAddr {
     }
 }
 
-use crate::raw::ezb_extaddr_t;
 impl From<ezb_extaddr_t> for IeeeAddr {
     fn from(v: ezb_extaddr_t) -> Self {
         Self(v.to_u64())

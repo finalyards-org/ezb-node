@@ -8,7 +8,11 @@
 *   - Native mode only; no RCP (radio co-processor) implementation. C API has both.
 */
 use alloc::boxed::Box;
-use core::sync::atomic::{AtomicBool, Ordering};
+
+use core::{
+    cell::OnceCell,
+    sync::atomic::{AtomicBool, Ordering}
+};
 
 use bitflags::bitflags;
 use esp_idf_sys::EspError;
@@ -38,43 +42,38 @@ use ezb_node_raw::{
 use crate::{
     IeeeAddr,
     AppSignal,
+    Error::{
+        AlreadyInUse,
+        InitializationFailed
+    },
     config_views::PlatformDeviceView,
 };
 
 use ezb_node_config::ChannelMask;
 
-static SINGLETON_CHECK: AtomicBool = AtomicBool::new(false);
+static SINGLETON: OnceCell<esp_zigbee_config_t> = OnceCell::new();
+    // 'esp_zigbee_config_t' is the struct itself (not a pointer)
+    //
+    //  - mostly here for documentary intention (to show the singleton state); it's leaked
 
 /**
 * Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
 *
-* Configuration-wise this includes: network, platform and node categories.
-*
 * A **singleton** - you can create only one and it has "endless" (static) lifespan.
 */
-pub struct Node {
-    _cfg: &'static esp_zigbee_config_t,
-        // anchored for the C side to use it; it's leaked so whether it's here or not does not really matter.
-}
+// tbd. review the comment above
+pub trait Node {
+    fn on_app_signal(&self, sig: AppSignal);
 
-impl Node {
     /**
     * Initialize a 'Node' from a given configuration.
     */
-    pub fn new(cv: &PlatformDeviceView) -> Self {
+    fn init(cv: &PlatformDeviceView) -> Result<(),crate::Error> {
         let (cc, channel_masks) = cv.expand();
 
-        if SINGLETON_CHECK.swap(true, Ordering::SeqCst) {
-            panic!("node already in use.");
-        }
+        SINGLETON.set(cc).map_err( AlreadyInUse )?;
 
-        // Move the C-side configuration structure to heap (from stack), and leak it. Note: we wouldn't need to leak,
-        // if we just place it as a member in 'Node', but this also works. We are singleton, after all.
-        //
-        // The point is to keep the contents from being moved around: 'esp_zigbee_init()' might read it, even after the
-        // initial call.
-        //
-        let cc: &'static esp_zigbee_config_t = Box::leak(Box::new(cc));
+        let cc: &'static esp_zigbee_config_t = SINGLETON.get().unwrap();
 
         // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
@@ -83,13 +82,12 @@ impl Node {
             // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
 
-        EspError::from(err).map(|e| {
-            panic!("Initializing node failed: {}", e);
-        });
+        if let Some(e) = EspError::from(err) {
+            Err(InitializationFailed(e))?
+        }
 
         Self::set_channel_sets(&channel_masks);
-
-        Self { _cfg: cc }
+        Ok(())
     }
 
     /**

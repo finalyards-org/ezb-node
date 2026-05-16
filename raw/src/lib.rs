@@ -57,6 +57,7 @@ pub use bindings::{
     ezb_nwk_signal_permit_join_status_params_t,
     ezb_app_signal_type_e,
     ezb_extaddr_t,
+    ezb_bdb_comm_status_e,
 };
 
 // Node constants and methods (global in C API)

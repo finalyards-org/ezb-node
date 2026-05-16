@@ -1,14 +1,16 @@
-/*
-*
-*/
 use alloc::collections::BTreeMap;
 
 use ezb_node::{
-    node::{Node, Controller, Router, ChannelMask, TOMLConfig},
     AppSignal,
+    BdbStatus,
+    Config,
+    Platform,
+    node::{
+        CommissioningModesMask,
+        Node
+    },
     utils::PascalString,
 };
-use ezb_node::node::{CommissioningModesMask};
 
 use embassy_time::{Duration};
 
@@ -16,34 +18,25 @@ use crate::{AppError, scheduler::schedule};
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
-pub(crate) struct LightController where Self: Controller {
-    const MAX_CHILDREN: u8 = 10;
+pub(crate) struct LightController where Self: Node {
+    // can have state here
 }
 
 impl LightController {
-    pub(crate) fn new(ep_id: u8, ep: ColorDimmableLightEPC) -> Result<Self, AppError> {
-
-        <Self as Controller>::init(cfg)?;
-        let me = Self{};
-
-        Ok(me)
+    pub fn new(c: &Config) -> Result<Self,ezb_node::Error> {
+        Self::init(c)
     }
 }
 
-impl Router for LightController {
-    type Error = AppError;
-
-    fn on_app_signal(&self, sig: AppSignal) /*? -> Result<(), AppError>*/ {
+impl Node for LightController {
+    /**
+    * Behaviour of this particular node.
+    */
+    fn on_app_signal(&self, sig: AppSignal) {
         on_app_signal(self, sig)
     }
 }
 
-impl Controller for LightController {}
-impl Node for LightController {}
-
-/**
-* Behaviour of this particular node.
-*/
 fn on_app_signal(this: &LightController, sig: AppSignal) {
     use AppSignal::*;
 
@@ -54,7 +47,7 @@ fn on_app_signal(this: &LightController, sig: AppSignal) {
             this.start_top_level_commissioning(CommissioningModesMask::empty()); // BDB_MODE_INITIALIZATION
         },
 
-        BdbSignalDeviceFirstStart{ success: true } | BdbSignalDeviceReboot{ success: true } => {
+        BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
             // Could do delayed hw initialization, here
 
             let is_new = this.is_factory_new();
@@ -66,53 +59,53 @@ fn on_app_signal(this: &LightController, sig: AppSignal) {
                 log::info!("Device rebooted");
             }
         },
-        BdbSignalDeviceFirstStart{ success: false } | BdbSignalDeviceReboot{ success: false } => {
-            log::warn!("{} failed, retrying", sig);
+        BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
+            log::warn!("{} failed with status = {}; retrying...", sig, st);
 
             schedule( ONE_SEC, |node| {
                 node.start_top_level_commissioning(CommissioningModesMask::empty());   // BDB_MODE_INITIALIZATION
             });
         },
 
-        BdbSignalFormation{ success: true } => {
+        BdbSignalFormation(BdbStatus::Success) => {
             log::info!("Formed network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
                 this.get_extended_pan_id(), this.get_pan_id(), this.get_current_channel(), this.get_short_address());
 
             this.start_top_level_commissioning(CommissioningModesMask::NETWORK_STEERING);
         },
-        BdbSignalFormation{ success: false } => {
-            log::info!("Failed to form network: {}", sig);
+        BdbSignalFormation(st) => {
+            log::info!("Failed to form network: {} (st = {})", sig, st);
             schedule( ONE_SEC, |node| {
                 node.start_top_level_commissioning(CommissioningModesMask::NETWORK_FORMATION);
             });
         },
 
-        BdbSignalSteering { success: true } => {
+        BdbSignalSteering(BdbStatus::Success) => {
             log::info!("Network steering completed.")
         },
-        BdbSignalSteering { success: false } => {
-            log::info!("Failed the network steering");
+        BdbSignalSteering(st) => {
+            log::info!("Failed the network steering: st = {}", st);
             schedule( ONE_SEC, |node| {
                 node.start_top_level_commissioning(CommissioningModesMask::NETWORK_STEERING);
             });
         }
 
-        ZdoSignalDeviceAnnce { device_short_addr } => {
-            log::info!("New device commissioned or rejoined: {}", device_short_addr);
+        ZdoSignalDeviceAnnce { short_addr, .. } => {
+            log::info!("New device commissioned or rejoined: {}", short_addr);
         },
 
-        NwkSignalPermitJoinStatus{ isOpenedFor } => {
+        NwkSignalPermitJoinStatus{ is_opened_for } => {
             let pan_id = this.get_pan_id();
 
-            match isOpenedFor {
+            match is_opened_for {
                 Some(dur) =>
-                    log::info!("Network {} is open for {} seconds", pan_id, dur.as_seconds()),
+                    log::info!("Network {} is open for {} seconds", pan_id, dur.as_secs()),
                 None =>
                     log::info!("Network {} closed, devices joining not allowed.", pan_id)
             };
         },
 
-        ZdoSignalLeaveIndication { short_addr } => {
+        ZdoSignalLeaveIndication { short_addr, .. } => {
             log::info!("Node {} is leaving the network.", short_addr);
         },
 

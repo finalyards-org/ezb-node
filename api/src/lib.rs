@@ -3,8 +3,6 @@
     // applies to 'node/mod.rs'; needs to be declared here.
 extern crate alloc;
 
-//pub(crate) use esp_zb_raw as raw;   // internal 'crate::raw'
-
 mod config_views;
 
 pub mod node;
@@ -20,3 +18,6 @@ pub use utils::IeeeAddr;
 
 mod device_descriptor;
 pub use device_descriptor::*;
+
+// Apps might like getting this.
+pub use ezb_node_config::Config;
