@@ -12,6 +12,7 @@ pub enum ConfigError {
     FeatureConflict(&'static str),      // feature name in '.0'
     //
     ParseError(toml::de::Error),
+    InternalError(syn::Error),
 }
 
 impl fmt::Display for ConfigError {
@@ -25,6 +26,9 @@ impl fmt::Display for ConfigError {
             },
             //
             ConfigError::ParseError(err) => write!(f, "TOML parsing: {err}"),
+            ConfigError::InternalError(err) => {
+                write!(f, "Internal error (syntax error in generated code): {err}")
+            }
         }
     }
 }
@@ -57,5 +61,12 @@ impl From<String> for ConfigError {
 impl From<toml::de::Error> for ConfigError {
     fn from(err: toml::de::Error) -> Self {
         ConfigError::ParseError(err)
+    }
+}
+
+// Wrap 'syn' errors
+impl From<syn::Error> for ConfigError {
+    fn from(err: syn::Error) -> Self {
+        ConfigError::InternalError(err)
     }
 }

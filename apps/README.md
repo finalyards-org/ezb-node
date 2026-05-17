@@ -3,7 +3,7 @@
 Some runnable programs to showcase the `esp-zb`.
 
 - Uses Embassy
-- Uses `esp-idf-sys` and `esp-idf-hal` but not `esp-idf-svc`
+- Uses `esp-idf-svc` and `esp-idf-hal` (to be..)
 
 
 ## Steps
@@ -14,11 +14,14 @@ Some runnable programs to showcase the `esp-zb`.
 $ cargo build --release -vv --example light
 ```
 
-Builds the:
+>You can also just the `just lb` helper, if you have `Justfiles` support.
 
-- `raw` binding to (C language) `esp-zigbee-sdk`
-- `x` Rust API
-- a "Light bulb" application
+This builds also the dependencies:
+
+- `raw` binding to (C language) `esp-zigbee-lib` 2.0
+- `api` = Rust API to the above
+
+And the "Light bulb" application.
 
 ### Run
 
@@ -26,6 +29,8 @@ Builds the:
 $ cargo run --release -vv --example light
 [...]
 ```
+
+>or: `just lr`
 
 
 ## Demo - Light Bulb

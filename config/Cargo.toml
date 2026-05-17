@@ -8,17 +8,18 @@ rust-version = "1.94"
 #humantime-serde = { version = "1.1.1", optional = true }
 quote = { version = "1.0", optional = true }
 prettyplease = { version = "0.2", optional = true }
+proc-macro2 = { version = "1.0", optional = true }
 serde = { version = "1.0", features = ["derive", "alloc"], default-features = false, optional = true }
 syn = { version = "2.0", features = ["full"], optional = true }
 toml = { version = "1.1.2", features = ["serde"], optional = true }
 
 [features]
 default = []
-toml = ["quote", "prettyplease", "serde", "syn", "dep:toml"]
+toml = ["quote", "prettyplease", "proc-macro2", "serde", "syn", "dep:toml"]
 
 coordinator = []
 router = []
-end_device_UNTESTED = []
+#end_device_UNTESTED = []
 
 ep_color_dimmable_light = []
 

@@ -16,7 +16,8 @@
 //
 // Note: We might later do this in the 'esp-idf-svc' way; then we can remove the header here (and the Makefile).
 //
-#include "nvs_flash.h"
+//#include "nvs_flash.h"
+
 #include "esp_zigbee.h"
 
 // #later
@@ -25,6 +26,7 @@
 #include "ezbee/secur.h"
 
 #include "ezbee/zha.h"
+  // ezb_zha_color_dimmable_light_config_t
 
 // Manifest device type specific configurations (macros in C) to 'const'.
 // Further used by 'bindings.rs' to make them 'Default' for said type.

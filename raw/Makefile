@@ -20,10 +20,9 @@ include .BUILD_ENV
 	#		ESP_IDF_TOOLS_INSTALL_DIR=global
 	#		ESP_IDF_VERSION=5.5.4
 	#		MCU=esp32c6
-	#		OUT_DIR=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-zb-raw-4477ae593d752247/out
 
 _ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
-#_SDKCONFIG:=${DEP_ESP_IDF_ROOT}/sdkconfig
+_SDKCONFIG:=${DEP_ESP_IDF_ROOT}/sdkconfig
 	# ^-- good for checking what config got generated [DEBUG]
 _SDKCONFIG_H:=${DEP_ESP_IDF_ROOT}/build/config/sdkconfig.h
 _ESP_ZIGBEE_LIB_INCLUDE:=\
@@ -59,9 +58,9 @@ endif
 ifeq (${DEP_ESP_IDF_EMBUILD_ENV_PATH},)
   $(error Missing 'DEP_ESP_IDF_EMBUILD_ENV_PATH' from '.BUILD_ENV')
 endif
-ifeq (${OUT_DIR},)
-  $(error Missing 'OUT_DIR' from '.BUILD_ENV')
-endif
+#ifeq (${OUT_DIR},)
+#  $(error Missing 'OUT_DIR' from '.BUILD_ENV')
+#endif
 
 # This happens if ESP-IDF does not pick up the definitions that we need 'esp-zigbee-lib'
 ifeq ($(wildcard $(DEP_ESP_IDF_ROOT)/managed_components),)
@@ -101,26 +100,42 @@ _BLOCKLIST_VARS:=$(strip EZB_ZCL_VALUE_NaN)
 	# '.._VALUE_NaN' avoid warning on its naming (we don't need it, either)
 
 # Typedefs to zero-size structs. Suppresses warnings.
-_OPAQUE_TYPES:=$(strip \
-	esp_zb_diagnostics_cluster_cfg_t \
-	esp_zb_price_cluster_cfg_t \
-	esp_zb_touchlink_commissioning_cfg_t \
-)
+#|_OPAQUE_TYPES:=$(strip \
+#|	esp_zb_diagnostics_cluster_cfg_t \
+#|	esp_zb_price_cluster_cfg_t \
+#|	esp_zb_touchlink_commissioning_cfg_t \
+#|)
+_OPAQUE_TYPES:=""
+
 ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
 	| bindgen
 	bindgen $< \
 	    --allowlist-file wrap.h \
-	    --allowlist-type 'ezb_.+' \
-	    --allowlist-function 'ezb_.+' \
-	    --allowlist-function 'esp_zigbee_.+' \
-	    --allowlist-function 'esp_zb_.+' \
-	    --allowlist-function 'nvs_flash_init(?:|_partition)' \
 			\
+	    --allowlist-function 'esp_zigbee_.+' \
+			--allowlist-function 'ezb_af_(?:create|device|endpoint|xxx)_.+' \
+			--allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
+			--allowlist-function 'ezb_bdb_.+' \
+	    --allowlist-function 'ezb_get_current_.+' \
+			--allowlist-function 'ezb_nwk_.+' \
+			--allowlist-function 'ezb_zcl_(?:basic_cluster|core|ota_upgrade|xxx)_.+' \
+			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|xxx)' \
+			\
+	    --allowlist-type 'ezb_af_(?:device|endpoint|xxx)_.+' \
+	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
+	    --allowlist-type 'ezb_bdb_.+' \
+	    --allowlist-type 'ezb_nwk_.+' \
+	    --allowlist-type 'ezb_zcl_(?:basic_cluster|basic_server|cluster|xxx)_.+' \
+	    --allowlist-type 'ezb_zdo_(?:signal|xxx)_.+' \
+	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
+	    \
 	    --allowlist-var 'ESP_ERR_.+' \
-	    --allowlist-var 'EZB_ZCL_.+' \
+	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|DEF)_.+' \
+	    --allowlist-var 'EZB_ZHA_(?:COLOR_DIMMABLE_LIGHT|XXX)_.+' \
 	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
+			\
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
 			\
 			--bitfield-enum 'ezb_bdb_comm_mode_e' \
@@ -133,7 +148,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\
-	  -I. -I${_TMP} -Ifake \
+	  -I. -I${_TMP} \
 	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
 		-I $(dir ${_SDKCONFIG_H}) \
 	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
@@ -141,14 +156,15 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 		-I ${_ESP_IDF_PATH}/components/esp_common/include \
 		-I ${_ESP_IDF_PATH}/components/hal/include \
 		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
+		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/register \
 		-I ${_ESP_IDF_PATH}/components/esp_driver_uart/include \
 		-I ${_ESP_IDF_PATH}/components/esp_hw_support/include \
 		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
 		-I ${_ESP_IDF_PATH}/components/freertos/config/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/config/include/freertos \
 		-I ${_ESP_IDF_PATH}/components/freertos/config/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include \
 		-I ${_ESP_IDF_PATH}/components/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/register \
 		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
 		-I ${_ESP_IDF_PATH}/components/heap/include \
 		-I ${_ESP_IDF_PATH}/components/esp_system/include \
@@ -158,6 +174,9 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 		\
 		-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
 	  > $@
+
+# Entries removed (keep for a while):
+#	    --allowlist-function 'nvs_flash_init(?:|_partition)' \
 
 # Hints:
 #	    --raw-line '#![allow(non_camel_case_types)]' \
@@ -170,13 +189,23 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 #
 #		'grep -q' for strings that should be in.
 #		'! grep -q' for those that should be omitted.
+#		- that the binding output is not outragously large (filtering failed)
 #
+SAFE_SIZE:=200000
+	# normal is: <5000 lines, ~185k
+
 manual_test: ${_BIND_RS}
 	#
-	grep -q ESP_ZB_VER_MAJOR $<
+	grep -q ESP_ZIGBEE_VER $<
   #
 	! grep -q '_NEWLIB_VERSION_H__' $<
+	! grep -q 'EZB_ZCL_SHADE_CONFIG_MOTOR_STEP_SIZE_MIN_VALUE' $<
 	@#
+	@FILE_SIZE=$$(stat -c%s $<); \
+	[ "$$FILE_SIZE" -lt $(SAFE_SIZE) ] || ( \
+		echo >&2 "ERROR: '${<}' size $$FILE_SIZE > ${SAFE_SIZE}"; false; \
+	)
+	wc -l $<
 	@echo ""
 	@echo "Yay!"
 
@@ -191,7 +220,7 @@ _clean:
 	-rm ${_BIND_RS}
 
 echo:
-	@echo $(addprefix --blocklist-type ,$(_BLOCKLIST_TYPES))
+	@echo ${_SDKCONFIG}
 
 # Remove any targets created if a build fails.
 .DELETE_ON_ERROR:

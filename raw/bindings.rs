@@ -43,6 +43,7 @@ use core::mem::MaybeUninit;
 
 // NVS
 //
+#[cfg(false)]   //R (if 'esp-idf-svc' works)
 pub mod sys {
     pub use super::{
         nvs_flash_init,

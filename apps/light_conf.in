@@ -1,0 +1,25 @@
+{
+        use alloc::collections::BTreeMap;
+        use ezb_node::config::*;
+        let channel_masks = [ChannelMask::from([13u8]), ChannelMask::ALL];
+        let storage_partition_name = "zb_storage";
+        let node = NodeType::CoordinatorConfig {
+            install_code_policy: false,
+            max_children: 10u8,
+        };
+        let endpoint_defs = BaseConfig {
+            manufacturer_name: Some("Your name"),
+            model_identifier: Some("Your model"),
+        };
+        let endpoints = {
+            let ep_10 = EndpointConfig::ColorDimmableLightEPC;
+            BTreeMap::from([(10u8, ep_10)])
+        };
+        Config {
+            channel_masks,
+            storage_partition_name,
+            node,
+            endpoint_defs,
+            endpoints,
+        }
+    }

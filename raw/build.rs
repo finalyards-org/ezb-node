@@ -42,12 +42,6 @@ fn main() {
 
     idf_stuff();
 
-    //---
-    // Config sanity checks
-    {
-        // nada. If there are conflicting feature combinations, give an error here.
-    }
-
     // Expose some env.vars to 'Makefile'.
     // Note: Writing them into a file means we can more freely develop the make itself.
     //
@@ -65,9 +59,9 @@ fn main() {
             "DEP_ESP_IDF_ROOT",
                 //
             "ESP_IDF_TOOLS_INSTALL_DIR",            //"global"|"out"
-            "ESP_IDF_VERSION",                      //"5.5.3"
+            "ESP_IDF_VERSION",                      //"5.5.4"
             "MCU",
-            "OUT_DIR",                              //"{target}/riscv32imac-esp-espidf/release/build/esp-zb-raw-f7c4340a8cec066b/out"
+            //"OUT_DIR",                              //"{target}/riscv32imac-esp-espidf/release/build/esp-zb-raw-f7c4340a8cec066b/out"
         ].map(|x| {
             let val = env::var(x)
                 .or_else(|_| env::var(x.to_ascii_lowercase()))  // check e.g. "esp_idf_version"
@@ -119,24 +113,44 @@ fn main() {
     }
 
     println!("cargo:rustc-link-search=tmp");
-    //_! println!("cargo:rustc-link-lib=static=vendor_uld{}", X);
 
-    // Defaults:
+    // What files should trigger a new 'build.rs' run, if they change?
+    //
+    // Cargo note: 'build.rs' is _not_ executed for every build. It does not (need to) run e.g. if the sources change
+    //      (generally). Here, we list the files we know will need us to run, again.
+    //
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=src");
     // +
     println!("cargo:rerun-if-changed=bindings.rs");
     println!("cargo:rerun-if-changed=Makefile");
     println!("cargo:rerun-if-changed=wrap.h");
-    println!("cargo:rerun-if-changed=stubs.rs");
     //
+    #[cfg(false)]
     println!("cargo:rerun-if-changed=tmp/bindings_0.rs");
         //
         // Note: 'bindings_0.rs' is an *output* but this helps dependent crates to realize if it has been removed,
         //      and avoid a failing upstream build.
         //
-        // Note 2: using 'rerun-if-changed' replaces the automatic defaults; that's why the "defaults" need now explicitly
-        //      to be stated. ('Cargo.{toml|lock}' are tracked nonetheless.)
+        // Note 2: 'Cargo.{toml|lock}' are tracked nonetheless.
+
+    // LINK FIX
+    //
+    // Sudden problems where the 'ldproxy' isn't finding the 'esp_zigbee_lib' though it's mentioned in the
+    // "extra components" and *should* be approachable.
+    //
+    #[cfg(false)]
+    {
+        let dep_esp_idf_root = env::var("DEP_ESP_IDF_ROOT").unwrap();
+        let mcu = env::var("MCU").unwrap();  // "esp32c6"
+
+        let lib_dir = format!("{dep_esp_idf_root}/managed_components/espressif__esp-zigbee-lib/lib/{mcu}");
+
+        println!("cargo::rustc-link-search=native={}", lib_dir);
+
+        println!("cargo::rustc-link-lib=static=esp-zigbee");
+        println!("cargo::rustc-link-lib=static=esp-zigbee-idf.native");
+        println!("cargo::rustc-link-lib=static=esp-zigbee-core.zczr.release")
+    }
 }
 
 fn idf_stuff() {

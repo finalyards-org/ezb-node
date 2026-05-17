@@ -34,7 +34,6 @@ CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
     # Controller/Router code included (can also do EndDevices with this)
 CONFIG_ZB_RADIO_NATIVE=y
-#CONFIG_ZB_GP_ENABLED=y     # tbd. is this still a setting in 2.0?
 
 # Partition Table
 # based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
@@ -43,27 +42,10 @@ CONFIG_ZB_RADIO_NATIVE=y
 # right 'partitions.csv'.
 #   |1|: "Custom partitions.csv with relative path is not copied to build folder causing build to fail" (GitHub Issues)
 #       https://github.com/esp-rs/esp-idf-sys/issues/395
-#|CONFIG_PARTITION_TABLE_CUSTOM=y
-#|CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
-#|CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
 #CONFIG_PARTITION_TABLE_OFFSET=0x8000   # default
-
-# mbedTLS
-# based on 'esp-zigbee-sdk' > examples > HA_color_dimmable_light
-#
-#CONFIG_MBEDTLS_HARDWARE_AES=y
-#CONFIG_MBEDTLS_HARDWARE_MPI=y
-#CONFIG_MBEDTLS_HARDWARE_SHA=y
-CONFIG_MBEDTLS_CMAC_C=y
-CONFIG_MBEDTLS_SSL_PROTO_DTLS=y
-CONFIG_MBEDTLS_KEY_EXCHANGE_ECJPAKE=y
-
-CONFIG_MBEDTLS_ECJPAKE_C=y
-
-# WiFi
-# Note: something forces it to 'y'.
-#CONFIG_ESP_WIFI_ENABLED=y
 
 #---
 # NOTE: Entries below cause "unknown" warnings in build output, when the tighter 'ESP_IDF_COMPONENTS' setting

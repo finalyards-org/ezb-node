@@ -4,9 +4,6 @@ extern crate alloc;
 #[path = "../bindings.rs"]
 mod bindings;
 
-#[path = "../~stubs.rs"]
-mod stubs;
-
 pub use bindings::{
     esp_zigbee_get_version_string,
 };
@@ -66,13 +63,12 @@ pub use bindings::{
     ezb_bdb_comm_mode_t,
     ezb_bdb_is_factory_new,
     ezb_nwk_get_panid,
-    ezb_get_current_channel,
+    ezb_nwk_get_current_channel,
     //ezb_factory_reset,
     esp_zigbee_device_config_t,
     ezb_nwk_get_extended_panid,
     ezb_extpanid_t,
     ezb_nwk_get_short_address,
-    ezb_nwk_get_current_channel,
     ezb_app_signal_t,
     ezb_nwk_device_type_t,
     esp_zigbee_config_t,
@@ -120,4 +116,4 @@ pub use bindings::{
 };
 
 // NVS access
-pub use bindings::sys::*;
+//pub use bindings::sys::*;

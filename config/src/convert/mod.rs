@@ -108,11 +108,35 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         }
     };
 
-    //--- endpoint
+    //--- endpoint.defaults
+    //
+    //    BaseConfig{ manufacturer_name: "...", model_identifier: "..." }
+    //
+    let q_bc = {
+        let endpoint_defaults = c.endpoint.defaults;
+
+        // 'quote!' normally unwraps on 'Option' so we need to do this, to have output "Some(...)|None".
+        //
+        let mfn = endpoint_defaults.manufacturer_name.as_ref()
+            .map(|s| quote! { Some(#s) })
+            .unwrap_or_else(|| quote! { None });
+
+        let mid = endpoint_defaults.model_identifier.as_ref()
+            .map(|s| quote! { Some(#s) })
+            .unwrap_or_else(|| quote! { None });
+
+        quote! {
+            BaseConfig{
+                manufacturer_name: #mfn,
+                model_identifier: #mid,
+            }
+        }
+    };
+
+    //--- endpoint.{id}
     // {
-    //    let bc = BaseConfig{ manufacturer_name: "...", model_identifier: "..." }
     //    let ep_10 = EndpointConfig::ColorDimmableLightEPC;
-    //    BTreeMap::from([(10, (ep_10, bc))])
+    //    BTreeMap::from([(10, ep_10)])
     // }
     let q_endpoints = {
         let mut q_lets = quote!{};
@@ -122,10 +146,20 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
             Err("Need at least one end point. Please define an '[endpoint.{id}]' section.")?;
         }
 
-        c.endpoint.instances.iter().try_for_each(|(&k,v)| -> Result<(),ConfigError> {
-            if !Config::is_valid_endpoint(k) {
-                Err(format!("Invalid endpoint ID: {}", k))?;
-            }
+        c.endpoint.instances.iter().try_for_each(|(k,v)| -> Result<(),ConfigError> {
+            // Skip ".defaults", turn others to 'u8'
+            let k = match k.as_str() {
+                "defaults" => { return Ok(()) },    // bypass, we get it through its own struct
+                id => {
+                    let endpoint_id = id.parse::<u8>().map_err(|_| {
+                        format!("Invalid endpoint ID (not 'u8'): {}", id)
+                    })?;
+                    if !Config::is_valid_endpoint(endpoint_id) {
+                        Err(format!("Invalid endpoint ID (not in valid range 1..=240): {}", id))?;
+                    }
+                    endpoint_id
+                }
+            };  // k ∈ 1..=240
 
             let ident = format_ident!("ep_{}", k);
 
@@ -138,26 +172,12 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
             };
 
             q_lets.extend(quote!{ let #ident = #value; });
-            q_arr_contents.extend(quote!{ (#k, (#ident, bc)) });
+            q_arr_contents.extend(quote!{ (#k, #ident) });
 
             Ok(())  // next
         })?;
 
-        let q_bc = {
-            let endpoint_defaults = c.endpoint.defaults;
-
-            let mfn = endpoint_defaults.manufacturer_name;
-            let mid = endpoint_defaults.model_identifier;
-            quote! {
-                BaseConfig{
-                    manufacturer_name: #mfn,
-                    model_identifier: #mid,
-                }
-            }
-        };
-
         quote!{ {
-            let bc = #q_bc;
             #q_lets
             BTreeMap::from([#q_arr_contents])
         } }
@@ -165,23 +185,48 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
     // All together now!
     //
-    let q_all = quote!{
+    let q_all = quote!{ {
+        use alloc::collections::BTreeMap;
+        use ezb_node::config::*;    // Config, BaseConfig, ...
+
         let channel_masks = #q_channel_masks;
         let storage_partition_name = #q_storage_partition_name;
         let node = #q_node;
+        let endpoint_defs = #q_bc;
         let endpoints = #q_endpoints;
 
         Config {
             channel_masks,
             storage_partition_name,
             node,
+            endpoint_defs,
             endpoints
         }
+    } };
+
+    pretty(q_all)
+}
+
+/**
+* Check a Rust expression for syntactical correctness, and format it similar to 'rustfmt'.
+*/
+fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
+
+    // Note: 'prettyplease' is designed to handle full files. To handle an expression, we do some wrapping and unwrapping,
+    //      suggested by google.ai.
+    //
+    let q_file = quote::quote! {
+        fn dummy_wrapper() { #q }
     };
 
-    let neat = {
-        let syntax_tree = syn::parse2(q_all).unwrap();
-        prettyplease::unparse(&syntax_tree)
-    };
-    Ok(neat)
+    let syntax_tree: syn::File = syn::parse2(q_file)?;
+    let formatted = prettyplease::unparse(&syntax_tree);
+
+    let cleaned = formatted
+        .replace("fn dummy_wrapper() {", "")
+        .trim_end() // remove newlines from the end
+        .strip_suffix('}').unwrap() // the closing brace of the dummy
+        .trim() // final clean, both ends
+        .to_string();
+    Ok(cleaned)
 }

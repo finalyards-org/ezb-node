@@ -22,7 +22,7 @@ fn main() {
         }
     }
 
-    #[cfg(not(any(feature = "coordinator", feature = "router", feature = "end_device_UNTESTED")))]
+    #[cfg(not(any(feature = "coordinator", feature = "router")))]  // add 'feature = "end_device"' much #later
     {
         panic!("Must have at least one feature: 'coordinator', 'router', 'end_device'");
     }

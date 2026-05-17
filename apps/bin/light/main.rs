@@ -18,6 +18,7 @@ use log::LevelFilter;
 
 use ezb_node::{
     Config,
+    Node,
 };
 
 use ezb_node_apps::{
@@ -47,10 +48,7 @@ async fn main(_spawner: Spawner) {
 
     log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
-    let config =
-        include!("light_conf.in");
-
-    main2(config).await .unwrap_or_else(|e| {
+    main2().await .unwrap_or_else(|e| {
         panic!("Fatal error: {:?}", e);
     });
 }
@@ -58,16 +56,13 @@ async fn main(_spawner: Spawner) {
 /**
 * An inner 'main()' that may fail its initialization.
 */
-async fn main2(c: Config) -> Result<!, AppError> {
+async fn main2() -> Result<!, AppError> {
     //#later let _ = Peripherals::take()?;
 
-    let _keep = init_nvs(c.storage_partition_name)?;
+    let c: Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
 
-    // Initialize Zigbee
-    //
-    let node = LightController::new(&c)?;
+    let _keep: (_,_) = init_nvs(c.storage_partition_name)?;
 
-    node
-        .launch(false) .await
-            .expect("Failed to launch node");
+    LightController::new(&c)?
+        .run(false)?;
 }

@@ -9,6 +9,10 @@ publish = false
 #
 #   Note: Please reflect any changes also in '{project}/_mc/main/idf_component.yml'
 #
+[package.metadata.esp-idf-sys]
+esp_idf_component_manager = "y"
+    # "on/y by default, but good practice to explicitly state"
+
 [[package.metadata.esp-idf-sys.extra_components]]
 remote_component = { name = "espressif/esp-zigbee-lib", version = "2.*" }
 

@@ -52,6 +52,12 @@ use crate::{
 
 use ezb_node_config::ChannelMask;
 
+// Note: We could just use a 'static mut' - though Rust doesn't like that too much.
+//      All use is from the same application, RTOS task, and async environment.
+//
+#[cfg(false)]
+static mut SINGLETON: Option<esp_zigbee_config_t> = None;
+
 static SINGLETON: DareOnceCell<esp_zigbee_config_t> = DareOnceCell::new();
     // 'esp_zigbee_config_t' is the struct itself (not a pointer)
     //
@@ -72,9 +78,10 @@ pub trait Node {
     fn init<'a>(cv: impl Into<PlatformDeviceView<'a>>) -> Result<(),crate::Error> {
         let (cc, channel_masks) = cv.into().expand();
 
-        SINGLETON.set(cc).map_err(|_| AlreadyInUse )?;
-
-        let cc: &'static esp_zigbee_config_t = SINGLETON.get().unwrap();
+        let cc: &'static esp_zigbee_config_t = {
+            SINGLETON.set(cc).map_err(|_| AlreadyInUse )?;
+            SINGLETON.get().unwrap()
+        };
 
         // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
@@ -83,9 +90,7 @@ pub trait Node {
             // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
             // Providing it a 'static', non-changing struct is safe.
 
-        if let Some(e) = EspError::from(err) {
-            Err(InitializationFailed(e))?
-        }
+        EspError::from(err).map_or(Ok(()), |e| { Err(InitializationFailed(e)) })?;
 
         Self::set_channel_sets(&channel_masks);
         Ok(())
@@ -108,8 +113,10 @@ pub trait Node {
     // tbd. could do so that the 'init', add endpoints, 'start' order is enforced by the type system. Currently,
     //      it's not, but it would take active malpractice to steer away from the suggested model.
     //
-    fn launch(self: Self, auto_start: bool) -> Result<!,EspError>
+    fn run(self: Self, auto_start: bool) -> Result<!,EspError>
     where Self: Sized {
+        assert!( SINGLETON.get().is_some(), "Please call '::init()' before us.");
+
         let err = unsafe {
             esp_zigbee_start(auto_start)
         };
@@ -120,42 +127,13 @@ pub trait Node {
         };
         EspError::from(err).map_or(Ok(()), Err)?;
 
-        unreachable!();
-
-        #[cfg(false)]   // v 1.x; this will no longer work
-        loop {
-            unsafe { esp_zigbee_stack_main_loop_iteration() };
-
-            // Note: Optimizing what shall be here is not trivial. We would ideally both:
-            //  - process Zigbee events without delay (call e.g. 'yield_now().await' instead of waiting 1 tick)
-            //  - sleep if there's nothing happening
-            //
-            //      Also, we must consider the Zigbee event loop. For NOW, it's safest to just
-            //      always have a small nap. 'esp_zigbee_lib' should be fine. So should Embassy
-            //      async code.
-            //
-            Timer::after(Duration::from_ticks(1)).await;
-        }
-
-        #[cfg(false)]
-        loop {
-            unsafe { esp_zb_stack_main_loop_iteration() };
-
-            // 'yield_now()' consumes 100% CPU, but means there's no gap between Zigbee processing
-            // its messages. We fall asleep only once Zigbee is idle.
-            //
-            if unsafe { esp_zb_scheduler_can_sleep() } {    // <-- no such function
-                Timer::after(Duration::from_ticks(1)).await;
-            } else {
-                yield_now().await;
-            }
-        }
+        todo!()
     }
 
     /**
     * Get the PAN ID of the network.
     */
-    fn nwk_get_panid(&self) -> u16 {
+    fn get_panid(&self) -> u16 {
         unsafe {
             ezb_nwk_get_panid()
         }
@@ -164,7 +142,7 @@ pub trait Node {
     /**
     * Get the extended PAN ID of the network.
     */
-    fn nwk_get_extended_panid(&self) -> IeeeAddr {
+    fn get_extended_panid(&self) -> IeeeAddr {
         let v = unsafe {
             ezb_nwk_get_extended_panid()
         };
@@ -174,7 +152,7 @@ pub trait Node {
     /**
     * Get the network (short) address of the device.
     */
-    fn nwk_get_short_address(&self) -> u16 {
+    fn get_short_address(&self) -> u16 {
         unsafe {
             ezb_nwk_get_short_address()
         }
@@ -183,7 +161,7 @@ pub trait Node {
     /**
     * Get the currently used channel.
     */
-    fn nwk_get_current_channel(&self) -> u8 {
+    fn get_current_channel(&self) -> u8 {
         unsafe {
             ezb_nwk_get_current_channel()
         }

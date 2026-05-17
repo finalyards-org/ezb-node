@@ -27,13 +27,12 @@ embuild.workspace = true
 default = ["esp32c6"]
 coordinator = ["ezb-node-config/coordinator"]
 router = ["ezb-node-config/router"]
-end_device_UNTESTED = [] #["ezb-node-config/end_device"]
-    # NOT TESTED; to allow speculative coding. Enable to create a node in EndDevice (only) role.
+#end_device_UNTESTED = [] #["ezb-node-config/end_device"]
 
 touchlink = []
 
 # Device types
-ep_color_dimmable_light = []
+ep_color_dimmable_light = ["ezb-node-config/ep_color_dimmable_light"]
 
 esp32c6 = [
     "ezb-node-raw/esp32c6",

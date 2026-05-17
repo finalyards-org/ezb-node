@@ -63,7 +63,8 @@ pub struct EndpointConfig {
     pub defaults: EndpointDefaults,
 
     #[serde(flatten)]
-    pub instances: BTreeMap<u8, EndpointInstance>,
+    // Note: 'String' (not 'u8') as map key avoids collision with ".defaults".
+    pub instances: BTreeMap<String, EndpointInstance>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -78,5 +79,6 @@ pub enum EndpointInstance {
     ColorDimmableLight {
         //| #[serde(with = "humantime_serde")]
         //| transition_time: Option<Duration>,  // an example, for now
-    }
+    },
+    //EndpointDefaults
 }

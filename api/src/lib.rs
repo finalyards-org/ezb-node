@@ -9,6 +9,7 @@ pub use config_views::*;
     // PlatformDeviceView,
 
 pub mod node;
+pub use node::Node;
 
 mod app_signal;
 pub use app_signal::*;
@@ -22,5 +23,9 @@ pub use utils::IeeeAddr;
 //mod device_descriptor;
 //pub use device_descriptor::*;
 
-// Apps might like getting this.
+// Pass-through the config.
+//
+// This is essential for the from-TOML-generated snippet digestion, but also useful for the apps in general,
+// them not needing to depend on the config crate, directly.
+pub use ezb_node_config as config;
 pub use ezb_node_config::Config;

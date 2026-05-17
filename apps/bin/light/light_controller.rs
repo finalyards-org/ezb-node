@@ -1,20 +1,20 @@
-use alloc::collections::BTreeMap;
+//use alloc::collections::BTreeMap;
 
 use ezb_node::{
     AppSignal,
     BdbStatus,
     Config,
-    PlatformDeviceView,
+    Node,
+    //PlatformDeviceView,
     node::{
         CommissioningModesMask,
-        Node
     },
-    utils::PascalString,
+    //r utils::PascalString,
 };
 
 use embassy_time::{Duration};
 
-use crate::{AppError, scheduler::schedule};
+use crate::{scheduler::schedule};
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
@@ -27,7 +27,7 @@ impl LightController {
         Self::init(c)?;
         Self::add_endpoints(c)?;
 
-        Ok(Self)
+        Ok(Self {})
     }
 }
 
@@ -72,7 +72,7 @@ fn on_app_signal(this: &LightController, sig: AppSignal) {
 
         BdbSignalFormation(BdbStatus::Success) => {
             log::info!("Formed network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
-                this.get_extended_pan_id(), this.get_pan_id(), this.get_current_channel(), this.get_short_address());
+                this.get_extended_panid(), this.get_panid(), this.get_current_channel(), this.get_short_address());
 
             this.start_top_level_commissioning(CommissioningModesMask::NETWORK_STEERING);
         },
@@ -98,7 +98,7 @@ fn on_app_signal(this: &LightController, sig: AppSignal) {
         },
 
         NwkSignalPermitJoinStatus{ is_opened_for } => {
-            let pan_id = this.get_pan_id();
+            let pan_id = this.get_panid();
 
             match is_opened_for {
                 Some(dur) =>
