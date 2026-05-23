@@ -17,13 +17,13 @@ embassy-time = { version = "0.5", features = ["log"] }
 
 embuild = { version = "0.33.1", features = ["espidf"] }
 
-# These are references among '{main|x}/Cargo.toml' by:
+# Referenced in '{api|apps}/Cargo.toml':
 #   <<
 #       [lints]
 #       workspace = true
 #   <<
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5_5_3)'] }
+#unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5_5_3)'] }
 
 # We don't use
 #[profile.dev]

@@ -85,11 +85,10 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
 # IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
 ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
 
-# DO NOT do this. It affected the build, causing linker problems.
-#|# AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
-#|ESP_IDF_SDKCONFIG = { value = ".no-such", relative = true }
+# AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
+ESP_IDF_SDKCONFIG = { value = "/tmp/.no-such" }
 
-ESP_IDF_SDKCONFIG_DEFAULTS = { value = "sdkconfig.defaults", relative = true }
+ESP_IDF_SDKCONFIG_DEFAULTS = { value = "apps/sdkconfig.defaults", relative = true }
 
 # The name of the sub-project that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
 #   - esp_zigbee_lib

@@ -42,7 +42,7 @@ When you see the build output, pay attention to certain parts of it. Especially 
 [esp-idf-sys 0.37.2]     },
 [esp-idf-sys 0.37.2] cargo:warning=the crate given by `ESP_IDF_SYS_ROOT_CRATE` does not exist in this workspace
 [esp-idf-sys 0.37.2]     esp_idf_sys_root_crate: Some(
-[esp-idf-sys 0.37.2]         "raw",
+[esp-idf-sys 0.37.2]         "ezb-node-raw",
 [esp-idf-sys 0.37.2]     ),
 [esp-idf-sys 0.37.2] }
 ```
@@ -78,16 +78,16 @@ When you see the build output, pay attention to certain parts of it. Especially 
 	Keep an eye on this, casually. If you see something other than you expected, the configuration is somehow faulty.
 
 
-### Root crate
+### Warnings in the output
 	
 ```
 cargo:warning=the crate given by `ESP_IDF_SYS_ROOT_CRATE` does not exist in this workspace
 [esp-idf-sys 0.37.2]     esp_idf_sys_root_crate: Some(
-[esp-idf-sys 0.37.2]         "raw",
+[esp-idf-sys 0.37.2]         "...",
 [esp-idf-sys 0.37.2]     ),
 ```
 
-You should not see this - but taking it here as a sample on how build warnings/errors would show in the log.
+Keep an eye open for such! You should not see these warnings - it would actually be an error:
 
 **Note that `esp-sys-idf` is overly tolerant on errors! It just spits warnings, uses some defaults, and keeps going!!** This feels very unusual for a Cargo project, because in Rust, it's normally "explicit over implicit".
 
@@ -165,7 +165,37 @@ Example:
 
 See `_mc/` for tools and info on how to:
 
-a. detect which configuration keys are available
-b. what their values after a build have become
+- detect which configuration keys are available
+- what their values after a build have become
 
 This helps you to pick the right keys for `sdkconfig.defaults` and hopefully avoid components that are not needed.
+
+
+## `components_esp32c6.lock`
+
+This file is used by `esp-idf-sys` builds
+
+```
+$ more components_esp32c6.lock 
+dependencies:
+  espressif/esp-zigbee-lib:
+    component_hash: 823ee1604d896bdcfd3d5dbe2b1eb84fdf089cffcbbe50e46d01d647861710ba
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.0.0
+  idf:
+    source:
+      type: idf
+    version: 5.5.4
+direct_dependencies:
+- espressif/esp-zigbee-lib
+manifest_hash: 4a9a19333e88ba7873691c6603cbb1190f6a997bc299616cd41835923c76de09
+target: esp32c6
+version: 2.0.0
+```
+

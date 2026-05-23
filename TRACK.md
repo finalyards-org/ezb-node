@@ -41,9 +41,7 @@ A mismatch between Rust `nightly` (roughly 2026-05-15), and the `newlib` used in
 
 ## `esp-zigbee-sdk` ESP-IDF 6.0 compatibility
 
-[https://github.com/espressif/esp-zigbee-sdk](https://github.com/espressif/esp-zigbee-sdk)
-
-- [ ] There is no tracking item for ESP-IDF 6.0 compatibility, which was [released Mar-26](https://github.com/espressif/esp-idf/releases).
+- ["IDF 6 support"](https://github.com/espressif/esp-zigbee-sdk/issues/816) (GitHub)
 
 Currently (23-Mar-26) build of `esp-zigbee-sdk` examples fails like this (see DEVS/* for how to set up):
 

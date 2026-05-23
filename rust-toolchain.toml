@@ -1,8 +1,11 @@
 # needed for building 'riscv32imac-esp-espidf' core
 [toolchain]
-# Note: For some time (15-May-26), keep the pinned version. Later versions (as of now) introduce a 'SIGKILL' conflict
-#       between Rust 'std' and ESP32 'newlib'.
-channel = "nightly-2026-05-01"
+# Note: For some time (15-May-26), to keep the pinned version.
+#       Later versions (as of now) introduced a 'SIGKILL' conflict between Rust 'std' and ESP32 'newlib'.
+#           -> https://github.com/esp-rs/esp-idf-sys/issues/419#issuecomment-4497684271
+#
+#channel = "nightly-2026-05-01"
+channel = "nightly"
 components = [ "rust-src", "clippy", "rustfmt" ]
 
 # Automatically installs the target, if you don't have it, yet.

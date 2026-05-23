@@ -27,7 +27,6 @@ use ezb_node_apps::{
     AppError,
 };
 use crate::light_controller::LightController;
-//r use ezb_node::ChannelMask;
 
 //use hal::peripherals::Peripherals;
 
@@ -36,8 +35,22 @@ mod scheduler;
 
 //use my_controller::LightController;
 
+static CONFIG: Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
+
+/**
+* Task that receives Zigbee events. Not application specific (at least not much).
+*/
+compile_error!("Ei näin, vaan 'std::thread':n kautta (laita se kirjastoon, pidä täällä apps-puolella)")
+#[embassy_executor::task]
+async fn zb_task(controller: &'static dyn Node) {
+    controller.run(false).unwrap();
+}
+
 /**
 * The entry point.
+*
+* The main thread runs the application. Part/most of it happens within the 'LightController'
+* methods, which are called within the application (main) thread.
 */
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -48,21 +61,25 @@ async fn main(_spawner: Spawner) {
 
     log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
-    main2().await .unwrap_or_else(|e| {
-        panic!("Fatal error: {:?}", e);
+    // Initialize and provide error message
+    //
+    let _keep: (_,_);
+    let init_res: Result<LightController,ezb_node::Error> = async {
+        _keep = init_nvs(crate::CONFIG.storage_partition_name)?;
+
+        let lc = LightController::new(&CONFIG)?;
+        Ok(lc)
+    };
+
+    let lc = init_res.unwrap_or_else(|e| {
+        panic!("Initialization failed: {:?}", e);
     });
-}
 
-/**
-* An inner 'main()' that may fail its initialization.
-*/
-async fn main2() -> Result<!, AppError> {
-    //#later let _ = Peripherals::take()?;
+    spawner.spawn( zb_task(&lc).unwrap() );
 
-    let c: Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
-
-    let _keep: (_,_) = init_nvs(c.storage_partition_name)?;
-
-    LightController::new(&c)?
-        .run(false)?;
+    // 'zb_task' listens to the radio; will feed 'LightController' methods events.
+    // Listen to them.
+    loop {
+        lc.tick() .await
+    }
 }

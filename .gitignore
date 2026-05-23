@@ -1,15 +1,15 @@
 /Cargo.lock
 
-# 'menuconfig' creates; ignore
-/build/
-/managed_components/
-/dependencies.lock
-/sdkconfig.old
-/components_esp32c6.lock
-  # likely a temporary file
+# DO NOT run 'menuconfig' at the root; use '_mc'
+#r 'menuconfig' creates; ignore
+#r/build/
+#r/managed_components/
+#r/dependencies.lock
+#r/sdkconfig.old
+
+# IDF Component Manager lock file, generated during build.
+# Can be in root, but also in subfolders (if build started there)
+components_esp32c6.lock
 
 # 'sdkconfig.defaults' is in version control; this not
-/sdkconfig
-
-# esp-idf-sys generates these (can be ignored)
-*/components_esp32c6.lock
+#/sdkconfig

@@ -26,10 +26,6 @@ fn main() -> Result<()> {
     }
 
     #[cfg(false)]   // DEBUG
-    // NOTE: We don't get the '--bin' target name by design in 'build.rs', so need to (below) generate them all.
-    //  <<
-    //      {}
-    //  <<
     {
         env::vars().for_each(|(a, b)| { eprintln!("{a}={b}"); });
         panic!();
@@ -40,6 +36,7 @@ fn main() -> Result<()> {
 
     // Write some env.vars to the file system. This allows the developer to see where the last build
     // wrote stuff (in particular the TOML-parsed '.in' snippets).
+    #[cfg(false)]
     {
         use std::fs;
         const FN: &str = ".BUILD_ENV";
@@ -69,11 +66,21 @@ fn main() -> Result<()> {
             .unwrap_or_else(|e| panic!("❗Unable to write {FN}: {e}"));
     }
 
-    // Turn 'bin/{name}/app.toml' -> '{out_dir}/{name}_conf.rs'
+    // Turn 'bin/{*}/app.toml' -> '{out_dir}/{*}_conf.rs'
     //
-    // Do this (and marking them as change triggers) for all bin apps.
+    // For _all_ bin targets detected ('light', 'switch'), convert TOML to a program snippet that
+    // provides the configuration. Also mark such TOMLs as triggers for re-running 'build.rs'.
     //
-    // Note: If you create a new 'bin' target, you'll need to induce a rebuild manually, e.g. by 'touch build.rs'.
+    // Note: This needs to be done for all such targets, each time, because of the 'build.rs' execution
+    //      model. It's not related to individual builds, but for providing dynamically built pre-compilation
+    //      dependencies for any builds.
+    //
+    // Note2:
+    //      If you create a new 'bin' target, you MUST inform the Cargo system about it manually.
+    //      Either a 'cargo clean' (harsh!) or just 'touch build.rs'.
+    //
+    // Note3:
+    //      "If two binary targets (light and switch) exist within the same Cargo crate, they share the OUT_DIR."
     {
         let out_dir = env::var("OUT_DIR")
             .expect("OUT_DIR environment variable not set");

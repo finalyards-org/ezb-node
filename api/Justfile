@@ -11,8 +11,8 @@
 default:
     @just --list
 
-# NOTE:
-#	For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
+# For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
+# This is only for commentary purposes.
 nightly := ""
 
 b: build

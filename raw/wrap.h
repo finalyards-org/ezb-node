@@ -44,4 +44,4 @@ const char *ESP_ZIGBEE_VER = \
   _TO_STR(ESP_ZIGBEE_VER_MAJOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_MINOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_PATCH);
-  // "2.0.0"
+  // "2.0.1"

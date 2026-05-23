@@ -1,0 +1,111 @@
+#
+# sdkconfig.defaults
+#
+# Here are lines we have changed in the 'sdkconfig' file.
+#
+# WARN! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
+#     the build! Keep an eye on the build output!!
+#
+#       ^-- this is understandable in the way that the config(s) are intended to be worked on using 'menuconfig',
+#           not by manual edits.
+
+# Rust needs more main task stack size compared to C
+#   - C 'esp_zigbee_sdk' examples use 4096
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
+
+# Recommended by 'esp-idf-svc', at least if (as we do) 'embassy-time-driver' is being used.
+CONFIG_ESP_TIMER_TASK_STACK_SIZE=4096
+#CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=8192
+CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
+
+# 1 ms granularity for (FreeRTOS) thread sleeps (10 ms by default).
+# This is likely vital, for having 'esp-zigbee-lib' respond in a timely manner.
+CONFIG_FREERTOS_HZ=1000
+
+# NOTE! In ESP-IDF use of Kconfig files, DISABLED LINES ARE USUALLY COMMENTED OUT, NOT SET TO '=n'. This seems to be
+#   "so that C #ifdef can be used for seeing which features are in use" (video |here|).
+#
+#       |here| (around 4:20): "ESP32 - Kconfig with ESP-IDF Tutorial" -> https://www.youtube.com/watch?v=KsrDYfQ9geU
+
+#---
+# Zigbee
+CONFIG_ZB_ENABLED=y
+CONFIG_ZB_ZCZR=y
+    # Controller/Router code included (can also do EndDevices with this)
+CONFIG_ZB_RADIO_NATIVE=y
+
+# Partition Table
+# based on 'esp-zigbee-sdk' > examples > home_automation_devices
+#
+# These ARE NOT properly handled by 'esp-idf-sys' (0.37.2) |1|, leading to a build error on 'apps':
+#   <<
+#         CMake Warning at /home/ubuntu/.espressif/esp-idf/v5.5.4/components/partition_table/project_include.cmake:37 (message):
+#    Partition table CSV file
+#    /home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-15e6d77135ef9b21/out/partitions.csv
+#    not found.  Change custom partition CSV path in menuconfig.
+#  Call Stack (most recent call first):
+#    /home/ubuntu/.espressif/esp-idf/v5.5.4/tools/cmake/build.cmake:469 (include)
+#    /home/ubuntu/.espressif/esp-idf/v5.5.4/tools/cmake/build.cmake:720 (__build_process_project_includes)
+#    /home/ubuntu/.espressif/esp-idf/v5.5.4/tools/cmake/project.cmake:752 (idf_build_process)
+#    CMakeLists.txt:36 (project)
+#   <<
+#   Let's keep them disabled. That's fine, as long as we flash with the right 'partitions.csv'.
+#
+#   |1|: "Custom partitions.csv with relative path is not copied to build folder causing build to fail" (GitHub Issues)
+#       https://github.com/esp-rs/esp-idf-sys/issues/395
+#
+#|CONFIG_PARTITION_TABLE_CUSTOM=y
+#|CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+#
+# mbedTLS
+#
+# Optimizes the mbedTLS code size by disabling unused features by ESP-Zigbee-SDK.
+# From: 'esp-zigbee-lib' examples' 'sdkconfig.mbed_tls_minimal'
+#       -> https://github.com/espressif/esp-zigbee-sdk/blob/main/examples/utils/example_common/sdkconfig.mbedtls_minimal
+
+# required
+CONFIG_MBEDTLS_AES_C=y
+CONFIG_MBEDTLS_CCM_C=y
+
+# Disable unused
+CONFIG_MBEDTLS_GCM_C=n
+CONFIG_MBEDTLS_CMAC_C=n
+CONFIG_MBEDTLS_SHA1_C=n
+CONFIG_MBEDTLS_SHA3_C=n
+CONFIG_MBEDTLS_SHA512_C=n
+CONFIG_MBEDTLS_ECP_DP_SECP384R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP521R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP256K1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_BP256R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_BP384R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_BP512R1_ENABLED=n
+CONFIG_MBEDTLS_KEY_EXCHANGE_RSA=n
+CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_PSK=n
+CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA=n
+
+## v5.x
+CONFIG_MBEDTLS_ECP_DP_SECP192R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP224R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP192K1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP224K1_ENABLED=n
+CONFIG_MBEDTLS_KEY_EXCHANGE_DHE_RSA=n
+CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_RSA=n
+
+## v6.0
+# Commented out, to not get warnings about missing configuration keys. Enable once moving to 6.0.
+#CONFIG_MBEDTLS_AES_ONLY_128_BIT_KEY_LENGTH=y
+#CONFIG_MBEDTLS_CTR_DRBG_C=y
+#CONFIG_MBEDTLS_HMAC_DRBG_C=n
+#CONFIG_MBEDTLS_X509_RSASSA_PSS_SUPPORT=n
+#CONFIG_MBEDTLS_CIPHER_MODE_CBC=n
+#CONFIG_MBEDTLS_CIPHER_MODE_CFB=n
+#CONFIG_MBEDTLS_CIPHER_MODE_CTR=n
+#CONFIG_MBEDTLS_CIPHER_MODE_OFB=n
+#CONFIG_MBEDTLS_CIPHER_MODE_XTS=n
+#CONFIG_MBEDTLS_RSA_C=n
+#CONFIG_MBEDTLS_MD5_C=n
+#CONFIG_MBEDTLS_SHA384_C=n
+
+# end of mbedTLS

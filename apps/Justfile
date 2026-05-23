@@ -3,6 +3,9 @@
 #
 # Development helper targets. Optional.
 #
+# Requires:
+#	- jq	(sudo apt install jq)
+#
 # Usage:
 #   <<
 #     $ just {--list|{..target..}}
@@ -11,9 +14,11 @@
 default:
     @just --list
 
-# NOTE:
-#	For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
+# For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
+# This is only for commentary purposes.
 nightly := ""
+
+target_dir := `cargo metadata --format-version 1 --no-deps | jq -r '.target_directory'`
 
 [group('light')]
 lb: light-build
@@ -25,3 +30,13 @@ light-build:
 lr: light-run
 light-run:
 	cargo {{nightly}} run --release -vv --bin light
+
+# List the *last* 'sdkconfig'
+echo-sdkconfig-path:
+	@\
+	out=$(find {{target_dir}} -name sdkconfig -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
+	if [ -z "$out" ]; then \
+		echo >&2 "Error: No 'sdkconfig' found in {{target_dir}}"; \
+		false; \
+	fi; \
+	echo "$out"

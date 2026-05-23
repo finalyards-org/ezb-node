@@ -14,7 +14,7 @@ esp_idf_component_manager = "y"
     # "on/y by default, but good practice to explicitly state"
 
 [[package.metadata.esp-idf-sys.extra_components]]
-remote_component = { name = "espressif/esp-zigbee-lib", version = "2.*" }
+remote_component = { name = "espressif/esp-zigbee-lib", version = "2.0.1" }
 
 [dependencies]
 log.workspace = true

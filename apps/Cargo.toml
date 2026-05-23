@@ -8,10 +8,10 @@ publish = false
 # Inform 'espflash'
 #
 # We are anyways pointing the flashing command ('espflash') directly at the partition table, so keeping this hidden,
-# to avoid confusion. auth/3-May-26
+# to avoid confusion. 3-May-26
 #
-#[package.metadata.espflash]
-#partition_table = "partitions.csv"
+[package.metadata.espflash]
+partition_table = "partitions.csv"
 
 [dependencies]
 ezb-node = { path = "../api", features = [] }   # "coordinator", "router"
