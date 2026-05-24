@@ -1,5 +1,7 @@
 //use alloc::collections::BTreeMap;
 
+use core::time::Duration;
+
 use ezb_node::{
     AppSignal,
     BdbStatus,
@@ -12,28 +14,63 @@ use ezb_node::{
     //r utils::PascalString,
 };
 
-use embassy_time::{Duration};
+//r use embassy_time::{Duration};
 
 use crate::{scheduler::schedule};
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
+
+const CONFIG: &Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
 
 pub(crate) struct LightController where Self: Node {
     // can have state here
 }
 
 impl LightController {
-    pub fn new(c: &Config) -> Result<Self,ezb_node::Error> {
+    pub fn new() -> Result<Self,ezb_node::Error> {
+        let c = CONFIG;
         Self::init(c)?;
         Self::add_endpoints(c)?;
 
         Ok(Self {})
+    }
+
+    #[cfg(false)] //R; in API
+    /**
+    * Launch the task that receives Zigbee events, and pumps them to our '.on_app_signal()'.
+    */
+    //* @note Here (and in not 'Node'), because needs 'std::thread'. TEMP
+    //
+    // 'auto_start': we might get rid of this parameter. It has to do with the application initialization logic.
+    //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
+    //      activated by a call to '...'.
+    //
+    //      We could do a different kind of arrangement, in Rust (while retaining the freedom)... #tbd
+    //
+    fn spawn(&self, auto_start: bool) -> Result<(), std::io::Error> {
+        use std::thread;
+
+        let _ = thread::Builder::new()
+            .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
+            .stack_size(TASK_STACK_SIZE)    // Rust: 20000
+            .spawn(move || {
+                log::info!("Zigbee task running");
+
+                self.run(auto_start).unwrap_or_else(|e| {
+                    log::error!("Zigbee task failed: {:?}", e);
+                });
+            })?;
+
+        // Right after the thread is successfully spawned.
+        Ok(())
     }
 }
 
 impl Node for LightController {
     /**
     * Behaviour of this particular node.
+    *
+    * @note Gets called in the application RTOS thread.
     */
     fn on_app_signal(&self, sig: AppSignal) {
         on_app_signal(self, sig)

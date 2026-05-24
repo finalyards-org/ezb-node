@@ -13,8 +13,11 @@ log.workspace = true
 embassy-executor = { version = "0.10.0" }
 embassy-time = { workspace = true, features = ["log"] }
 
-esp-idf-sys = { workspace = true, default-features = false }
-    # just core
+# 'esp-idf-svc' is vital for:
+#   - 'std' for RTOS threading (running Zigbee task separate from the application task)
+#   + 'native' (from workspace) needed for linking (likely; tbd. confirm)
+#
+esp-idf-svc = { workspace = true, features = ["std"], default-features = false }
 
 bitflags = { version = "2.11.1" }
 

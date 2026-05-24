@@ -10,7 +10,8 @@ resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
 [workspace.dependencies]
-esp-idf-sys = { version = "0.37", default-features = false }
+#esp-idf-sys = { version = "0.37", default-features = false }
+esp-idf-svc = { version = "0.52", default-features = false, features = ["native"] }
 log = { version = "0.4" }
 
 embassy-time = { version = "0.5", features = ["log"] }

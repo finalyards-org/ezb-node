@@ -5,7 +5,7 @@ use core::fmt::{
     Formatter,
 };
 
-use esp_idf_sys::EspError;
+use esp_idf_svc::sys::EspError;
 
 #[derive(Debug, Clone)]
 pub enum Error {

@@ -118,7 +118,6 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 	```
 	$ sudo apt install git python3 python3-venv cmake pkg-config
 	```
-	<!-- wget? libssl-dev? libusb-1.0-0? -->
 
 - Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
 

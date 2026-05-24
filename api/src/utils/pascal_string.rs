@@ -1,5 +1,4 @@
-
-use alloc::vec::Vec;
+use std::vec::Vec;
 
 /**
 * Handling strings (e.g. Zigbee manufacturer info) where the initial byte provides the length.

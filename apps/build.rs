@@ -82,8 +82,7 @@ fn main() -> Result<()> {
     // Note3:
     //      "If two binary targets (light and switch) exist within the same Cargo crate, they share the OUT_DIR."
     {
-        let out_dir = env::var("OUT_DIR")
-            .expect("OUT_DIR environment variable not set");
+        let out_dir = env::var("OUT_DIR").unwrap();
 
         let dir_entries = fs::read_dir("bin")?
             .flatten()

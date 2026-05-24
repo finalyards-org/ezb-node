@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use ezb_node_config::{
     ChannelMask,
     Config,
@@ -11,17 +13,20 @@ use ezb_node_raw::{
     ezb_nwk_device_type_t::*,
 };
 
+static BAKED: OnceLock<esp_zigbee_config_t> = OnceLock::new();
+    // 'esp_zigbee_config_t' is the struct itself (not a pointer)
+
 /**
 * A view to a 'Config' struct used in initializing 'Node'.
 *
 * Covers TOML sections '[network]', '[platform]' and '[node]'.
 */
-pub struct PlatformDeviceView<'a>(&'a Config);
+pub struct PlatformDeviceView(&'static Config);
 
-impl<'a> PlatformDeviceView<'a> {
+impl PlatformDeviceView {
 
-    pub(crate) fn expand(&self) -> (esp_zigbee_config_t, [ChannelMask;2]) {
-        let channel_masks = self.0.channel_masks;
+    pub(crate) fn expand(&self) -> (&'static esp_zigbee_config_t, &'static [ChannelMask;2]) {
+        let channel_masks = &self.0.channel_masks;
         let storage_partition_name = self.0.storage_partition_name.as_ref();
         let nt = self.0.node;
 
@@ -75,13 +80,19 @@ impl<'a> PlatformDeviceView<'a> {
             platform_config: platform_cfg,
         };
 
+        // Since the config is only one (we know this, it's not in the types), we can simply provide the first
+        // value ever created. (We can also panic if coming here a second time; should not happen).
+        //
+        assert!(BAKED.get().is_none(), "Internal: initializing the node twice.");
+
+        let cc = BAKED.get_or_init(|| cc);
         (cc, channel_masks)
     }
 }
 
-// This allows an app to provide '&Config' where the needing party only takes a view.
-impl<'a> From<&'a Config> for PlatformDeviceView<'a> {
-    fn from(c: &'a Config) -> Self {
+// This allows an app to provide a static '&Config' where the needing party only needs a view.
+impl From<&'static Config> for PlatformDeviceView {
+    fn from(c: &'static Config) -> Self {
         Self(c)
     }
 }

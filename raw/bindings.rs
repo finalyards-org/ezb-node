@@ -41,15 +41,12 @@ pub const EZB_ZCL_CLUSTER_SERVER: u8 = a::EZB_ZCL_CLUSTER_SERVER as _;
 
 use core::mem::MaybeUninit;
 
-// NVS
+// Bit of a #hack, to help the 'api' level use 'esp_zigbee_config_t' within 'OnceLock'. We *know* (well, API level knows)
+// it's not getting shipped across task boundaries. We kind-of lie that it would be okay, if it did (which would still
+// be okay, since those are non-changing pointers). This is about the C pointers within the structure.
 //
-#[cfg(false)]   //R (if 'esp-idf-svc' works)
-pub mod sys {
-    pub use super::{
-        nvs_flash_init,
-        nvs_flash_init_partition,
-    };
-}
+unsafe impl Send for esp_zigbee_config_s {}
+unsafe impl Sync for esp_zigbee_config_s {}
 
 #[cfg(false)]
 impl ezb_extpanid_t {

@@ -35,17 +35,6 @@ mod scheduler;
 
 //use my_controller::LightController;
 
-static CONFIG: Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
-
-/**
-* Task that receives Zigbee events. Not application specific (at least not much).
-*/
-compile_error!("Ei näin, vaan 'std::thread':n kautta (laita se kirjastoon, pidä täällä apps-puolella)")
-#[embassy_executor::task]
-async fn zb_task(controller: &'static dyn Node) {
-    controller.run(false).unwrap();
-}
-
 /**
 * The entry point.
 *
@@ -75,7 +64,7 @@ async fn main(_spawner: Spawner) {
         panic!("Initialization failed: {:?}", e);
     });
 
-    spawner.spawn( zb_task(&lc).unwrap() );
+    lc.spawn();
 
     // 'zb_task' listens to the radio; will feed 'LightController' methods events.
     // Listen to them.

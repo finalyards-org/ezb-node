@@ -3,29 +3,34 @@
 *   - Singleton; there's only one Node in a running system
 *   - Methods, not globals. Helps e.g. in IDE auto-completion (and generally not being able to see weird stuff
 *       outside their context). In comparison, C API has everything as global functions, which is overwhelming.
+*   - Application task does not (need to) know about the underlying Zigbee task; it's an Embassy application
+*     and can use 'async' for its own concurrency.
 *
 * Note:
 *   - Native mode only; no RCP (radio co-processor) implementation. C API has both.
 */
-use alloc::boxed::Box;
 
-//use core::{
-    //sync::atomic::{AtomicBool, Ordering}
-//};
+mod zigbee_task;
+use zigbee_task::zigbee_spawn;
+
+use std::{
+    boxed::Box,
+    sync::OnceLock,
+};
 
 use bitflags::bitflags;
-use esp_idf_sys::EspError;
+use esp_idf_svc::{
+    sys::EspError
+};
 use log;
 
 use ezb_node_raw::{
     esp_zigbee_init,
     ezb_app_signal_t,
-    //ezb_app_signal_type_t,
     ezb_bdb_start_top_level_commissioning,
     ezb_bdb_is_factory_new,
     ezb_nwk_get_panid,
     ezb_nwk_get_extended_panid,
-    //ezb_extpanid_t,
     ezb_nwk_get_short_address,
     ezb_nwk_get_current_channel,
     ezb_bdb_comm_mode_t,
@@ -47,41 +52,33 @@ use crate::{
         InitializationFailed
     },
     config_views::PlatformDeviceView,
-    utils::DareOnceCell,
 };
 
 use ezb_node_config::ChannelMask;
 
-// Note: We could just use a 'static mut' - though Rust doesn't like that too much.
-//      All use is from the same application, RTOS task, and async environment.
-//
-#[cfg(false)]
-static mut SINGLETON: Option<esp_zigbee_config_t> = None;
-
-static SINGLETON: DareOnceCell<esp_zigbee_config_t> = DareOnceCell::new();
-    // 'esp_zigbee_config_t' is the struct itself (not a pointer)
-    //
-    //  - mostly here for documentary intention (to show the singleton state); it's leaked
-
 /**
-* Provides access to the radio, and decides the role (Coordinator/Router/EndDevice) of the ... Node.
+* Provides access to the radio. The application struct implementing this decides the role (Coordinator/Router/EndDevice)
+* that this has.
 *
 * A **singleton** - you can create only one and it has "endless" (static) lifespan.
+*
+* @thread Call from application RTOS thread.
 */
-// tbd. review the comment above
 pub trait Node {
-    fn on_app_signal(&self, sig: AppSignal);
+    /**
+    * Callback on Zigbee events.        // tbd. EDIT!
+    */
+    //r fn on_app_signal(&self, sig: AppSignal);
+    fn poll_app_signal(&self) -> Option<AppSignal> {
+        todo!()
+    }
 
     /**
     * Initialize a 'Node' from a given configuration.
     */
+    #[cfg(false)] //R
     fn init<'a>(cv: impl Into<PlatformDeviceView<'a>>) -> Result<(),crate::Error> {
         let (cc, channel_masks) = cv.into().expand();
-
-        let cc: &'static esp_zigbee_config_t = {
-            SINGLETON.set(cc).map_err(|_| AlreadyInUse )?;
-            SINGLETON.get().unwrap()
-        };
 
         // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
@@ -104,30 +101,15 @@ pub trait Node {
     }
 
     /**
-    * Process Zigbee messages.
-    *
-    * @param auto_start
-    *   'true' for automatic start of the Zigbee stack
-    *   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
+    * Launch the task that receives Zigbee events, converts them to Rust structs, and sends them to a FIFO that
+    * the application task can read.
     */
-    // tbd. could do so that the 'init', add endpoints, 'start' order is enforced by the type system. Currently,
-    //      it's not, but it would take active malpractice to steer away from the suggested model.
+    // 'auto_start': we might get rid of this parameter. It has to do with the application initialization logic.
+    //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
+    //      activated by a call to '...'.
     //
-    fn run(self: Self, auto_start: bool) -> Result<!,EspError>
-    where Self: Sized {
-        assert!( SINGLETON.get().is_some(), "Please call '::init()' before us.");
-
-        let err = unsafe {
-            esp_zigbee_start(auto_start)
-        };
-        EspError::from(err).map_or(Ok(()), Err)?;
-
-        let err = unsafe {
-            esp_zigbee_launch_mainloop()
-        };
-        EspError::from(err).map_or(Ok(()), Err)?;
-
-        todo!()
+    fn spawn(self, cfg: &'static PlatformDeviceView, auto_start: bool) -> Result<(), std::io::Error> where Self: Sized {
+        zigbee_spawn(cfg, auto_start)
     }
 
     /**
@@ -207,32 +189,6 @@ pub trait Node {
     fn factory_reset(&self) {
         unsafe {
             esp_zb_factory_reset()
-        }
-    }
-
-    /**
-    * Set the primary and secondary channel mask, on the C library side. Called only by '::new()'.
-    *
-    * @note This (for primary) "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'".
-    *       "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x docs)
-    *       -- but we call it every time.
-    */
-    fn set_channel_sets(channel_masks: &[ChannelMask;2]) {
-
-        for (primary,cm) in [true,false].into_iter().zip(channel_masks) {
-            let err = unsafe {
-                if primary {
-                    ezb_bdb_set_primary_channel_set(cm.bits())
-                } else {
-                    ezb_bdb_set_secondary_channel_set(cm.bits())
-                }
-            };
-            // EZB_ERR_NONE
-            // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
-
-            EspError::from(err).map(|e| {
-                panic!("Setting {} channel set failed: {}", if primary {"primary"} else {"secondary"}, e);
-            });
         }
     }
 }
