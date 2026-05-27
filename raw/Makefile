@@ -115,6 +115,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --allowlist-function 'esp_zigbee_.+' \
 			--allowlist-function 'ezb_af_(?:create|device|endpoint|xxx)_.+' \
 			--allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
+			--allowlist-function 'ezb_aps_(?:secur|xxx)_.+' \
 			--allowlist-function 'ezb_bdb_.+' \
 	    --allowlist-function 'ezb_get_current_.+' \
 			--allowlist-function 'ezb_nwk_.+' \

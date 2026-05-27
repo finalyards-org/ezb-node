@@ -212,28 +212,6 @@ bitflags! {
     }
 }
 
-/*
-* Handler for Zigbee APP signals.
-*/
-// typedef void *ezb_app_signal_t;
-// typedef uint16_t ezb_app_signal_type_t;
-//
-#[unsafe(no_mangle)]
-extern "C" fn esp_zb_app_signal_handler(p_app_signal: *const ezb_app_signal_t) {
-
-    let p_type = unsafe { ezb_app_signal_get_type(p_app_signal) };
-    let p_params = unsafe { ezb_app_signal_get_params(p_app_signal) };
-
-    AppSignal::from(p_type, p_params)
-        .map(|sig| {
-            log::info!("Received: {}", sig);
-        })
-        .unwrap_or_else(|| {
-
-            log::error!("Unexpected app signal: {}, {:?}", p_type, p_params);
-        });
-}
-
 /**
 * Internal helper.
 *

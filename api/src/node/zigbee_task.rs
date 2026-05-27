@@ -26,6 +26,8 @@ use ezb_node_raw::{
     esp_zigbee_start,
     ezb_app_signal_get_params,
     ezb_app_signal_get_type,
+    ezb_aps_secur_enable_distributed_security,
+    ezb_app_signal_add_handler,
 };
 
 use crate::{
@@ -77,45 +79,36 @@ pub(crate) fn zigbee_spawn(cfg: &'static PlatformDeviceView, auto_start: bool) -
 fn zigbee_init(cfg: &PlatformDeviceView) -> Result<(),crate::Error> {
     let (cc, channel_masks) = cfg.expand();
 
-    // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
-    //
-    let err = unsafe { esp_zigbee_init(cc) };
+    let inner = || -> Result<(),EspError> {
+        // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
         //
-        // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
-        // Providing it a 'static', non-changing struct is safe.
+        EspError::from(unsafe { esp_zigbee_init(cc) }).map_or(Ok(()), Err)?;
+            //
+            // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
+            // Providing it a 'static', non-changing struct is safe.
 
-    EspError::from(err).map_or(Ok(()), |e| { Err(InitializationFailed(e)) })?;
+        EspError::from(unsafe { ezb_aps_secur_enable_distributed_security(false) }).map_or(Ok(()), Err)?;
 
-    zigbee_set_channel_sets(&channel_masks);
-    Ok(())
-}
-
-/**
-* Set the primary and secondary channel mask, on the C library side.
-*
-* @note This (for primary) "should be called [...] after 'ezb_core_init()' and before 'ezb_dev_start()'".
-*       "If function is not called, by default it will scan all channels or read from zb_fct NVRAM zone if available." (1.x docs)
-*       -- but we call it every time.
-*/
-fn zigbee_set_channel_sets(channel_masks: &[ChannelMask;2]) {
-
-    for (primary,cm) in [true,false].into_iter().zip(channel_masks) {
-        let err = unsafe {
-            if primary {
-                ezb_bdb_set_primary_channel_set(cm.bits())
-            } else {
-                ezb_bdb_set_secondary_channel_set(cm.bits())
-            }
-        };
-        // EZB_ERR_NONE
-        // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
-
-        // Since the config is validated already at compilation, we are not expecting a failure, here (thus panic).
+        // Since the configs are validated at compilation, we are not expecting a failure.
         //
-        EspError::from(err).map(|e| {
-            panic!("Setting {} channel set failed: {}", if primary {"primary"} else {"secondary"}, e);
-        });
-    }
+        [ezb_bdb_set_primary_channel_set, ezb_bdb_set_secondary_channel_set].into_iter()
+            .zip( channel_masks.map(|cm| cm.bits() ))
+            .for_each(|(f, mask)| {
+                let err = unsafe { f(mask) };
+                    // EZB_ERR_NONE
+                    // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
+
+                EspError::from(err).unwrap_or_else(|e| {
+                    panic!("Unexpected problem setting channel masks: {}", e);
+                });
+            });
+
+        EspError::from({ unsafe { ezb_app_signal_add_handler(Some(app_signal_handler)) } })
+            .map_or(Ok(()), Err)
+            // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
+            //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
+    };
+    inner().map_err(|e| { InitializationFailed(e) })
 }
 
 /**
@@ -143,3 +136,27 @@ fn zigbee_run(auto_start: bool) -> Result<!,EspError> {
     //panic!("Returned from main loop, unharmed.");   // if we get here, we could do the "deinit" and just return '()'
 }
 
+/**
+* Handler for Zigbee APP signals.
+*/
+// typedef void *ezb_app_signal_t;
+// typedef uint16_t ezb_app_signal_type_t;
+//
+#[unsafe(no_mangle)]
+extern "C" fn app_signal_handler(p_app_signal: *const ezb_app_signal_t) -> bool {
+
+    let p_type = unsafe { ezb_app_signal_get_type(p_app_signal) };
+    let p_params = unsafe { ezb_app_signal_get_params(p_app_signal) };
+
+    AppSignal::from(p_type, p_params)
+        .map(|sig| {
+            log::info!("Received: {}", sig);
+
+            // todo: Push 'sig' to a channel
+        })
+        .unwrap_or_else(|| {
+            log::error!("Unexpected app signal: {}, {:?}", p_type, p_params);
+        });
+
+    todo!()     // when to return 'true'?
+}

@@ -61,6 +61,7 @@ rustflags = [
 [env]
 MCU = "esp32c6"
 ESP_IDF_VERSION = "5.5.4"
+#ESP_IDF_VERSION = "6.0.0"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'

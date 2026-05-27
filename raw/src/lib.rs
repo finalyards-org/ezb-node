@@ -55,6 +55,8 @@ pub use bindings::{
     ezb_app_signal_type_e,
     ezb_extaddr_t,
     ezb_bdb_comm_status_e,
+    ezb_aps_secur_enable_distributed_security,
+    ezb_app_signal_add_handler,
 };
 
 // Node constants and methods (global in C API)
