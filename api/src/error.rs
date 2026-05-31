@@ -7,10 +7,11 @@ use core::fmt::{
 
 use esp_idf_svc::sys::EspError;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Error {
     AlreadyInUse,       // only one Controller/Router/EndDevice allowed
     InitializationFailed(EspError),
+    SpawnFailed(std::io::Error),
 }
 
 impl Display for Error {

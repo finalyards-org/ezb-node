@@ -113,25 +113,25 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --allowlist-file wrap.h \
 			\
 	    --allowlist-function 'esp_zigbee_.+' \
-			--allowlist-function 'ezb_af_(?:create|device|endpoint|xxx)_.+' \
+			--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
 			--allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
 			--allowlist-function 'ezb_aps_(?:secur|xxx)_.+' \
 			--allowlist-function 'ezb_bdb_.+' \
 	    --allowlist-function 'ezb_get_current_.+' \
 			--allowlist-function 'ezb_nwk_.+' \
-			--allowlist-function 'ezb_zcl_(?:basic_cluster|core|ota_upgrade|xxx)_.+' \
-			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|xxx)' \
+			--allowlist-function 'ezb_zcl_(?:basic_cluster|core|ota_upgrade)_.+' \
+			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light)' \
 			\
-	    --allowlist-type 'ezb_af_(?:device|endpoint|xxx)_.+' \
+	    --allowlist-type 'ezb_af_(?:device|endpoint)_.+' \
 	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_bdb_.+' \
 	    --allowlist-type 'ezb_nwk_.+' \
-	    --allowlist-type 'ezb_zcl_(?:basic_cluster|basic_server|cluster|xxx)_.+' \
+	    --allowlist-type 'ezb_zcl_(?:basic_cluster|core|basic_server|cluster)_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    \
 	    --allowlist-var 'ESP_ERR_.+' \
-	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|DEF)_.+' \
+	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \
 	    --allowlist-var 'EZB_ZHA_(?:COLOR_DIMMABLE_LIGHT|XXX)_.+' \
 	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \

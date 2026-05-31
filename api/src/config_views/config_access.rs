@@ -21,9 +21,9 @@ static BAKED: OnceLock<esp_zigbee_config_t> = OnceLock::new();
 *
 * Covers TOML sections '[network]', '[platform]' and '[node]'.
 */
-pub struct PlatformDeviceView(&'static Config);
+pub struct ConfigAccess(&'static Config);
 
-impl PlatformDeviceView {
+impl ConfigAccess {
 
     pub(crate) fn expand(&self) -> (&'static esp_zigbee_config_t, &'static [ChannelMask;2]) {
         let channel_masks = &self.0.channel_masks;
@@ -91,7 +91,7 @@ impl PlatformDeviceView {
 }
 
 // This allows an app to provide a static '&Config' where the needing party only needs a view.
-impl From<&'static Config> for PlatformDeviceView {
+impl From<&'static Config> for ConfigAccess {
     fn from(c: &'static Config) -> Self {
         Self(c)
     }

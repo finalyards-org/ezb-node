@@ -26,11 +26,11 @@ use ezb_node_apps::{
     set_panic_hook,
     AppError,
 };
-use crate::light_controller::LightController;
+use crate::light_coordinator::LightCoordinator;
 
 //use hal::peripherals::Peripherals;
 
-mod light_controller;
+mod light_coordinator;
 mod scheduler;
 
 //use my_controller::LightController;
@@ -50,25 +50,22 @@ async fn main(_spawner: Spawner) {
 
     log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
+    const CONFIG: &Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
+
     // Initialize and provide error message
     //
     let _keep: (_,_);
-    let init_res: Result<LightController,ezb_node::Error> = async {
-        _keep = init_nvs(crate::CONFIG.storage_partition_name)?;
 
-        let lc = LightController::new(&CONFIG)?;
-        Ok(lc)
-    };
+    let lc: LightCoordinator = (|| {    // Rust note: scope the '?' by an anonymous closure
+        _keep = init_nvs(CONFIG.storage_partition_name)?;
+        let tmp = LightCoordinator::new(CONFIG)?;
+            // The Zigbee task is now running (will be, at least..)
 
-    let lc = init_res.unwrap_or_else(|e| {
+        Ok(tmp)
+    })()
+    .unwrap_or_else(|e: ezb_node::Error| {
         panic!("Initialization failed: {:?}", e);
     });
 
-    lc.spawn();
-
-    // 'zb_task' listens to the radio; will feed 'LightController' methods events.
-    // Listen to them.
-    loop {
-        lc.tick() .await
-    }
+    lc.run() .await;
 }

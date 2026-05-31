@@ -4,8 +4,11 @@
 *
 * These are all internal details.
 */
-mod platform_device_view;
-pub use platform_device_view::*;
+mod config_access;
+pub use config_access::ConfigAccess;
 
-mod device_descriptor_view;
-pub use device_descriptor_view::*;
+//r mod device_descriptor_view;
+//r pub use device_descriptor_view::*;
+
+mod endpoint_creator;
+pub use endpoint_creator::EndpointCreator;

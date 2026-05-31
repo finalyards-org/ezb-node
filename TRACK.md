@@ -30,13 +30,15 @@ We could do this with symbolic links. Just distribute a file to all `api`, `apps
 >Edit: Went with this. Works.
 
 
+<!-- resolved
 ## `nightly` vs. `newlib`
 
 - ["Build failing on latest nightly: SIGKILL not found in libc (unix::process)"](https://github.com/esp-rs/esp-idf-sys/issues/419) (GitHub; not the upstream issue)
 
 A mismatch between Rust `nightly` (roughly 2026-05-15), and the `newlib` used in `esp-idf-sys`. 
 
-- [ ] Once there's a fix, remove the `nightly` pin in `rust-toolchain.toml`. <!-- and some Justfile's -->
+- [ ] Once there's a fix, remove the `nightly` pin in `rust-toolchain.toml`.
+-->
 
 
 ## `esp-zigbee-sdk` ESP-IDF 6.0 compatibility
@@ -68,10 +70,11 @@ compilation terminated.
 - [ ] Consider opening an issue (maybe only once we have a Rust binding available...).
 -->
 
+<!-- merged
 ## `esp-idf-sys` with ESP-IDF 6.0
 
-- [ ] ["Add (some) support for ESP-IDF v6.0"](https://github.com/esp-rs/esp-idf-sys/pull/408)
-	
+- [x] ["Add (some) support for ESP-IDF v6.0"](https://github.com/esp-rs/esp-idf-sys/pull/408)
+-->	
 
 ## `zigbee-rs`
 

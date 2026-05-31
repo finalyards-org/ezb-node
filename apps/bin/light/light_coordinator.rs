@@ -2,82 +2,58 @@
 
 use core::time::Duration;
 
-use ezb_node::{
-    AppSignal,
-    BdbStatus,
-    Config,
-    Node,
-    //PlatformDeviceView,
-    node::{
-        CommissioningModesMask,
-    },
-    //r utils::PascalString,
+use embassy_sync::channel::{
+    DynamicReceiver
 };
 
-//r use embassy_time::{Duration};
+use ezb_node::{AppSignal, BdbStatus, Config, Node, node::{
+    CommissioningModesMask,
+}, ConfigAccess};
 
 use crate::{scheduler::schedule};
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
-const CONFIG: &Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
-
-pub(crate) struct LightController where Self: Node {
+pub(crate) struct LightCoordinator
+where Self: Node {
     // can have state here
 }
 
-impl LightController {
-    pub fn new() -> Result<Self,ezb_node::Error> {
-        let c = CONFIG;
-        Self::init(c)?;
+impl LightCoordinator {
+    pub fn new(c: &'static Config) -> Result<Self,ezb_node::Error> {
+        const AUTO_START: bool = false;
+            // Note: This might disappear, see comment of 'Node::init()'.
+
+        let () = <Self as Node>::init(c,AUTO_START)?;
+
         Self::add_endpoints(c)?;
 
         Ok(Self {})
     }
 
-    #[cfg(false)] //R; in API
-    /**
-    * Launch the task that receives Zigbee events, and pumps them to our '.on_app_signal()'.
-    */
-    //* @note Here (and in not 'Node'), because needs 'std::thread'. TEMP
-    //
-    // 'auto_start': we might get rid of this parameter. It has to do with the application initialization logic.
-    //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
-    //      activated by a call to '...'.
-    //
-    //      We could do a different kind of arrangement, in Rust (while retaining the freedom)... #tbd
-    //
-    fn spawn(&self, auto_start: bool) -> Result<(), std::io::Error> {
-        use std::thread;
-
-        let _ = thread::Builder::new()
-            .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
-            .stack_size(TASK_STACK_SIZE)    // Rust: 20000
-            .spawn(move || {
-                log::info!("Zigbee task running");
-
-                self.run(auto_start).unwrap_or_else(|e| {
-                    log::error!("Zigbee task failed: {:?}", e);
-                });
-            })?;
-
-        // Right after the thread is successfully spawned.
-        Ok(())
-    }
-}
-
-impl Node for LightController {
     /**
     * Behaviour of this particular node.
-    *
-    * @note Gets called in the application RTOS thread.
     */
-    fn on_app_signal(&self, sig: AppSignal) {
-        on_app_signal(self, sig)
+    pub async fn run(&self) {
+        let rx = self.receiver();
+
+        loop {
+            let sig: AppSignal = rx.receive() .await;
+
+            if let Some(x) = on_app_signal(self, sig) {
+                log::debug!("No match for: {x}");
+            }
+        }
     }
 }
 
-fn on_app_signal(this: &LightController, sig: AppSignal) {
+/**
+* Run the received signal through our logic match.
+*
+* @return 'Some<AppSignal>' if the signal did not find a match (remains to be processed).
+*       'None' if the signal has been taken care of
+*/
+fn on_app_signal(this: &LightCoordinator, sig: AppSignal) -> Option<AppSignal> {
     use AppSignal::*;
 
     match sig {
@@ -150,7 +126,8 @@ fn on_app_signal(this: &LightController, sig: AppSignal) {
         },
 
         _ => {
-            log::debug!("ZDO signal: {sig}");
+            return Some(sig);    // no match!
         },
     }
+    None
 }

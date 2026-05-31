@@ -37,12 +37,12 @@ use embassy_sync::channel::Channel;
 use core::cmp::Ordering;
 use embassy_futures::select::{select, Either};
 
-use crate::LightController;
+use crate::LightCoordinator;
 
 // Channel to send tasks over
 static SCHED_CHAN: Channel<CriticalSectionRawMutex, ScheduledTask, 4> = Channel::new();
 
-type NodeT = LightController;
+type NodeT = LightCoordinator;
 
 /*
 * Something the application wants to happen, in the future.

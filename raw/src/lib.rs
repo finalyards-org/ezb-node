@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(never_type)]
 extern crate alloc;
 
 #[path = "../bindings.rs"]
@@ -104,8 +105,6 @@ pub use bindings::{
     ezb_af_ep_desc_t,
     ezb_zha_create_color_dimmable_light,
     ezb_zcl_cluster_id_e,
-    EZB_ZCL_CLUSTER_CLIENT,
-    EZB_ZCL_CLUSTER_SERVER,
     ezb_zcl_cluster_desc_t,
     ezb_af_endpoint_get_cluster_desc,
     ezb_zcl_basic_cluster_desc_add_attr,
@@ -115,6 +114,10 @@ pub use bindings::{
     ezb_zcl_core_action_handler_register,
     ezb_af_create_device_desc,
     ezb_af_device_desc_t,
+    EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG,
+    ClusterRole,
+    //ezb_zcl_core_action_callback_id_t,    // DO NOT expose this (it's u32), use '..._e' instead
+    ezb_zcl_core_action_callback_id_e,
 };
 
 // NVS access

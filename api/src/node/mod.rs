@@ -13,20 +13,15 @@
 mod zigbee_task;
 use zigbee_task::zigbee_spawn;
 
-use std::{
-    boxed::Box,
-    sync::OnceLock,
-};
-
 use bitflags::bitflags;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::{Channel, DynamicReceiver};
 use esp_idf_svc::{
     sys::EspError
 };
 use log;
 
 use ezb_node_raw::{
-    esp_zigbee_init,
-    ezb_app_signal_t,
     ezb_bdb_start_top_level_commissioning,
     ezb_bdb_is_factory_new,
     ezb_nwk_get_panid,
@@ -34,27 +29,15 @@ use ezb_node_raw::{
     ezb_nwk_get_short_address,
     ezb_nwk_get_current_channel,
     ezb_bdb_comm_mode_t,
-    esp_zigbee_config_t,
-    ezb_bdb_set_primary_channel_set,
-    ezb_bdb_set_secondary_channel_set,
-    esp_zigbee_launch_mainloop,
-    esp_zigbee_start,
-    ezb_app_signal_get_params,
-    ezb_app_signal_get_type,
 };
 
-use crate::{
-    AppSignal,
-    DeviceDescriptorView,
-    IeeeAddr,
-    Error::{
-        AlreadyInUse,
-        InitializationFailed
-    },
-    config_views::PlatformDeviceView,
-};
+use crate::{AppSignal, DeviceDescriptorView, IeeeAddr, config_views::ConfigAccess, Error};
 
-use ezb_node_config::ChannelMask;
+// Channel:
+//  - fed by the Zigbee task; blocking
+//  - consumed by the application task; async
+//
+static CHANNEL: Channel<CriticalSectionRawMutex, AppSignal, 10> = Channel::new();
 
 /**
 * Provides access to the radio. The application struct implementing this decides the role (Coordinator/Router/EndDevice)
@@ -66,50 +49,32 @@ use ezb_node_config::ChannelMask;
 */
 pub trait Node {
     /**
-    * Callback on Zigbee events.        // tbd. EDIT!
+    * Initialize the Zigbee side of things.
+    *
+    * This launches the task that receives Zigbee events, converts them to Rust-friendly structs, and sends them over
+    * to the application task.
     */
-    //r fn on_app_signal(&self, sig: AppSignal);
-    fn poll_app_signal(&self) -> Option<AppSignal> {
-        todo!()
-    }
-
-    /**
-    * Initialize a 'Node' from a given configuration.
-    */
-    #[cfg(false)] //R
-    fn init<'a>(cv: impl Into<PlatformDeviceView<'a>>) -> Result<(),crate::Error> {
-        let (cc, channel_masks) = cv.into().expand();
-
-        // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
-        //
-        let err = unsafe { esp_zigbee_init(cc) };
-            //
-            // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
-            // Providing it a 'static', non-changing struct is safe.
-
-        EspError::from(err).map_or(Ok(()), |e| { Err(InitializationFailed(e)) })?;
-
-        Self::set_channel_sets(&channel_masks);
+    // 'auto_start': we might get rid of this parameter. It has to do with the application initialization logic.
+    //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
+    //      activated by a call to '...'.
+    //
+    fn init(cv: impl Into<&'static ConfigAccess>, auto_start: bool) -> Result<(), crate::Error> {
+        let () = zigbee_spawn(cv, auto_start, CHANNEL.dyn_sender())
+            .map_err(|e| { Error::SpawnFailed(e) })?;
         Ok(())
     }
 
     /**
     * Add endpoints to an initialized 'Node' (before starting it).
     */
-    fn add_endpoints<'a>(cv: impl Into<DeviceDescriptorView<'a>>) -> Result<(),crate::Error> {
+    fn add_endpoints(cv: impl Into<&'static DeviceDescriptorView>) -> Result<(),crate::Error> {
         todo!()
     }
 
     /**
-    * Launch the task that receives Zigbee events, converts them to Rust structs, and sends them to a FIFO that
-    * the application task can read.
     */
-    // 'auto_start': we might get rid of this parameter. It has to do with the application initialization logic.
-    //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
-    //      activated by a call to '...'.
-    //
-    fn spawn(self, cfg: &'static PlatformDeviceView, auto_start: bool) -> Result<(), std::io::Error> where Self: Sized {
-        zigbee_spawn(cfg, auto_start)
+    fn receiver() -> DynamicReceiver<'static, AppSignal> {
+        CHANNEL.dyn_receiver()
     }
 
     /**

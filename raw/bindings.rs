@@ -34,10 +34,33 @@
 mod a {
     include!("tmp/bindings_0.rs");
 }
+
 pub use a::*;
 
-pub const EZB_ZCL_CLUSTER_CLIENT: u8 = a::EZB_ZCL_CLUSTER_CLIENT as _;
-pub const EZB_ZCL_CLUSTER_SERVER: u8 = a::EZB_ZCL_CLUSTER_SERVER as _;
+// Shadow some entries (will be used via their enum).
+#[allow(hidden_glob_reexports)]
+//const EZB_ZCL_CLUSTER_CLIENT: () = ();
+mod EZB_ZCL_CLUSTER_CLIENT {}
+#[allow(hidden_glob_reexports)]
+//const EZB_ZCL_CLUSTER_SERVER: () = ();
+mod EZB_ZCL_CLUSTER_SERVER {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum ClusterRole {
+    Server = a::EZB_ZCL_CLUSTER_SERVER as u8, // 1
+    Client = a::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
+}
+
+/*** consider; it really is a bitmask, but we don't likely need it as such
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct ClusterRole: u8 { // C-puolella rooli on yleensä uint8_t
+        const SERVER = EZB_ZCL_CLUSTER_SERVER;  //0x01
+        const CLIENT = EZB_ZCL_CLUSTER_CLIENT;  //0x02
+    }
+}
+***/
 
 use core::mem::MaybeUninit;
 
@@ -245,3 +268,47 @@ fn empty<T>() -> T {
     let un = MaybeUninit::zeroed();
     unsafe { un.assume_init() }
 }
+
+// Cover the raw function, 'ezb_zcl_cluster_id_e' for the enum.
+/// @brief Get a cluster descriptor from an endpoint descriptor.
+///
+/// @param ep_desc    Pointer to endpoint descriptor.
+/// @param cluster_id Cluster identifier.
+/// @param role       Cluster role (server/client).
+/// @return Pointer to the cluster descriptor, or NULL if not found.
+pub unsafe fn ezb_af_endpoint_get_cluster_desc(
+    ep_desc: ezb_af_ep_desc_t,
+    cluster_id: ezb_zcl_cluster_id_e, // u16
+    role: ClusterRole, // u8
+) -> ezb_zcl_cluster_desc_t {
+    unsafe {
+        a::ezb_af_endpoint_get_cluster_desc(
+            ep_desc,
+            cluster_id as u16,
+            role as u8
+            // tbd. the role could be an enum, but we cannot mask out 'a::EZB_ZCL_CLUSTER_{SERVER|CLIENT}' easily, can we?
+        )
+    }
+}
+
+// Cover the raw function, 'ezb_zcl_basic_server_attr_t' for the enum.
+/// @brief Add an attribute to a basic cluster descriptor.
+///
+/// @param cluster_desc Pointer to the basic cluster descriptor, see ezb_zcl_cluster_desc_t.
+/// @param attr_id      Attribute identifier.
+/// @param value        Pointer to the attribute value.
+/// @return Error code.
+pub unsafe fn ezb_zcl_basic_cluster_desc_add_attr(
+    cluster_desc: ezb_zcl_cluster_desc_t,
+    attr_id: ezb_zcl_basic_server_attr_t,   // u16
+    value: *const ::core::ffi::c_void,
+) -> ezb_err_t {
+    unsafe {
+        a::ezb_zcl_basic_cluster_desc_add_attr(
+            cluster_desc,
+            attr_id as u16,
+            value,
+        )
+    }
+}
+
