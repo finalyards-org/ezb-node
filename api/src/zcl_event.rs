@@ -1,39 +1,20 @@
 
 use core::{
     fmt,
-    time::Duration
+    //time::Duration
 };
-
+use std::ffi::c_void;
 use strum;
 
-use ezb_node_raw::{
-    //ezb_app_signal_type_t,
-    ezb_zdo_signal_device_annce_params_t,
-    //zb_app_signal_get_params,
-    ezb_zdo_signal_leave_params_t,
-    //ezb_nwk_signal_device_associated_params_t,
-    ezb_zdo_signal_leave_indication_params_t,
-    //R ezb_zdo_signal_can_sleep_params_t,
-    ezb_zdo_signal_device_authorized_params_t,
-    ezb_zdo_signal_device_update_params_t,
-    //R ezb_zdo_signal_nwk_status_indication_params_t,
-    ezb_zdo_signal_device_unavailable_params_t,
-    ezb_bdb_signal_simple_params_t,
-    ezb_nwk_signal_network_status_params_t,
-    ezb_nwk_network_status_t,
-    ezb_nwk_signal_permit_join_status_params_t,
-    ezb_app_signal_type_e,
-    //ezb_app_signal_t,
-    ezb_bdb_comm_status_e,
-};
+use ezb_node_raw::{ezb_zcl_core_action_callback_id_e, ezb_zcl_set_attr_value_message_t, ezb_zcl_status_e, ClusterRole, ezb_zcl_attribute_s, ezb_zcl_cmd_hdr_t, ezb_zcl_read_attr_rsp_variable_t, ezb_zcl_cluster_id_e, ezb_app_signal_type_e};
 
 #[cfg(feature = "touchlink")]
-use crate::raw::{
+use ezb_node_raw::{
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
     esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
 };
-
+use ezb_node_raw::ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC;
 use crate::utils::IeeeAddr;
 
 /**
@@ -45,34 +26,42 @@ pub enum ZclEvent {
     //      terms.
 
     /// Triggered when an application-related attribute is changed.
-    SetAttrValue(SetAttrValueM),
+    // ezb_zcl_set_attr_value_message_s
+    SetAttrValue{ info: CommonInfo, in_: Attr, out: OutStatus },
 
     /// A ZCL general ReadAttribute response is received.
-    ReadAttrResp(ReadAttrRespM),
+    // ezb_zcl_cmd_read_attr_rsp_message_s
+    ReadAttrResp{ info: CommonInfo, in_: HeaderAndVariables, out: OutStatus },
 
     /// A ZCL general WriteAttribute response is received.
-    WriteAttrResp(WriteAttrRespM),
+    // ezb_zcl_cmd_write_attr_rsp_message_s
+    WriteAttrResp{ info: CommonInfo, in_: HeaderAndVariables, out: OutStatus },
 
     /// A ZCL general ConfigureReporting response is received.
-    ConfigReportResp(ConfigReportRespM),
+    // ezb_zcl_cmd_config_report_rsp_message_s
+    ConfigReportResp(HeaderAndVariables),
 
-    /***
-    /// A callback ID triggered when a ZCL general ReadReportingConfiguration
-    /// response is received.
-    /// see @ref ezb_zcl_cmd_read_report_config_rsp_message_s.
-    EZB_ZCL_CORE_READ_REPORT_CONFIG_RSP_CB_ID = 4,
-    /// A callback ID triggered when a ZCL General ReportAttribute command is
-    /// received. see @ref ezb_zcl_cmd_report_attr_message_s.
-    EZB_ZCL_CORE_REPORT_ATTR_CB_ID = 5,
-    /// A callback ID triggered when a ZCL general DiscoverAttributes response
-    /// is received. see @ref ezb_zcl_cmd_discover_attributes_rsp_message_s.
-    EZB_ZCL_CORE_DISC_ATTR_RSP_CB_ID = 6,
-    /// A callback ID triggered when a ZCL general Discover response is
-    /// received. see @ref ezb_zcl_cmd_discover_commands_rsp_message_s.
-    EZB_ZCL_CORE_DISC_CMD_RSP_CB_ID = 7,
-    /// A callback ID triggered when a ZCL general DefaultResponse response is
-    /// received. see @ref ezb_zcl_cmd_default_rsp_message_s.
-    EZB_ZCL_CORE_DEFAULT_RSP_CB_ID = 8,
+    /// A ZCL general ReadReportingConfiguration response is received.
+    // ezb_zcl_cmd_read_report_config_rsp_message_s
+    ReadReportConfigResp(HeaderAndVariables),
+
+    /// A ZCL General ReportAttribute command is received.
+    // ezb_zcl_cmd_report_attr_message_s
+    ReportAttr(HeaderAndVariables),
+
+    /// A ZCL general DiscoverAttributes response is received.
+    // ezb_zcl_cmd_discover_attributes_rsp_message_s
+    DiscAttrResp(HeaderAndVariables),
+
+    /// A ZCL general Discover response is received.
+    // ezb_zcl_cmd_discover_commands_rsp_message_s
+    DiscCmdResp(HeaderAndIsRecvAndIsCompletedAndVariables),
+
+    /// A ZCL general DefaultResponse response is received.
+    // ezb_zcl_cmd_default_rsp_message_s
+    DefaultResp(HeaderAndRspToCmdAndStatusCode),
+
+    /*** tbd. todo
     /// A callback ID triggered when a ZCL command is received with
     /// Manufacturer-Specific code.
     /// see @ref ezb_zcl_manuf_spec_cmd_message_s.
@@ -337,146 +326,8 @@ impl ZclEvent {
                 })
             },
 
-            /***
-            EZB_ZDO_SIGNAL_SKIP_STARTUP => { // 1
-                Self::ZdoSignalSkipStartup
-            },
-            EZB_ZDO_SIGNAL_LEAVE => { // 3
-                let x = get_param::<ezb_zdo_signal_leave_params_t>(p_params);
-                Self::ZdoSignalLeave {
-                    leave_type_X: x.leave_type
-                }
-            },
-            EZB_ZDO_SIGNAL_LEAVE_INDICATION => { // 4
-                let x = get_param::<ezb_zdo_signal_leave_indication_params_t>(p_params);
-                Self::ZdoSignalLeaveIndication {
-                    short_addr: x.short_addr,
-                    device_addr: x.device_addr.into(),
-                    leave_type_X: x.leave_type
-                        // EZB_ZDO_LEAVE_TYPE_RESET (0): "Leave without rejoin
-                        // EZB_ZDO_LEAVE_TYPE_REJOIN (1): "Leave with rejoin"
-                        // tbd. make them a Rust enum; keep the 'leave_type' key though this (currently) is just a boolean
-                }
-            },
-            EZB_ZDO_SIGNAL_DEVICE_ANNCE => { // 5
-                let x = get_param::<ezb_zdo_signal_device_annce_params_t>(p_params);
-                Self::ZdoSignalDeviceAnnce {
-                    short_addr: x.short_addr,
-                    device_addr: x.device_addr.into(),
-                    capability_X: x.capability
-                }
-            },
-            EZB_ZDO_SIGNAL_DEVICE_UNAVAILABLE => { // 6
-                let x = get_param::<ezb_zdo_signal_device_unavailable_params_t>(p_params);
-                Self::ZdoSignalDeviceUnavailable {
-                    device_addr: x.device_addr.into(),
-                    short_addr: x.short_addr
-                }
-            },
-            EZB_ZDO_SIGNAL_DEVICE_UPDATE => { // 7
-                let x = get_param::<ezb_zdo_signal_device_update_params_t>(p_params);
-                Self::ZdoSignalDeviceUpdate {
-                    device_addr: x.device_addr.into(),
-                    short_addr: x.short_addr,
-                    status_X: x.status,
-                    tc_action_X: x.tc_action,
-                    parent_short: x.parent_short
-                }
-            },
-            EZB_ZDO_SIGNAL_DEVICE_AUTHORIZED => { // 8
-                let x = get_param::<ezb_zdo_signal_device_authorized_params_t>(p_params);
-                Self::ZdoSignalDeviceAuthorized {
-                    device_addr: x.device_addr.into(),
-                    short_addr: x.short_addr,
-                    type_X: x.type_,
-                    status_X: x.status
-                }
-            },
-            EZB_BDB_SIGNAL_DEVICE_FIRST_START => { // 256
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalDeviceFirstStart(
-                    BdbStatus::from_repr(x.status).unwrap()
-                )
-            },
-            EZB_BDB_SIGNAL_DEVICE_REBOOT => { // 257
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalDeviceReboot (
-                    BdbStatus::from_repr(x.status).unwrap()
-                )
-            },
-            EZB_BDB_SIGNAL_STEERING => { // 258
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalSteering (
-                    BdbStatus::from_repr(x.status).unwrap()
-                )
-            },
-            EZB_BDB_SIGNAL_FORMATION => { // 259
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalFormation (
-                    BdbStatus::from_repr(x.status).unwrap()
-                )
-            },
-            EZB_BDB_SIGNAL_FINDING_AND_BINDING_INITIATOR_FINISHED => { // 0x0d
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalFindingAndBindingInitiatorFinished (
-                    BdbStatus::from_repr(x.status).unwrap()
-                )
-            },
-            EZB_BDB_SIGNAL_FINDING_AND_BINDING_TARGET_FINISHED => { // 260
-                let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
-                Self::BdbSignalFindingAndBindingTargetFinished (
-                    BdbStatus::from_repr(x.status).unwrap()
-                )
-            },
-            #[cfg(feature = "touchlink")]
-            EZB_BDB_SIGNAL_TOUCHLINK_INITIATOR_FINISHED => { // 262
-                Self::BdbSignalTouchlinkInitiatorFinished
-            },
-            #[cfg(feature = "touchlink")]
-            EZB_BDB_SIGNAL_TOUCHLINK_TARGET_FINISHED => { // 263
-                Self::BdbSignalTouchlinkTargetFinished
-            },
-            #[cfg(false)]   // obsolete; param type not existing
-            EZB_NWK_SIGNAL_DEVICE_ASSOCIATED => { // 512
-                log::warn!("Caught {} marked 'obsolete' by C side docs", sig);
+            // ...
 
-                let x = get_param::<ezb_nwk_signal_device_associated_params_t>(p_params);
-                Self::NwkSignalDeviceAssociated {
-                    device_addr: x.device_addr.into(),
-                }
-            },
-            EZB_NWK_SIGNAL_NO_ACTIVE_LINKS_LEFT => { // 513
-                Self::NwkSignalNoActiveLinksLeft
-            },
-            EZB_NWK_SIGNAL_PANID_CONFLICT_DETECTED => { // 514
-                Self::NwkSignalPanidConflictDetected
-            },
-            EZB_NWK_SIGNAL_NETWORK_STATUS => { // 515
-                let x = get_param::<ezb_nwk_signal_network_status_params_t>(p_params);
-
-                // tbd. Instead of panicking, we _could_ just not match a signal which does not carry a valid enum.
-                //      On the other hand, such a case would not arise from unexpected wire(less) traffic, but be a bug
-                //      in 'esp-zigbee-lib'. Which means, probably we can panic? >:)
-                //
-                let status = ezb_nwk_network_status_t::from_repr(x.status as u32)
-                    .unwrap_or_else(|| {
-                        panic!("EZB_NWK_SIGNAL_NETWORK_STATUS: unexpected '.status': {}", x.status);
-                    });
-
-                Self::NwkSignalNetworkStatus {
-                    status,
-                    network_addr: x.network_addr,
-                    unknown_command_id: x.unknown_command_id
-                }
-            },
-            EZB_NWK_SIGNAL_PERMIT_JOIN_STATUS => { // 516
-                let ezb_nwk_signal_permit_join_status_params_t{ duration: x /*secs*/ } = get_param(p_params);
-                    // YIEEEE!!!! ;)
-
-                let iof = (x > 0).then(|| Duration::from_secs(x as _));
-                Self::NwkSignalPermitJoinStatus{ is_opened_for: iof }
-            },
-            ***/
             //
             EZB_ZCL_CORE_CB_ID_END => { // 83
                 Self::End
@@ -498,15 +349,24 @@ impl fmt::Display for ZclEvent {
     }
 }
 
-/*
-* The 'p_params' pointer points to signal specific structures with more information. Get them.
+/**
+* Carrier of the '.info' field - common to all ZCL Core events.
 */
-#[cfg(false)] //?
-fn get_param<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
-    assert!(!vp.is_null());
-    unsafe {
-        let typed_ptr = vp as *const T;
-        typed_ptr.read_unaligned()  // do the right thing if the struct is "packed" ('esp-zigbee-lib' 2.0 API has 15 occurrences)
+pub struct CommonInfo {
+    #[allow(non_snake_case)]
+    ///< Status of the message processing. See @ref ezb_zcl_status_t.
+    pub status_X: ezb_zcl_status_e,     // tbd. implement as a non-raw enum
+    ///< The destination endpoint ID of the ZCL indication.
+    pub dst_ep: u8,
+    ///< The cluster ID of the ZCL indication.
+    pub cluster_id: ZclClusterId, // u16
+    ///< The role of cluster
+    pub cluster_role: ClusterRole,
+}
+
+impl From<c_void> for CommonInfo {
+    fn from(p: *const c_void) -> Self {
+        todo!()
     }
 }
 
@@ -523,8 +383,17 @@ fn get_param<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
 //     } out;                       /*!< Output: result to send back. */
 // } ezb_zcl_set_attr_value_message_t;
 struct SetAttrValueM {
-
+    // tbd. consider flattening, and/or not leaking 'raw' enums.
+    r#in: Attr,
+    out_result: Option<OutStatus>,     // 0 (success) presented as 'None'
 }
+
+/***
+impl From<ezb_zcl_set_attr_value_message_t> for SetAttrValueM {
+    fn from(p: *const ezb_zcl_set_attr_value_message_t) -> Self {
+        todo!()
+    }
+}***/
 
 /**
 * Message for 'ReadAttrResp'
@@ -544,7 +413,19 @@ struct SetAttrValueM {
 //     } out;                       /*!< Output data to be returned to the ZCL stack. */
 // } ezb_zcl_cmd_read_attr_rsp_message_t;
 struct ReadAttrRespM {
+    r#in_x: ReadAttrRespM_In,
+    st: Option<OutStatus>
+}
 
+#[allow(non_camel_case_types)]
+struct ReadAttrRespM_In;
+
+impl From<&ezb_zcl_set_attr_value_message_t> for ReadAttrRespM {
+    fn from(v: &ezb_zcl_set_attr_value_message_t) -> Self {
+        Self {
+            in_x: ReadAttrRespM_In,
+            st: OutStatus::from_try(v.out.result)
+    }
 }
 
 /**
@@ -563,6 +444,8 @@ struct ReadAttrRespM {
 //     } out;                       /*!< Output data to be returned to the ZCL stack. */
 // } ezb_zcl_cmd_write_attr_rsp_message_t;
 struct WriteAttrRespM {
+    r#in: WriteAttrRespM_In,
+}
 
 }
 
@@ -582,6 +465,77 @@ struct WriteAttrRespM {
 //     } out;                       /*!< Output data to be returned to the ZCL stack. */
 // } ezb_zcl_cmd_config_report_rsp_message_t;
 struct ConfigReportRespM {
-
+    r#in: InHeaderAndVars,
+    st: Option<OutStatus>
 }
 
+/**
+* The 'vp' points to ZCL Core ... message structures. Convert.
+*/
+fn typed<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
+    assert!(!vp.is_null());
+    unsafe {
+        let typed_ptr = vp as *const T;
+        typed_ptr.read_unaligned()  // does the right thing even if the struct is "packed" (tbd. don't know if any of the ZCL Core types were... check)
+    }
+}
+
+// Cover the inner 'raw' data structures from the API.
+pub struct Attr(ezb_zcl_attribute_s);
+
+impl Attr {
+    fn new(v: ezb_zcl_attribute_s) -> Self {
+        Self(v)
+    }
+}
+
+/**
+* Input for 'ZclEvent'
+*/
+pub struct HeaderAndVariables {
+    header_X: *const ezb_zcl_cmd_hdr_t,
+    variables_X: *const ezb_zcl_read_attr_rsp_variable_t,
+}
+
+// Note: In raw side, each such struct is anonymous. Thus, we need type parameters to convert them.
+//
+impl HeaderAndVariables {
+    fn new<X>(raw: &X) -> Self {
+        Self {
+            header_X: X.header,
+            variables_X: X.variables
+        }
+    }
+}
+
+// struct {
+//   ezb_zcl_status_t result; /*!< Status of processing in application. Set this to indicate how the application
+//                              processed the response. */
+// } out;                       /*!< Output data to be returned to the ZCL stack. */
+pub struct OutStatus(ezb_zcl_status_e);
+
+impl OutStatus {
+    fn new(e: ezb_zcl_status_e) -> Self {
+        Some(Self(e))
+    }
+}
+
+use ezb_zcl_cluster_id_e::*;
+
+// For now, enough to pass the values we actually are using in applications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::FromRepr, strum::Display)]
+#[repr(u16)]    // we know this by the C library
+pub enum ZclClusterId {
+    Basic = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC as _,
+    PowerConfig = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_POWER_CONFIG as _,
+    //...
+    Diagnostics = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_DIAGNOSTICS as _,
+    #[cfg(feature = "touchlink")]
+    TouchlinkCommissioning = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_TOUCHLINK_COMMISSIONING,
+}
+
+impl ZclClusterId {
+    fn from_raw(v: ezb_zcl_cluster_id_e) -> Option<Self> {
+        Self::from_repr(v as u16)
+    }
+}

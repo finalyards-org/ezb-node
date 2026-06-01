@@ -27,6 +27,10 @@ light-build:
 		--jobs 1
 
 [group('light')]
+lbx:
+	cargo {{nightly}} build --release -vv --bin light
+
+[group('light')]
 lr: light-run
 light-run:
 	cargo {{nightly}} run --release -vv --bin light

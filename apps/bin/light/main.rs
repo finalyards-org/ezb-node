@@ -33,8 +33,6 @@ use crate::light_coordinator::LightCoordinator;
 mod light_coordinator;
 mod scheduler;
 
-//use my_controller::LightController;
-
 /**
 * The entry point.
 *

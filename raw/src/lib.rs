@@ -64,6 +64,7 @@ pub use bindings::{
 pub use bindings::{
     ezb_bdb_start_top_level_commissioning,
     ezb_bdb_comm_mode_t,
+    ezb_bdb_comm_mode_e,
     ezb_bdb_is_factory_new,
     ezb_nwk_get_panid,
     ezb_nwk_get_current_channel,
@@ -118,7 +119,17 @@ pub use bindings::{
     ClusterRole,
     //ezb_zcl_core_action_callback_id_t,    // DO NOT expose this (it's u32), use '..._e' instead
     ezb_zcl_core_action_callback_id_e,
+    ezb_zcl_status_e,
+    //ezb_zcl_status_t,
+    ezb_zcl_attribute_s,
+    ezb_zcl_cmd_hdr_t,
+    ezb_zcl_read_attr_rsp_variable_t,
 };
 
-// NVS access
-//pub use bindings::sys::*;
+// ZCL Core; callback indications
+//
+pub use bindings::{
+    //ezb_zcl_set_attr_value_message_t,
+    esp_zigbee_lock_acquire,
+    esp_zigbee_lock_release,
+};

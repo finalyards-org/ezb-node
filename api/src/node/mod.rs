@@ -13,9 +13,10 @@
 mod zigbee_task;
 use zigbee_task::zigbee_spawn;
 
-use bitflags::bitflags;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::{Channel, DynamicReceiver};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::Channel,
+};
 use esp_idf_svc::{
     sys::EspError
 };
@@ -28,16 +29,29 @@ use ezb_node_raw::{
     ezb_nwk_get_extended_panid,
     ezb_nwk_get_short_address,
     ezb_nwk_get_current_channel,
-    ezb_bdb_comm_mode_t,
+    esp_zigbee_lock_acquire,
+    esp_zigbee_lock_release,
 };
 
-use crate::{AppSignal, DeviceDescriptorView, IeeeAddr, config_views::ConfigAccess, Error};
+use crate::{
+    AppSignal,
+    BdbMode,
+    IeeeAddr,
+    config_views::ConfigAccess,
+    Error,
+    ZclEvent
+};
 
 // Channel:
 //  - fed by the Zigbee task; blocking
 //  - consumed by the application task; async
 //
-static CHANNEL: Channel<CriticalSectionRawMutex, AppSignal, 10> = Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channel::new();
+
+enum Payload {
+    AppSignal(AppSignal),
+    ZclEvent(ZclEvent)
+}
 
 /**
 * Provides access to the radio. The application struct implementing this decides the role (Coordinator/Router/EndDevice)
@@ -65,22 +79,36 @@ pub trait Node {
     }
 
     /**
-    * Add endpoints to an initialized 'Node' (before starting it).
+    * Run the event loop, passing Zigbee events to the application task (that calls us).
+    *
+    * The closures/functions get us (an application struct implementing 'Node' as a parameter, allowing them to
+    * access the Zigbee APIs, via 'Node' methods. We ensure that locking is in place for such methods (see ZigbeeGuard).
     */
-    fn add_endpoints(cv: impl Into<&'static DeviceDescriptorView>) -> Result<(),crate::Error> {
-        todo!()
+    async fn run<T: Node, F1, F2>(&mut this: /*move*/ T, on_app_signal: F1, on_zcl_event: F2) -> !
+    where
+        F1: Fn(&mut T, AppSignal),
+        F2: Fn(&mut T, ZclEvent)
+    {
+        let rx = CHANNEL.receiver();
+
+        loop {
+            let x = rx.receive().await;
+            match x {
+                Payload::AppSignal(x) => on_app_signal(this, x),
+                Payload::ZclEvent(x) => on_zcl_event(this, x)
+            }
+        }
     }
 
-    /**
-    */
-    fn receiver() -> DynamicReceiver<'static, AppSignal> {
-        CHANNEL.dyn_receiver()
-    }
+    //---
+    // The rest of the methods are for the application task to call the Zigbee C API.
+    // They _must_ all have the guarding mechanism in place!!!
 
     /**
     * Get the PAN ID of the network.
     */
     fn get_panid(&self) -> u16 {
+        let _guard = ZigbeeGuard::acquire();
         unsafe {
             ezb_nwk_get_panid()
         }
@@ -90,6 +118,7 @@ pub trait Node {
     * Get the extended PAN ID of the network.
     */
     fn get_extended_panid(&self) -> IeeeAddr {
+        let _guard = ZigbeeGuard::acquire();
         let v = unsafe {
             ezb_nwk_get_extended_panid()
         };
@@ -100,6 +129,7 @@ pub trait Node {
     * Get the network (short) address of the device.
     */
     fn get_short_address(&self) -> u16 {
+        let _guard = ZigbeeGuard::acquire();
         unsafe {
             ezb_nwk_get_short_address()
         }
@@ -109,6 +139,7 @@ pub trait Node {
     * Get the currently used channel.
     */
     fn get_current_channel(&self) -> u8 {
+        let _guard = ZigbeeGuard::acquire();
         unsafe {
             ezb_nwk_get_current_channel()
         }
@@ -125,7 +156,8 @@ pub trait Node {
     *
     * Note: Modes are bit patterns.
     */
-    fn start_top_level_commissioning(&self, mask: CommissioningModesMask) -> Option<EspError> {
+    fn start_top_level_commissioning(&self, mask: BdbMode) -> Option<EspError> {
+        let _guard = ZigbeeGuard::acquire();
         let err= unsafe {
             ezb_bdb_start_top_level_commissioning(mask.bits())
         };
@@ -141,6 +173,7 @@ pub trait Node {
     *   - all settings (bindings, intervals) are at their defaults
     */
     fn is_factory_new(&self) -> bool {
+        let _guard = ZigbeeGuard::acquire();
         unsafe {
             ezb_bdb_is_factory_new()
         }
@@ -152,55 +185,34 @@ pub trait Node {
     */
     #[cfg(false)]
     fn factory_reset(&self) {
+        let _guard = ZigbeeGuard::acquire();
         unsafe {
             esp_zb_factory_reset()
         }
     }
 }
 
-type BdbMode = ezb_bdb_comm_mode_t;
-bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct CommissioningModesMask: u8 {
-        const INITIALIZATION = BdbMode::EZB_BDB_MODE_INITIALIZATION.0 as u8; // 1
-        #[cfg(feature = "touchlink")]
-        const TOUCHLINK_INITIATOR = BdbMode::EZB_BDB_MODE_TOUCHLINK_INITIATOR.0 as u8; // 2
-        const NETWORK_STEERING = BdbMode::EZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 4
-        #[cfg(feature = "coordinator")]
-        const NETWORK_FORMATION = BdbMode::EZB_BDB_MODE_NETWORK_FORMATION.0 as u8; // 8
-        const FINDING_N_BINDING = BdbMode::EZB_BDB_MODE_FINDING_N_BINDING.0 as u8; // 16
-        #[cfg(feature = "touchlink")]
-        const TOUCHLINK_TARGET = BdbMode::EZB_BDB_MODE_TOUCHLINK_TARGET.0 as u8; // 32
+#[must_use = "Please store the guard in a variable, e.g. '_guard = ...'; otherwise it drops right away."]
+struct ZigbeeGuard;
 
-        // Declare all bits as "known". Recommended for 'bitflags', when working with C library APIs.
-        const _ = !0;
+impl ZigbeeGuard {
+    /**
+    * It's mandatory to acquire the lock before calling any Zigbee SDK APIs, except that the call site is in Zigbee
+    * callbacks.
+    */
+    fn acquire() -> Self {
+        unsafe {
+            let got_it = esp_zigbee_lock_acquire(u32::MAX);
+            assert!(got_it);
+        };
+        Self
     }
 }
 
-/**
-* Internal helper.
-*
-* Collects about-to-be-registered endpoints, and passes them to the C 'esp-zigbee-lib', all at once.
-*/
-#[cfg(false)]   // is it needed in 2.0?
-struct RegState(*mut esp_zb_ep_list_t);
-
-#[cfg(false)]
-impl RegState {
-    fn new() -> Self {
-        let l = unsafe { esp_zb_ep_list_create() };
-        Self(l)
-    }
-
-    fn add(&self, cluster_list: *mut esp_zb_cluster_list_t, ep_cfg: esp_zb_endpoint_config_t) {
+impl Drop for ZigbeeGuard {
+    fn drop(&mut self) {
         unsafe {
-            esp_zb_ep_list_add_ep(self.0, cluster_list, ep_cfg);   // tbd. handle error
-        }
-    }
-
-    fn register(self) {
-        unsafe {
-            esp_zb_device_register(self.0);    // tbd. errors
+            esp_zigbee_lock_release();
         }
     }
 }

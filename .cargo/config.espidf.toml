@@ -137,11 +137,27 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #       $ find ~/target -name project_description.json
 #       $ cat {above} | jq common_component_reqs -C
 #   <<
-#   ..plus some that were figured out, experimentally.
-#
-#   Note: 'esp-idf-svc-0.52.1' seems to need 'fatfs' (on apps level).
 #
 ESP_IDF_COMPONENTS = """\
   cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
-  nvs_flash;wear_levelling;spiffs;fatfs;\
+  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
 """
+    # vfs, nvs_flash: 'PRIV_REQUIRES' in the 'color_dimmable_light' C sample.
+    # fatfs:    'esp-idf-svc-0.52.1' must have it
+    #   <<
+    #       error[E0433]: cannot find `fatfs` in `fs`
+    #       --> /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-svc-0.52.1/src/io.rs:126:51
+    #       |
+    #       126 |             T: core::borrow::BorrowMut<crate::fs::fatfs::Fatfs<H>>,
+    #       |                                                   ^^^^^ could not find `fatfs` in `fs`
+    #       |
+    #   <<
+    # spiffs:   'esp-idf-svc-0.52.1' needs it
+    #   <<
+    #       error[E0433]: cannot find `spiffs` in `fs`
+    #       --> /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-svc-0.52.1/src/io.rs:80:51
+    #       |
+    #       80 |             T: core::borrow::BorrowMut<crate::fs::spiffs::Spiffs>,
+    #       |                                                   ^^^^^^ could not find `spiffs` in `fs`
+    #       |
+    #   <<

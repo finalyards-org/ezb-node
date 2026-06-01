@@ -16,6 +16,8 @@
     //      }
     //  <<
 
+use core::mem::MaybeUninit;
+
 // Silence:
 //  <<
 //warning: unnecessary transmute
@@ -36,117 +38,24 @@ mod a {
 }
 
 pub use a::*;
+    //
+    // Note: This only exposes the C bindings to 'lib.rs', not dependent crates.
+    //      Some values, e.g. 'EZB_ZCL_CLUSTER_{SERVER|CLIENT}' are not going to be further exposed.
 
-// Shadow some entries (will be used via their enum).
-#[allow(hidden_glob_reexports)]
-//const EZB_ZCL_CLUSTER_CLIENT: () = ();
-mod EZB_ZCL_CLUSTER_CLIENT {}
-#[allow(hidden_glob_reexports)]
-//const EZB_ZCL_CLUSTER_SERVER: () = ();
-mod EZB_ZCL_CLUSTER_SERVER {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum ClusterRole {
-    Server = a::EZB_ZCL_CLUSTER_SERVER as u8, // 1
-    Client = a::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
-}
-
-/*** consider; it really is a bitmask, but we don't likely need it as such
+/***r
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct ClusterRole: u8 { // C-puolella rooli on yleensä uint8_t
+    pub struct ClusterRole: u8 {
         const SERVER = EZB_ZCL_CLUSTER_SERVER;  //0x01
         const CLIENT = EZB_ZCL_CLUSTER_CLIENT;  //0x02
     }
 }
 ***/
 
-use core::mem::MaybeUninit;
-
-// Bit of a #hack, to help the 'api' level use 'esp_zigbee_config_t' within 'OnceLock'. We *know* (well, API level knows)
-// it's not getting shipped across task boundaries. We kind-of lie that it would be okay, if it did (which would still
-// be okay, since those are non-changing pointers). This is about the C pointers within the structure.
+// #hack: allow use of 'OnceLock<esp_zigbee_config_t>' within the 'api'.
 //
 unsafe impl Send for esp_zigbee_config_s {}
 unsafe impl Sync for esp_zigbee_config_s {}
-
-#[cfg(false)]
-impl ezb_extpanid_t {
-    /**
-    * Provide an empty struct, e.g. to be used as a buffer.
-    */
-    pub fn empty() -> Self {
-        let un = MaybeUninit::zeroed();
-        unsafe { un.assume_init() }
-    }
-}
-
-/*
-* Because 'esp_zigbee_device_config_t' has a union field, it's best we treat it here.
-*/
-//pub struct esp_zigbee_device_config_s {
-//     ///< The nwk device type, @ref ezb_nwk_device_type_t
-//     pub device_type: ezb_nwk_device_type_t,
-//     ///< Allow install code security policy or not
-//     pub install_code_policy: bool,
-//     pub __bindgen_anon_1: esp_zigbee_device_config_s__bindgen_ty_1,
-// }
-//
-//pub union esp_zigbee_device_config_s__bindgen_ty_1 {
-//     ///< The Zigbee zc/zr device configuration
-//     pub zczr_config: esp_zigbee_zczr_config_s,
-//     ///< The Zigbee zed device configuration
-//     pub zed_config: esp_zigbee_zed_config_s,
-// }
-//
-//pub struct esp_zigbee_zczr_config_s {
-//     ///< Max number of the children
-//     pub max_children: u8,
-// }
-#[cfg(false)]   //R
-impl esp_zigbee_device_config_t {
-
-    /// Create a device configuration for a Coordinator.
-    pub fn for_zc(install_code_policy: bool, max_children: u8) -> Self {
-        Self::for_zczr(EZB_NWK_DEVICE_TYPE_COORDINATOR, install_code_policy, max_children)
-    }
-
-    /// Create a device configuration for a Router.
-    pub fn for_zr(install_code_policy: bool, max_children: u8) -> Self {
-        Self::for_zczr(EZB_NWK_DEVICE_TYPE_ROUTER, install_code_policy, max_children)
-    }
-
-    fn for_zczr(device_type: ezb_nwk_device_type_t, install_code_policy: bool, max_children: u8) -> Self {
-        Self {
-            device_type,
-            install_code_policy,
-            __bindgen_anon_1: esp_zigbee_device_config_s__bindgen_ty_1 {
-                zczr_config: esp_zigbee_zczr_config_s {
-                    max_children
-                }
-            }
-        }
-    }
-
-    /// Create a device configuration for an End Device.
-    #[deprecated(note="Not yet tested - please do report if it works! :)")]
-    #[cfg(false)]
-    //? #[allow(dead_code)]
-    pub fn for_zed(install_code_policy: bool, ed_timeout: ezb_nwk_ed_timeout_e, keep_alive: Duration) -> Self {
-        let device_type = ezb_nwk_device_type_t::EZB_NWK_DEVICE_TYPE_END_DEVICE;
-        Self {
-            device_type,
-            install_code_policy,
-            __bindgen_anon_1: esp_zigbee_device_config_s__bindgen_ty_1 {
-                zed_config: esp_zigbee_zed_config_s {
-                    ed_timeout: ed_timeout as u8,
-                    keep_alive: keep_alive.as_millis() as u32,
-                }
-            }
-        }
-    }
-}
 
 /*
 * Default for a device configuration.
@@ -276,6 +185,7 @@ fn empty<T>() -> T {
 /// @param cluster_id Cluster identifier.
 /// @param role       Cluster role (server/client).
 /// @return Pointer to the cluster descriptor, or NULL if not found.
+#[cfg(false)]   //r: handle in 'api' level
 pub unsafe fn ezb_af_endpoint_get_cluster_desc(
     ep_desc: ezb_af_ep_desc_t,
     cluster_id: ezb_zcl_cluster_id_e, // u16
@@ -312,3 +222,11 @@ pub unsafe fn ezb_zcl_basic_cluster_desc_add_attr(
     }
 }
 
+// it really is a bitmask, but we don't likely need it as such
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+#[cfg(false)]   //r: handle in 'api' level
+pub enum ClusterRole {
+    Server = a::EZB_ZCL_CLUSTER_SERVER as u8, // 1
+    Client = a::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
+}

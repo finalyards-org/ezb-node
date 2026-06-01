@@ -126,7 +126,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_bdb_.+' \
 	    --allowlist-type 'ezb_nwk_.+' \
-	    --allowlist-type 'ezb_zcl_(?:basic_cluster|core|basic_server|cluster)_.+' \
+	    --allowlist-type 'ezb_zcl_(?:attribute|basic|cluster|cmd|core|status)_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    \
