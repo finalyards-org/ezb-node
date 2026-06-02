@@ -6,8 +6,18 @@
 *     wrapping/renaming.
 */
 //r use bitflags::bitflags;
+// tbd. This may be eligible for breaking into sub-modules, one per each type?
 
-use ezb_node_raw::ezb_bdb_comm_mode_e;
+use ezb_node_raw::{ezb_bdb_comm_mode_e, ezb_zcl_cluster_id_e};
+
+mod zcl_error;
+pub use zcl_error::ZclError;
+
+mod zcl_attr;
+pub use zcl_attr::{ZclAttr, ZclValue};
+
+mod zcl_command_header;
+pub use zcl_command_header::CommandHeader;
 
 /**
 * @brief Base Device Behavior (BDB) operation mode.
@@ -71,5 +81,31 @@ bitflags! {
 
         // Declare all bits as "known". Recommended for 'bitflags', when working with C library APIs.
         const _ = !0;
+    }
+}
+
+// it really is a bitmask, but we don't likely need it as such
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum ClusterRole {
+    Server = ezb_node_raw::EZB_ZCL_CLUSTER_SERVER as u8, // 1
+    Client = ezb_node_raw::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
+}
+
+// For now, enough to pass the values we actually are using in applications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::FromRepr, strum::Display)]
+#[repr(u16)]    // we know this by the C library
+pub enum ZclClusterId {
+    Basic = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC as _,
+    PowerConfig = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_POWER_CONFIG as _,
+    //...
+    Diagnostics = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_DIAGNOSTICS as _,
+    #[cfg(feature = "touchlink")]
+    TouchlinkCommissioning = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_TOUCHLINK_COMMISSIONING,
+}
+
+impl ZclClusterId {
+    fn from_raw(v: ezb_zcl_cluster_id_e) -> Option<Self> {
+        Self::from_repr(v as u16)
     }
 }

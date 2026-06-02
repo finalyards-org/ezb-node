@@ -134,8 +134,18 @@ impl LightCoordinator {
     /**
     * Run the received ZCL event through our logic.
     */
-    fn on_zcl_event(this: &mut Self, ev: ZclEvent) {
+    fn on_zcl_event(this: &mut Self, ev_res: Result<ZclEvent, ZclError>) {
         use ZclEvent::*;
+
+        // Note: It may be that we need to know more about the event, when errors arise. Let's, however, keep the
+        //      'ZclEvent' for successful ones, and curry the 'ZclError' with extra information ('CommonInfo'?) if
+        //      there is a need. All this information is available in the C level, but dividing it to success/fail
+        //      will make applications easier to read.
+
+        let ev = ev_res.unwrap_or_else(|e| {
+            log::warn!("ZCL event error: {e}");
+            return;
+        });
 
         match ev {
             SetAttrValue { .. } => {

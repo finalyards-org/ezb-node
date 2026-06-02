@@ -3,10 +3,27 @@ use core::{
     fmt,
     //time::Duration
 };
-use std::ffi::c_void;
 use strum;
 
-use ezb_node_raw::{ezb_zcl_core_action_callback_id_e, ezb_zcl_set_attr_value_message_t, ezb_zcl_status_e, ClusterRole, ezb_zcl_attribute_s, ezb_zcl_cmd_hdr_t, ezb_zcl_read_attr_rsp_variable_t, ezb_zcl_cluster_id_e, ezb_app_signal_type_e};
+use ezb_node_raw::{
+    ezb_zcl_core_action_callback_id_e,
+    //ezb_zcl_set_attr_value_message_t,
+    ezb_zcl_status_e,
+    ezb_zcl_attribute_s,
+    ezb_zcl_cmd_hdr_t,
+    ezb_zcl_read_attr_rsp_variable_t,
+    ezb_app_signal_type_e,
+    ezb_zcl_set_attr_value_message_t,
+    ezb_zcl_cmd_default_rsp_message_t,
+    ezb_zcl_message_info_s,
+};
+
+use crate::types::{
+    ClusterRole,
+    ZclClusterId,
+    ZclAttr,
+    ZclError,
+};
 
 #[cfg(feature = "touchlink")]
 use ezb_node_raw::{
@@ -14,11 +31,12 @@ use ezb_node_raw::{
     esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
 };
-use ezb_node_raw::ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC;
-use crate::utils::IeeeAddr;
+use ezb_node_raw::ezb_zcl_core_action_callback_id_e::EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID;
 
 /**
 * Enumeration of Zigbee Cluster Library (ZCL) "core action callback identifiers" (C term) and their data.
+*
+* These structs are used for the successful events.
 */
 #[derive(Debug, Clone)]
 pub enum ZclEvent {
@@ -27,39 +45,48 @@ pub enum ZclEvent {
 
     /// Triggered when an application-related attribute is changed.
     // ezb_zcl_set_attr_value_message_s
-    SetAttrValue{ info: CommonInfo, in_: Attr, out: OutStatus },
+    SetAttrValue{ info: CommonInfo, attr: ZclAttr },
 
     /// A ZCL general ReadAttribute response is received.
     // ezb_zcl_cmd_read_attr_rsp_message_s
-    ReadAttrResp{ info: CommonInfo, in_: HeaderAndVariables, out: OutStatus },
+    ReadAttrResp{ info: CommonInfo, header: XXX, variables: YYY },
 
     /// A ZCL general WriteAttribute response is received.
     // ezb_zcl_cmd_write_attr_rsp_message_s
-    WriteAttrResp{ info: CommonInfo, in_: HeaderAndVariables, out: OutStatus },
+    WriteAttrResp{ info: CommonInfo, header: XXX, variables: YYY },
 
     /// A ZCL general ConfigureReporting response is received.
     // ezb_zcl_cmd_config_report_rsp_message_s
+    #[cfg(false)]
     ConfigReportResp(HeaderAndVariables),
 
     /// A ZCL general ReadReportingConfiguration response is received.
     // ezb_zcl_cmd_read_report_config_rsp_message_s
+    #[cfg(false)]
     ReadReportConfigResp(HeaderAndVariables),
 
     /// A ZCL General ReportAttribute command is received.
     // ezb_zcl_cmd_report_attr_message_s
+    #[cfg(false)]
     ReportAttr(HeaderAndVariables),
 
     /// A ZCL general DiscoverAttributes response is received.
     // ezb_zcl_cmd_discover_attributes_rsp_message_s
+    #[cfg(false)]
     DiscAttrResp(HeaderAndVariables),
 
     /// A ZCL general Discover response is received.
     // ezb_zcl_cmd_discover_commands_rsp_message_s
+    #[cfg(false)]
     DiscCmdResp(HeaderAndIsRecvAndIsCompletedAndVariables),
 
     /// A ZCL general DefaultResponse response is received.
+    ///
+    /// @note 'cmd_id' is the command id, within the cluster, of the original request. E.g. 0x01 for *On* in
+    ///         an On/Off cluster.
+    ///
     // ezb_zcl_cmd_default_rsp_message_s
-    DefaultResp(HeaderAndRspToCmdAndStatusCode),
+    DefaultResp{ info: CommonInfo, header: CommandHeader, cmd_id: u8, err: Option<ZclError> },
 
     /*** tbd. todo
     /// A callback ID triggered when a ZCL command is received with
@@ -312,18 +339,43 @@ pub enum ZclEvent {
     End,
 }
 
+
 impl ZclEvent {
     /**
     * Convert from C level to Rust so that type and message are self-contained.
     */
-    pub(crate) fn from(eraw: ezb_zcl_core_action_callback_id_e, msg: *const ::core::ffi::c_void) -> Option<Self> {
+    pub(crate) fn parse(e: ezb_zcl_core_action_callback_id_e, p: *const ::core::ffi::c_void) -> Option<Self> {
         use ezb_zcl_core_action_callback_id_e::*;
 
-        let happy_res = match eraw {
-            EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID => { // 0
-                Self::SetAttrValue(SetAttrValueM{
+        let happy_res = match e {
+            EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID => {
+                let mp: ezb_zcl_set_attr_value_message_t = get_msg::<ezb_zcl_set_attr_value_message_t>(p);
 
-                })
+                Self::SetAttrValue{
+                    info: CommonInfo::from(&mp.info),
+                    attr: ZclAttr::parse(&mp.in_.attribute)?
+                }
+            },
+
+            // ...
+
+            EZB_ZCL_CORE_DEFAULT_RSP_CB_ID => {
+                let mp: ezb_zcl_cmd_default_rsp_message_t = get_msg::<ezb_zcl_cmd_default_rsp_message_t>(p);
+                    //typedef struct ezb_zcl_cmd_default_rsp_message_s {
+                    //     ezb_zcl_message_info_t info; /*!< Common information about the received response. See @ref ezb_zcl_message_info_s. */
+                    //     struct {
+                    //         const ezb_zcl_cmd_hdr_t *header;      /*!< ZCL command header information. See @ref ezb_zcl_cmd_hdr_s. */
+                    //         uint8_t                  rsp_to_cmd;  /*!< Command ID (0x00-0xFF) to which this is a response. */
+                    //         uint8_t                  status_code; /*!< Status code of the response. See @ref ezb_zcl_status_t. */
+                    //     } in;                                     /*!< Input data from the received default response. */
+                    // } ezb_zcl_cmd_default_rsp_message_t;
+
+                Self::DefaultResp{
+                    info: CommonInfo::from(&mp.info),
+                    header: CommandHeader::from(&mp.in_.header),
+                    rsp_to_cmd: u8,
+                    err: Option<ZclError>
+                }
             },
 
             // ...
@@ -350,12 +402,13 @@ impl fmt::Display for ZclEvent {
 }
 
 /**
-* Carrier of the '.info' field - common to all ZCL Core events.
+* Carrier of the '.info' fields - common to all ZCL Core events.
 */
+#[derive(Debug, Clone)]
 pub struct CommonInfo {
     #[allow(non_snake_case)]
-    ///< Status of the message processing. See @ref ezb_zcl_status_t.
-    pub status_X: ezb_zcl_status_e,     // tbd. implement as a non-raw enum
+    ///< Status of the message processing. 'None' for success; 'Some' for errors.
+    pub err: Option<ZclError>, // status: ezb_zcl_status_e
     ///< The destination endpoint ID of the ZCL indication.
     pub dst_ep: u8,
     ///< The cluster ID of the ZCL indication.
@@ -364,37 +417,22 @@ pub struct CommonInfo {
     pub cluster_role: ClusterRole,
 }
 
-impl From<c_void> for CommonInfo {
-    fn from(p: *const c_void) -> Self {
-        todo!()
+use core::ffi::c_void;
+
+impl From<ezb_zcl_message_info_s> for CommonInfo {
+    fn from(r: &ezb_zcl_message_info_s) -> Self {
+        let err = ZclError::from_u8(r.status);
+        let dst_ep = r.dst_ep;
+        let cluster_id = ZclClusterId(r.cluster_id);
+        let cluster_role = ZclClusterRole(r.cluster_role);
+        Self {
+            err, dst_ep, cluster_id, cluster_role
+        }
     }
 }
 
-/**
-* Message for 'SetAttrValue'.
-*/
-//typedef struct ezb_zcl_set_attr_value_message_s {
-//     ezb_zcl_message_info_t info; /*!< Common information for Zigbee device callback. */
-//     struct {
-//         ezb_zcl_attribute_t attribute; /*!< Attribute to set. */
-//     } in;                              /*!< Input: parsed fields from the request. */
-//     struct {
-//         ezb_zcl_status_t result; /*!< Status of the set attribute operation. */
-//     } out;                       /*!< Output: result to send back. */
-// } ezb_zcl_set_attr_value_message_t;
-struct SetAttrValueM {
-    // tbd. consider flattening, and/or not leaking 'raw' enums.
-    r#in: Attr,
-    out_result: Option<OutStatus>,     // 0 (success) presented as 'None'
-}
 
-/***
-impl From<ezb_zcl_set_attr_value_message_t> for SetAttrValueM {
-    fn from(p: *const ezb_zcl_set_attr_value_message_t) -> Self {
-        todo!()
-    }
-}***/
-
+#[cfg(false)]   // #later
 /**
 * Message for 'ReadAttrResp'
 */
@@ -417,9 +455,11 @@ struct ReadAttrRespM {
     st: Option<OutStatus>
 }
 
+#[cfg(false)]   // #later
 #[allow(non_camel_case_types)]
 struct ReadAttrRespM_In;
 
+#[cfg(false)]   // #later
 impl From<&ezb_zcl_set_attr_value_message_t> for ReadAttrRespM {
     fn from(v: &ezb_zcl_set_attr_value_message_t) -> Self {
         Self {
@@ -431,6 +471,7 @@ impl From<&ezb_zcl_set_attr_value_message_t> for ReadAttrRespM {
 /**
 * Message for 'WriteAttrResp'
 */
+#[cfg(false)]   // #later
 //typedef struct ezb_zcl_cmd_write_attr_rsp_message_s {
 //     ezb_zcl_message_info_t info; /*!< Common information about the received response. See @ref ezb_zcl_message_info_s. */
 //     struct {
@@ -452,6 +493,7 @@ struct WriteAttrRespM {
 /**
 * Message for 'ConfigReportResp'
 */
+#[cfg(false)]   // #later
 //typedef struct ezb_zcl_cmd_config_report_rsp_message_s {
 //     ezb_zcl_message_info_t info; /*!< Common information about the received response. See @ref ezb_zcl_message_info_s. */
 //     struct {
@@ -467,26 +509,6 @@ struct WriteAttrRespM {
 struct ConfigReportRespM {
     r#in: InHeaderAndVars,
     st: Option<OutStatus>
-}
-
-/**
-* The 'vp' points to ZCL Core ... message structures. Convert.
-*/
-fn typed<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
-    assert!(!vp.is_null());
-    unsafe {
-        let typed_ptr = vp as *const T;
-        typed_ptr.read_unaligned()  // does the right thing even if the struct is "packed" (tbd. don't know if any of the ZCL Core types were... check)
-    }
-}
-
-// Cover the inner 'raw' data structures from the API.
-pub struct Attr(ezb_zcl_attribute_s);
-
-impl Attr {
-    fn new(v: ezb_zcl_attribute_s) -> Self {
-        Self(v)
-    }
 }
 
 /**
@@ -508,34 +530,33 @@ impl HeaderAndVariables {
     }
 }
 
-// struct {
-//   ezb_zcl_status_t result; /*!< Status of processing in application. Set this to indicate how the application
-//                              processed the response. */
-// } out;                       /*!< Output data to be returned to the ZCL stack. */
-pub struct OutStatus(ezb_zcl_status_e);
 
-impl OutStatus {
-    fn new(e: ezb_zcl_status_e) -> Self {
-        Some(Self(e))
+/**
+* Re-interpret a void pointer (as in C code), to be pointing to a particular message struct.
+*
+* @note The pointer does not necessarily point to 'Copy' contents; we return a reference.
+*/
+fn get_msg<'a, T>(vp: *const ::core::ffi::c_void) -> Option<&'a T> {
+    // C code samples check for 'null' ("empty message"); so should we.
+    if vp.is_null() {
+        log::debug!("Empty ZCL message");
+        return None;
+    }
+    let typed_ptr = vp as *const T;
+    unsafe {
+        typed_ptr.as_ref()
+        //or: Some(std::ptr::read_unaligned(typed_ptr))
     }
 }
 
-use ezb_zcl_cluster_id_e::*;
-
-// For now, enough to pass the values we actually are using in applications.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::FromRepr, strum::Display)]
-#[repr(u16)]    // we know this by the C library
-pub enum ZclClusterId {
-    Basic = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC as _,
-    PowerConfig = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_POWER_CONFIG as _,
-    //...
-    Diagnostics = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_DIAGNOSTICS as _,
-    #[cfg(feature = "touchlink")]
-    TouchlinkCommissioning = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_TOUCHLINK_COMMISSIONING,
-}
-
-impl ZclClusterId {
-    fn from_raw(v: ezb_zcl_cluster_id_e) -> Option<Self> {
-        Self::from_repr(v as u16)
+/**
+* The 'vp' points to ZCL Core ... message structures. Convert.
+*/
+#[cfg(false)]  // keep for a while
+fn typed<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
+    assert!(!vp.is_null());
+    unsafe {
+        let typed_ptr = vp as *const T;
+        typed_ptr.read_unaligned()  // does the right thing even if the struct is "packed" (tbd. don't know if any of the ZCL Core types were... check)
     }
 }

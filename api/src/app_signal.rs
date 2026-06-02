@@ -636,8 +636,8 @@ impl fmt::Display for AppSignal {
 */
 fn get_param<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
     assert!(!vp.is_null());
+    let typed_ptr = vp as *const T;
     unsafe {
-        let typed_ptr = vp as *const T;
         typed_ptr.read_unaligned()  // do the right thing if the struct is "packed" ('esp-zigbee-lib' 2.0 API has 15 occurrences)
     }
 }

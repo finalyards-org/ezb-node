@@ -122,11 +122,12 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 			--allowlist-function 'ezb_zcl_(?:basic_cluster|core|ota_upgrade)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light)' \
 			\
+	    --allowlist-type 'ezb_addr_mode_e' \
 	    --allowlist-type 'ezb_af_(?:device|endpoint)_.+' \
 	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_bdb_.+' \
 	    --allowlist-type 'ezb_nwk_.+' \
-	    --allowlist-type 'ezb_zcl_(?:attribute|basic|cluster|cmd|core|status)_.+' \
+	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|cmd|core|set|status)_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    \
@@ -145,6 +146,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --default-enum-style rust \
 	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_zcl_attr_type_e=strum::FromRepr,strum::Display" \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \

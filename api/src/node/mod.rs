@@ -87,7 +87,7 @@ pub trait Node {
     async fn run<T: Node, F1, F2>(&mut this: /*move*/ T, on_app_signal: F1, on_zcl_event: F2) -> !
     where
         F1: Fn(&mut T, AppSignal),
-        F2: Fn(&mut T, ZclEvent)
+        F2: Fn(&mut T, Result<ZclEvent, ZclError>)
     {
         let rx = CHANNEL.receiver();
 

@@ -116,7 +116,8 @@ pub use bindings::{
     ezb_af_create_device_desc,
     ezb_af_device_desc_t,
     EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG,
-    ClusterRole,
+    EZB_ZCL_CLUSTER_SERVER,
+    EZB_ZCL_CLUSTER_CLIENT,
     //ezb_zcl_core_action_callback_id_t,    // DO NOT expose this (it's u32), use '..._e' instead
     ezb_zcl_core_action_callback_id_e,
     ezb_zcl_status_e,
@@ -132,4 +133,14 @@ pub use bindings::{
     //ezb_zcl_set_attr_value_message_t,
     esp_zigbee_lock_acquire,
     esp_zigbee_lock_release,
+    ezb_zcl_set_attr_value_message_t,
+    ezb_zcl_cmd_default_rsp_message_t,
+    ezb_zcl_message_info_s,
+    // As an exception, allow this interim struct to be passed to 'api' level.
+    ezb_zcl_attribute_s__bindgen_ty_1,
+    ezb_zcl_attr_type_e,
+    ezb_zcl_cmd_hdr_s,
+    ezb_address_s,
+    ezb_addr_u,
+    ezb_addr_mode_e,
 };
