@@ -67,3 +67,17 @@ fn on_zcl_event_callback(vp: *mut ::core::ffi::c_void) {
 }
 Käytä koodia harkiten.Tämän ansiosta ESP-pino ei lähetä mitään, ja sovellustaskillasi on täysi rauha ja oikeus lähettää se ainoa ja oikea vastaus verkon yli silloin, kun se on valmis.
 ```
+
+## Milloin palauttaa `false` C-callbackista
+
+```
+C:n callback palauttaa `bool`. Luuletko (tiedätkö), mitä tapahtuu jos palautan sille `false`? Heidän dokut eivät asiasta mielestäni mainitse. 
+
+```
+extern "C" fn app_signal_handler(p_app_signal: *const ezb_app_signal_t) -> bool ```ESP-Zigbee-SDK:ssa (joka perustuu taustalla ZBOSS-Zigbee-pinoon) tällä bool-palautusarvolla on erittäin kriittinen ja tarkka merkitys.Kun app_signal_handler palauttaa arvon:true: Kerrot Zigbee-pinolle, että sinun sovelluksesi käsitteli (tai aikoo käsitellä) tämän signaalin kokonaan. Pino päättelee, että signaali on hoidettu, eikä se tee sille enää mitään automaattisia tausta-toimenpiteitä.false: Ilmoitat pinolle, että sovelluksesi hylkäsi tai jätti signaalin huomiotta. Tällöin Zigbee-pino suorittaa kyseiselle signaalille sen oman sisäänrakennetun oletustoiminnon (default action).Mitä false:n palauttaminen aiheuttaa käytännössä?Se riippuu täysin siitä, mikä p_app_signal-rakenteen sisältämä signaalityyppi (kuten ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP, ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT tai ESP_ZB_BDB_SIGNAL_STEERING) on kyseessä:Verkkoon liittyminen ja paritus (Commissioning / Steering):Jos saat signaalin, joka kertoo laitteen liittyneen verkkoon onnistuneesti, ja palautat false, pino saattaa ajaa oman oletuslogiikkansa – esimerkiksi tallentaa verkkoparametrit NVRAM-muistiin ja sulkea paritusikkunan automaattisesti. Jos taas palautat true, pino olettaa, että sovelluksesi hoitaa parituksen loppuvaiheet (kuten endpointien esittelyt) itse käsin.Virhetilanteet (kuten verkon hukkuminen):Jos pino lähettää signaalin siitä, että yhteys reitittimeen katkesi, ja palautat false, pinon oletustoiminto voi olla käynnistää automaattinen uudelleenliittymisprosessi (rejoin). Jos palautat true, pino pysyy passiivisena, koska se luulee sovelluksesi hoitavan verkon etsinnän omalla logiikallaan.Miten sinun kannattaa toimia Rust-koodissasi?Koska arkkitehtuurissasi kopioit viestin kanavaan ja palaat callbackista heti, paras ja turvallisin nyrkkisääntö on:Palauta false kaikille niille signaaleille, joita sovelluksesi ei tunmista tai joille et ole vielä kirjoittanut käsittelyloogikaa. Näin varmistat, että ESP-Zigbee-pino hoitaa perusohjauksen, eikä laite esimerkiksi jää jumiin verkon käynnistyksessä.Palauta true vain silloin, kun tiedät tismalleen mitä teet ja olet kopioinut signaalin onnistuneesti eteenpäin sovellustaskille, ja haluat nimenomaan estää C-puolen oletuskäyttäytymisen.Peruskäytössä (kuten laitteen käynnistyessä ja perusohjaussignaaleissa) false on usein turvallisempi oletusarvo, koska se antaa ESP-IDF:n oman Zigbee-pohja-automatiikan tehdä työt puolestasi taustalla.
+```
+
+Tätä täytyy vielä katsoa uudelleen.
+
+Nykyinen toiminta C-esimerkin mukaista, mutta se ei sovellu varsinaisiin Rust-koodeihin. Meillä pitäisi olla jokin synkroninen tapa sovelluksen määritellä (TOML, ehkä??), mitkä asiat se hoitaa itse.
+

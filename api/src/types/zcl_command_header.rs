@@ -8,7 +8,7 @@ use ezb_node_raw::{
     ezb_addr_mode_e,
 };
 
-use crate::{IeeeAddr, ZclClusterId};
+use crate::{IeeeAddr, ClusterId};
 
 /**
  * @brief Structure containing information about a received ZCL command.
@@ -46,7 +46,7 @@ pub struct CommandHeader {
     dst_addr: Addr,
     src_ep: u8,
     dst_ep: u8,
-    cluster_id: ZclClusterId,
+    cluster_id: ClusterId,
     #[allow(non_snake_case)]
     profile_id_X: u16,  // tbd. enum?
     #[allow(non_snake_case)]

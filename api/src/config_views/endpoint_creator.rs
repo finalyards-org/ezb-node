@@ -16,7 +16,6 @@ use ezb_node_raw::{
     ezb_zcl_basic_cluster_desc_add_attr,
     ezb_zcl_cluster_desc_t,
     ezb_zha_create_color_dimmable_light,
-    ClusterRole,
     EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG,
     ezb_zcl_basic_server_attr_t,
     ezb_zcl_cluster_id_e,

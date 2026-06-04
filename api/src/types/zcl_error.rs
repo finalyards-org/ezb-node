@@ -104,8 +104,8 @@ impl ZclError {
 
     // Reality is, the 'esp_zigbee_lib' message structures give us 'u8's, not enums.
     //
-    pub(crate) fn from_u8(v: u8) -> Option<Self> {
-        ezb_zcl_status_e::from_repl(v)
+    pub(crate) fn parse(v: u8) -> Option<Option<Self>> {
+        ezb_zcl_status_e::from_repr(v as u32)
             .map(Self::new)
     }
 }

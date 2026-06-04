@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(never_type)]
 extern crate alloc;
 
 #[path = "../bindings.rs"]
@@ -143,4 +142,11 @@ pub use bindings::{
     ezb_address_s,
     ezb_addr_u,
     ezb_addr_mode_e,
+    ezb_zcl_core_action_callback_id_t,
+    ezb_zcl_write_attr_rsp_variable_s,
+    ezb_zcl_cluster_id_t,
+    ezb_zcl_cmd_read_attr_rsp_message_t,
+    ezb_zcl_cmd_write_attr_rsp_message_t,
+    RspVariableEntry,
+    RspVariableIter,
 };

@@ -8,7 +8,7 @@ use ezb_node_raw::{
     ezb_zcl_attribute_s__bindgen_ty_1,
     ezb_zcl_attr_type_e,
 };
-
+use crate::AttrId;
 // ZCL attributes are defined by the protocol specification.
 // 'esp_zigbee_lib' has ~58 of them, in 'zcl_type.h'.
 //
@@ -40,7 +40,7 @@ use ezb_node_raw::{
 
 #[derive(Debug, Clone)]
 pub struct ZclAttr {
-    id: u16,    // standardized; dependent on the cluster
+    id: AttrId,    // standardized; dependent on the cluster
     data: ZclValue
 }
 
@@ -50,12 +50,24 @@ impl ZclAttr {
     *
     * @return None if there's a problem in the parsing (details are logged); Some when parsing was possible.
     */
-    fn parse(v: &ezb_zcl_attribute_s) -> Option<Self> {
+    pub(crate) fn parse(v: &ezb_zcl_attribute_s) -> Option<Self> {
+        let ezb_zcl_attribute_s {
+           id,
+           data
+        } = *v;
+
         let o= Self{
-            id: v.id,
-            data: ZclValue::parse(&v.data)?
+            id: AttrId(id),
+            data: ZclValue::parse(&data)?
         };
         Some(o)
+    }
+
+    /**
+    * Alternative parsing, when the input is more scattered..
+    */
+    pub(crate) fn parse2(attr_id: AttrId, attr_type: u64, data: c_void) -> Option<Self> {
+
     }
 }
 
@@ -80,15 +92,10 @@ pub enum ZclValue {
 }
 
 impl ZclValue {
-    fn parse(v: &ezb_zcl_attribute_s__bindgen_ty_1) -> Option<Self> {
-        let ezb_zcl_attribute_s__bindgen_ty_1{
-            type_,
-            size,
-            value
-        } = *v;
+    fn parse(type_: u8, size: u16, value: *mut c_void) -> Option<Self> {
 
         // tbd. How are 'NoData' presented? Alternative is to return 'None'.
-        if v.value.is_null() {
+        if value.is_null() {
             if type_ != 0 {
                 // One could think this to occur, e.g. on an empty string?
                 log::warn!("Null pointer, but type not 'NO_DATA' (skipping): type: {}, size: {}", type_, size);
@@ -99,7 +106,7 @@ impl ZclValue {
             }
         }
 
-        if let Some(tmp_e) = ezb_zcl_attr_type_e::from_repr(type_ as u32) {} else {
+        let Some(tmp_e) = ezb_zcl_attr_type_e::from_repr(type_ as u32) else {
             log::error!("[data error] ZCL value type NOT RECOGNIZED by 'esp_zigbee_lib'!: {}", type_);
             return None;
         };
@@ -107,16 +114,16 @@ impl ZclValue {
         let happy_cow = match tmp_e {
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_NO_DATA => Self::NoData,
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA8 => {
-                let v = read_ptr::<u8>(v.value, v.size)?;
+                let v = read_ptr::<u8>(value, size)?;
                 Self::Data8(v)
             },
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA16 => {
-                let v = read_ptr::<u16>(v.value, v.size)?;
+                let v = read_ptr::<u16>(value, size)?;
                 Self::Data16(v)
             }
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_STRING => {
-                let p = v.value as *const u8;
-                let byte_slice = unsafe { std::slice::from_raw_parts(p, v.size as usize) };
+                let p = value as *const u8;
+                let byte_slice = unsafe { std::slice::from_raw_parts(p, size as usize) };
                 let s = String::from_utf8_lossy(byte_slice).into_owned();
                 Self::String(s)
             },

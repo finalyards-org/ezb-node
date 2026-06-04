@@ -46,7 +46,9 @@ use crate::{
 //  - fed by the Zigbee task; blocking
 //  - consumed by the application task; async
 //
-static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channel::new();
+pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channel::new();
+    // tx: in 'zigbee_task'
+    // rx: us, passing to the application (application task)
 
 enum Payload {
     AppSignal(AppSignal),
@@ -73,7 +75,7 @@ pub trait Node {
     //      activated by a call to '...'.
     //
     fn init(cv: impl Into<&'static ConfigAccess>, auto_start: bool) -> Result<(), crate::Error> {
-        let () = zigbee_spawn(cv, auto_start, CHANNEL.dyn_sender())
+        let () = zigbee_spawn(cv, auto_start)
             .map_err(|e| { Error::SpawnFailed(e) })?;
         Ok(())
     }

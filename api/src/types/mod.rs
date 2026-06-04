@@ -16,8 +16,20 @@ pub use zcl_error::ZclError;
 mod zcl_attr;
 pub use zcl_attr::{ZclAttr, ZclValue};
 
+mod zcl_attr_id;
+pub use zcl_attr_id::AttrId;
+
 mod zcl_command_header;
 pub use zcl_command_header::CommandHeader;
+
+mod zcl_cluster_id;
+pub use zcl_cluster_id::ClusterId;
+
+mod zcl_attr_resp;
+pub use zcl_attr_resp::ZclAttrResp;
+
+mod zcl_write_attr_resp;
+pub use zcl_write_attr_resp::ZclWriteAttrResp;
 
 /**
 * @brief Base Device Behavior (BDB) operation mode.
@@ -92,20 +104,12 @@ pub enum ClusterRole {
     Client = ezb_node_raw::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
 }
 
-// For now, enough to pass the values we actually are using in applications.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::FromRepr, strum::Display)]
-#[repr(u16)]    // we know this by the C library
-pub enum ZclClusterId {
-    Basic = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC as _,
-    PowerConfig = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_POWER_CONFIG as _,
-    //...
-    Diagnostics = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_DIAGNOSTICS as _,
-    #[cfg(feature = "touchlink")]
-    TouchlinkCommissioning = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_TOUCHLINK_COMMISSIONING,
-}
-
-impl ZclClusterId {
-    fn from_raw(v: ezb_zcl_cluster_id_e) -> Option<Self> {
-        Self::from_repr(v as u16)
+impl ClusterRole {
+    pub(crate) fn parse(v: u8) -> Option<Self> {
+        match v as _ {
+            ezb_node_raw::EZB_ZCL_CLUSTER_SERVER => Some(ClusterRole::Server),
+            ezb_node_raw::EZB_ZCL_CLUSTER_CLIENT => Some(ClusterRole::Client),
+            _ => None
+        }
     }
 }

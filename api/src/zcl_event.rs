@@ -1,13 +1,13 @@
 
 use core::{
+    ffi::c_void,
     fmt,
-    //time::Duration
+    ptr::NonNull,
 };
 use strum;
 
 use ezb_node_raw::{
     ezb_zcl_core_action_callback_id_e,
-    //ezb_zcl_set_attr_value_message_t,
     ezb_zcl_status_e,
     ezb_zcl_attribute_s,
     ezb_zcl_cmd_hdr_t,
@@ -16,12 +16,18 @@ use ezb_node_raw::{
     ezb_zcl_set_attr_value_message_t,
     ezb_zcl_cmd_default_rsp_message_t,
     ezb_zcl_message_info_s,
+    ezb_zcl_cmd_read_attr_rsp_message_t,
+    ezb_zcl_cmd_write_attr_rsp_message_t,
+    RspVariableEntry,
+    RspVariableIter,
 };
 
 use crate::types::{
     ClusterRole,
-    ZclClusterId,
+    CommandHeader,
+    ClusterId,
     ZclAttr,
+    ZclAttrResp,
     ZclError,
 };
 
@@ -49,11 +55,11 @@ pub enum ZclEvent {
 
     /// A ZCL general ReadAttribute response is received.
     // ezb_zcl_cmd_read_attr_rsp_message_s
-    ReadAttrResp{ info: CommonInfo, header: XXX, variables: YYY },
+    ReadAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrResp> },
 
     /// A ZCL general WriteAttribute response is received.
     // ezb_zcl_cmd_write_attr_rsp_message_s
-    WriteAttrResp{ info: CommonInfo, header: XXX, variables: YYY },
+    WriteAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrResp> },
 
     /// A ZCL general ConfigureReporting response is received.
     // ezb_zcl_cmd_config_report_rsp_message_s
@@ -344,23 +350,53 @@ impl ZclEvent {
     /**
     * Convert from C level to Rust so that type and message are self-contained.
     */
-    pub(crate) fn parse(e: ezb_zcl_core_action_callback_id_e, p: *const ::core::ffi::c_void) -> Option<Self> {
+    // @note 'vp' is 'mut' though we don't change it. 'NotNull' needs it that way, but this also allows us to (later)
+    //      write to '.out' field if that ever becomes necessary (that write would need to be synchronous).
+    //
+    pub(crate) fn parse(e: ezb_zcl_core_action_callback_id_e, vp: *mut ::core::ffi::c_void) -> Option<Self> {
         use ezb_zcl_core_action_callback_id_e::*;
+
+        // In C samples, the pointer is checked against 'null', and the callback returned from if it is.
+        let Some(p) = NonNull::new(vp) else {
+            log::debug!("Null pointer, no data");
+            return None;
+        };
 
         let happy_res = match e {
             EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID => {
-                let mp: ezb_zcl_set_attr_value_message_t = get_msg::<ezb_zcl_set_attr_value_message_t>(p);
+                let msg = get_msg::<ezb_zcl_set_attr_value_message_t>(p);
 
                 Self::SetAttrValue{
-                    info: CommonInfo::from(&mp.info),
-                    attr: ZclAttr::parse(&mp.in_.attribute)?
+                    info: CommonInfo::parse(&msg.info)?,
+                    attr: ZclAttr::parse(&msg.in_.attribute)?
                 }
             },
+
+            EZB_ZCL_CORE_READ_ATTR_RSP_CB_ID => {
+                let msg = get_msg::<ezb_zcl_cmd_read_attr_rsp_message_t>(p);
+
+                let vars = ;
+                Self::ReadAttrResp{
+                    info: CommonInfo::parse(&msg.info)?,
+                    header: CommandHeader::parse(&msg.in_.header)?,
+                    variables: ZclAttrResp::parse_list(&msg.in_.variables)   // ezb_zcl_read_attr_rsp_variable_t
+                }
+            },
+
+            EZB_ZCL_CORE_WRITE_ATTR_RSP_CB_ID => {
+                let msg = get_msg::<ezb_zcl_cmd_write_attr_rsp_message_t>(p);
+
+                Self::WriteAttrResp{
+                    info: CommonInfo::parse(&msg.info)?,
+                    header: CommandHeader::parse(&msg.in_.header)?,
+                    variables: ZclAttrResp::parse_list(&msg.in_.variables)
+                }
+            }
 
             // ...
 
             EZB_ZCL_CORE_DEFAULT_RSP_CB_ID => {
-                let mp: ezb_zcl_cmd_default_rsp_message_t = get_msg::<ezb_zcl_cmd_default_rsp_message_t>(p);
+                let msg = get_msg::<ezb_zcl_cmd_default_rsp_message_t>(p);
                     //typedef struct ezb_zcl_cmd_default_rsp_message_s {
                     //     ezb_zcl_message_info_t info; /*!< Common information about the received response. See @ref ezb_zcl_message_info_s. */
                     //     struct {
@@ -371,10 +407,10 @@ impl ZclEvent {
                     // } ezb_zcl_cmd_default_rsp_message_t;
 
                 Self::DefaultResp{
-                    info: CommonInfo::from(&mp.info),
-                    header: CommandHeader::from(&mp.in_.header),
-                    rsp_to_cmd: u8,
-                    err: Option<ZclError>
+                    info: CommonInfo::parse(&msg.info)?,
+                    header: CommandHeader::parse(&msg.in_.header)?,
+                    cmd_id: msg.in_.rsp_to_cmd,
+                    err: ZclError::parse(msg.in_.status_code)?
                 }
             },
 
@@ -412,22 +448,23 @@ pub struct CommonInfo {
     ///< The destination endpoint ID of the ZCL indication.
     pub dst_ep: u8,
     ///< The cluster ID of the ZCL indication.
-    pub cluster_id: ZclClusterId, // u16
+    pub cluster_id: ClusterId, // u16
     ///< The role of cluster
     pub cluster_role: ClusterRole,
 }
 
-use core::ffi::c_void;
+impl CommonInfo {
+    fn parse(v: &ezb_zcl_message_info_s) -> Option<Self> {
+        let ezb_zcl_message_info_s{
+            status, dst_ep, cluster_id, cluster_role
+        } = *v;
 
-impl From<ezb_zcl_message_info_s> for CommonInfo {
-    fn from(r: &ezb_zcl_message_info_s) -> Self {
-        let err = ZclError::from_u8(r.status);
-        let dst_ep = r.dst_ep;
-        let cluster_id = ZclClusterId(r.cluster_id);
-        let cluster_role = ZclClusterRole(r.cluster_role);
-        Self {
-            err, dst_ep, cluster_id, cluster_role
-        }
+        Some( Self {
+            err: ZclError::parse(status)?,
+            dst_ep,
+            cluster_id: ClusterId::parse(cluster_id)?,
+            cluster_role: ClusterRole::parse(cluster_role)?
+        })
     }
 }
 
@@ -512,51 +549,18 @@ struct ConfigReportRespM {
 }
 
 /**
-* Input for 'ZclEvent'
-*/
-pub struct HeaderAndVariables {
-    header_X: *const ezb_zcl_cmd_hdr_t,
-    variables_X: *const ezb_zcl_read_attr_rsp_variable_t,
-}
-
-// Note: In raw side, each such struct is anonymous. Thus, we need type parameters to convert them.
-//
-impl HeaderAndVariables {
-    fn new<X>(raw: &X) -> Self {
-        Self {
-            header_X: X.header,
-            variables_X: X.variables
-        }
-    }
-}
-
-
-/**
-* Re-interpret a void pointer (as in C code), to be pointing to a particular message struct.
+* Re-interpret a void pointer, as a message of a certain type.
 *
-* @note The pointer does not necessarily point to 'Copy' contents; we return a reference.
+* @note #safety: The caller must ensure that `T` is properly aligned in the C memory!
+*
+*       Within 'esp_zigbee_sdk' 2.0.1), only the 'ezb_eui64_s' type (IEEE / Extended PAN addresses) is tagged 'packed'.
+*       You CAN use this function with messages that _contain_ such an address. Just DO NOT USE that resulting
+*       reference to it. Instead, value-read the IEEE field with 'std::ptr::read_unaligned()'.
+*
+*       Alternatively, we can make this function return 'T' (by value), using '::read_unaligned'.
 */
-fn get_msg<'a, T>(vp: *const ::core::ffi::c_void) -> Option<&'a T> {
-    // C code samples check for 'null' ("empty message"); so should we.
-    if vp.is_null() {
-        log::debug!("Empty ZCL message");
-        return None;
-    }
+fn get_msg<'a, T>(vp: core::ptr::NonNull<core::ffi::c_void>) -> &'a T {
     let typed_ptr = vp as *const T;
-    unsafe {
-        typed_ptr.as_ref()
-        //or: Some(std::ptr::read_unaligned(typed_ptr))
-    }
-}
-
-/**
-* The 'vp' points to ZCL Core ... message structures. Convert.
-*/
-#[cfg(false)]  // keep for a while
-fn typed<T: Copy>(vp: *const ::core::ffi::c_void) -> T {
-    assert!(!vp.is_null());
-    unsafe {
-        let typed_ptr = vp as *const T;
-        typed_ptr.read_unaligned()  // does the right thing even if the struct is "packed" (tbd. don't know if any of the ZCL Core types were... check)
-    }
+    unsafe { &*typed_ptr }
+    //unsafe { Some(std::ptr::read_unaligned(typed_ptr)) }
 }

@@ -1,8 +1,8 @@
 use std::{
     boxed::Box,
-    sync::OnceLock,
+    collections::BTreeMap,
+    sync::atomic::AtomicBool
 };
-use std::collections::BTreeMap;
 use bitflags::bitflags;
 use esp_idf_svc::{
     sys::EspError
@@ -48,8 +48,8 @@ use ezb_node_raw::{
     ezb_zcl_cluster_id_e,
     ezb_zcl_cluster_desc_t,
     ezb_zcl_basic_server_attr_t,
-    ClusterRole,
     ezb_zcl_core_action_callback_id_e,
+    ezb_zcl_core_action_callback_id_t,
 };
 
 use crate::{
@@ -60,6 +60,7 @@ use crate::{
         AlreadyInUse,
         InitializationFailed
     },
+    ZclEvent,
     config_views::ConfigAccess,
 };
 
@@ -70,8 +71,7 @@ use crate::utils::PascalString;
 const TASK_NAME: &str = "Zigbee_main";
 const TASK_STACK_SIZE: usize = 20 * 1024;   // note: C example uses 4k, Rust may need more
 
-// Note: Could also just share from the 'CHANNEL'
-static SENDER: OnceLock<&'static DynamicSender<AppSignal>> = OnceLock::new();
+static BEEN_THERE: AtomicBool = AtomicBool::new(false);
 
 /**
 * Launch the separate, background FreeRTOS task for interacting with the 'esp_zigbee_lib' callbacks (C side).
@@ -79,11 +79,12 @@ static SENDER: OnceLock<&'static DynamicSender<AppSignal>> = OnceLock::new();
 * @note Initialization etc. is done within the new thread; this is _mainly_ to remain as close to the C examples
 *       as possible.
 */
-pub(crate) fn zigbee_spawn(cfg: ConfigAccess, auto_start: bool, tx: &'static DynamicSender<AppSignal>) -> Result<(),std::io::Error> {
+pub(crate) fn zigbee_spawn(cfg: ConfigAccess, auto_start: bool) -> Result<(),std::io::Error> {
 
-    // Does double duty in checking we only are called once.
-    SENDER.set(tx)
-        .unwrap_or_else(|_| panic!("Already initialized"));
+    // We should ever be called just once.
+    if BEEN_THERE.swap(true, std::sync::atomic::Ordering::Relaxed) {
+        panic!("Calling 'zigbee_spawn' twice");
+    }
 
     let _ = std::thread::Builder::new()
         .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
@@ -197,7 +198,7 @@ fn zigbee_create_endpoints(creator: &EndpointCreator) -> Result<(), EspError> {
     EspError::from(err).map_or(Ok(()), Err)?;
 
     unsafe {
-        ezb_zcl_core_action_handler_register(Some(zcl_core_action_handler));
+        ezb_zcl_core_action_handler_register(Some(zcl_action_handler));
     }
 
     Ok(())
@@ -238,27 +239,49 @@ fn zigbee_run(auto_start: bool) -> Result<!,EspError> {
 //
 #[unsafe(no_mangle)]
 extern "C" fn app_signal_handler(p_app_signal: *const ezb_app_signal_t) -> bool {
-
     let p_type = unsafe { ezb_app_signal_get_type(p_app_signal) };
     let p_params = unsafe { ezb_app_signal_get_params(p_app_signal) };
 
-    let sig = AppSignal::from(p_type, p_params)
-        .map(|sig| {
-            log::info!("Received: {}", sig);
+    let Some(sig) = AppSignal::from(p_type, p_params) else {
+        log::error!("Unexpected app signal: {}, {:?}", p_type, p_params);
+        return false;
+    };
 
-            // todo: Push 'sig' to a channel
-        })
-        .unwrap_or_else(|| {
-            log::error!("Unexpected app signal: {}, {:?}", p_type, p_params);
-        });
+    log::debug!("Received: {}", sig);
 
-    SENDER.send(sig);
+    let tx = super::CHANNEL.sender();
 
-    true    // handled
+    if let Err(err) = tx.try_send(super::Payload::AppSignal(sig)) {
+        log::error!("[internal] Failure in channel, likely full ('AppSignal' skipped!!): {:?}", err);
+        return false;   // not handled (could also say "handled"; this should not really be allowed to happen)
+    }
+
+    // todo: 'true' is from C examples, but we will need a mechanism for the application to declare the logic, when
+    //      messages should be marked as handled, when skipped. #revisit
+    true
 }
 
 // ezb_zcl_core_action_callback_t
-extern "C" fn zcl_core_action_handler(callback_id: /*ezb_zcl_core_action_callback_id_t*/ u32, msg: *mut ::core::ffi::c_void) {
-    todo!()
-}
+extern "C" fn zcl_action_handler(action_id: ezb_zcl_core_action_callback_id_t /*u32*/, msg: *mut ::core::ffi::c_void) {
 
+    // Note: It's possible the '.out' field of 'msg' would need to be written. .. #later
+
+    let Some(action_e) = ezb_zcl_core_action_callback_id_e::from_repr(action_id as _) else {
+        log::error!("Unexpected ZCL core action (skipped): {}", action_id);
+        return;
+    };
+
+    let Some(ev) = ZclEvent::parse(action_e, msg) else {
+        log::error!("Failed to parse ZCL core action (skipped; bad data?): {}", action_e);
+        return;
+    };
+
+    let tx = super::CHANNEL.sender();
+
+    if let Err(err) = tx.try_send(super::Payload::ZclEvent(ev)) {
+        log::error!("[internal] Failure in channel, likely full ('ZclEvent' skipped!!): {:?}", err);
+        return;
+    }
+
+    ()
+}

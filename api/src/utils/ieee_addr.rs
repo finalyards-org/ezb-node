@@ -20,12 +20,6 @@ pub struct IeeeAddr(u64);
 //     } EZB_PACKED_FIELD;
 // } EZB_PACKED_END;
 impl IeeeAddr {
-    /// Convert to a slice.
-    ///
-    #[cfg(false)]
-    fn to_le_bytes(self) -> [u8; 8] {
-        self.0.to_le_bytes()
-    }
 }
 
 impl From<[u8; 8]> for IeeeAddr {

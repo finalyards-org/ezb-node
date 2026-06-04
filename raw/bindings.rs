@@ -2,20 +2,7 @@
 * Gathering the bindgen-generated binding like this allows us to attach
 * 'Default' (and/or other traits) to its types.
 */
-#[allow(non_camel_case_types)]
-#[allow(unused)]
-    // Disable warnings of unused entries, and imports in 'tmp/bindings_0.rs'.
-
-#[allow(unsafe_op_in_unsafe_fn)]
-    // 'bindgen' (0.72.1) generates code that has 'unsafe fn' but not using 'unsafe within the body; this seems to be a problem.
-    //  <<
-    //      #[inline]
-    //      pub unsafe fn as_slice(&self, len: usize) -> &[T] {
-    //          // <-- no 'unsafe {' here
-    //          ::core::slice::from_raw_parts(self.as_ptr(), len)
-    //      }
-    //  <<
-
+use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 
 // Silence:
@@ -33,6 +20,20 @@ use core::mem::MaybeUninit;
 //  <<
 //
 #[allow(unnecessary_transmutes)]
+#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types)]
+#[allow(unused)]
+    // Disable warnings of unused entries, and imports in 'tmp/bindings_0.rs'.
+
+#[allow(unsafe_op_in_unsafe_fn)]
+    // 'bindgen' (0.72.1) generates code that has 'unsafe fn' but not using 'unsafe within the body; this seems to be a problem.
+    //  <<
+    //      #[inline]
+    //      pub unsafe fn as_slice(&self, len: usize) -> &[T] {
+    //          // <-- no 'unsafe {' here
+    //          ::core::slice::from_raw_parts(self.as_ptr(), len)
+    //      }
+    //  <<
 mod a {
     include!("tmp/bindings_0.rs");
 }
@@ -41,16 +42,6 @@ pub use a::*;
     //
     // Note: This only exposes the C bindings to 'lib.rs', not dependent crates.
     //      Some values, e.g. 'EZB_ZCL_CLUSTER_{SERVER|CLIENT}' are not going to be further exposed.
-
-/***r
-bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct ClusterRole: u8 {
-        const SERVER = EZB_ZCL_CLUSTER_SERVER;  //0x01
-        const CLIENT = EZB_ZCL_CLUSTER_CLIENT;  //0x02
-    }
-}
-***/
 
 // #hack: allow use of 'OnceLock<esp_zigbee_config_t>' within the 'api'.
 //
@@ -222,11 +213,81 @@ pub unsafe fn ezb_zcl_basic_cluster_desc_add_attr(
     }
 }
 
-// it really is a bitmask, but we don't likely need it as such
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-#[cfg(false)]   //r: handle in 'api' level
-pub enum ClusterRole {
-    Server = a::EZB_ZCL_CLUSTER_SERVER as u8, // 1
-    Client = a::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
+// Make things 'parse' for the 'api' level; more consistent.
+//
+impl ezb_zcl_status_e {
+    fn parse(v: ezb_zcl_status_t /*u8*/) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+}
+
+// Many anonymous structs are essentially the same. This helps 'api' level deal with them, as one.
+//
+//pub struct ezb_zcl_read_attr_rsp_variable_s {
+//     ///< Attribute ID that was read.
+//     pub attr_id: u16,
+//     ///< Status of the read operation. See @ref ezb_zcl_status_t.
+//     pub status: u8,
+//     ///< Data type of the attribute. See @ref ezb_zcl_attr_type_t. Only valid
+//     /// if status is SUCCESS.
+//     pub attr_type: u8,
+//     ///< Pointer to the attribute value buffer. Only valid if status is
+//     /// SUCCESS.
+//     pub attr_value: *mut ::core::ffi::c_void,
+//     ///< Pointer to the next variable in the response list, or NULL if last.
+//     pub next: *mut ezb_zcl_read_attr_rsp_variable_s,
+// }
+//
+#[derive(Debug, Clone)]
+pub struct RspVariableEntry {
+    pub attr_id: u16,
+    pub status: u8,
+    pub attr_type: u8,
+    pub attr_value: *mut ::core::ffi::c_void
+}
+
+pub struct RspVariableIter<'a> {
+    current: *mut ezb_zcl_read_attr_rsp_variable_s,
+    _marker: core::marker::PhantomData<&'a ezb_zcl_read_attr_rsp_variable_s>,
+}
+
+impl<'a> Iterator for RspVariableIter {
+    type Item = RspVariableEntry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current.is_null() {     // end of list
+            return None;
+        }
+
+        // Read current struct
+        //  - alignment safely (only IEEE addresses have 'packed' alignment in the C library (2.0.1))
+        //  - ensuring we handle all their fields
+        //
+        let ezb_zcl_read_attr_rsp_variable_s {
+            attr_id, status, attr_type, attr_value, next
+        } = unsafe { core::ptr::read_unaligned(self.current) };
+
+        let entry = RspVariableEntry {
+            attr_id,
+            status,
+            attr_type,
+            attr_value
+        };
+
+        // move the iterator
+        self.current = next;
+
+        Some(entry)
+    }
+}
+
+impl ezb_zcl_read_attr_rsp_variable_s {
+    // The iterator's lifespan is tied to ours, meaning the linked list remains available to it.
+    //
+    pub fn iter(&self) -> RspVariableIter<'_> {
+        RspVariableIter {
+            current: self as *const Self as *mut Self,
+            _marker: core::marker::PhantomData,
+        }
+    }
 }
