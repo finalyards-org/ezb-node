@@ -55,27 +55,11 @@ pub enum BdbMode {
     TouchlinkTarget   = ezb_bdb_comm_mode_e::EZB_BDB_MODE_TOUCHLINK_TARGET.0,       // 32
 }
 
-impl BdbMode {
-    /***
-    pub fn to_raw(self) -> ezb_node_raw::ezb_bdb_comm_mode_e {
-        ezb_node_raw::ezb_bdb_comm_mode_e(self as ::core::ffi::c_uint)
-    }***/
+impl Into<ezb_bdb_comm_mode_e> for BdbMode {
+    fn into(self) -> ezb_bdb_comm_mode_e {
+        ezb_bdb_comm_mode_e(self as ::core::ffi::c_uint)
+    }
 }
-
-/***
-pub struct BdbMode(ezb_bdb_comm_mode_e);
-
-impl BdbMode {
-    pub const INITIALIZATION: Self = Self(ezb_bdb_comm_mode_e::EZB_BDB_MODE_INITIALIZATION); // 1
-    #[cfg(feature = "touchlink")]
-    pub const TOUCHLINK_INITIATOR: Self = Self(ezb_bdb_comm_mode_e::EZB_BDB_MODE_TOUCHLINK_INITIATOR); // 2
-    pub const NETWORK_STEERING: Self = Self(ezb_bdb_comm_mode_e::EZB_BDB_MODE_NETWORK_STEERING); // 4
-    #[cfg(feature = "coordinator")]
-    pub const NETWORK_FORMATION: Self = Self(ezb_bdb_comm_mode_e::EZB_BDB_MODE_NETWORK_FORMATION); // 8
-    pub const FINDING_N_BINDING: Self = Self(ezb_bdb_comm_mode_e::EZB_BDB_MODE_FINDING_N_BINDING); // 16
-    #[cfg(feature = "touchlink")]
-    pub const TOUCHLINK_TARGET: Self = Self(ezb_bdb_comm_mode_e::EZB_BDB_MODE_TOUCHLINK_TARGET); // 32
-}***/
 
 #[cfg(false)]
 bitflags! {

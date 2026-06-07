@@ -14,9 +14,10 @@ use embassy_sync::{
     channel::{
         Channel,
         DynamicReceiver,
+        DynamicSender,
     }
 };
-use embassy_sync::channel::DynamicSender;
+
 use ezb_node_raw::{
     esp_zigbee_init,
     ezb_app_signal_t,
@@ -54,6 +55,7 @@ use ezb_node_raw::{
 
 use crate::{
     AppSignal,
+    Config,
     EndpointCreator,
     IeeeAddr,
     Error::{
@@ -79,12 +81,15 @@ static BEEN_THERE: AtomicBool = AtomicBool::new(false);
 * @note Initialization etc. is done within the new thread; this is _mainly_ to remain as close to the C examples
 *       as possible.
 */
-pub(crate) fn zigbee_spawn(cfg: ConfigAccess, auto_start: bool) -> Result<(),std::io::Error> {
+pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),std::io::Error> {
 
     // We should ever be called just once.
     if BEEN_THERE.swap(true, std::sync::atomic::Ordering::Relaxed) {
         panic!("Calling 'zigbee_spawn' twice");
     }
+
+    let ca: ConfigAccess = cfg.into();
+    let endpoint_cfg: EndpointCreator = cfg.into();
 
     let _ = std::thread::Builder::new()
         .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
@@ -92,7 +97,7 @@ pub(crate) fn zigbee_spawn(cfg: ConfigAccess, auto_start: bool) -> Result<(),std
         .spawn(move || {
             log::info!("Zigbee task running");
 
-            let (cc, channel_masks) = cfg.expand();
+            let (cc, channel_masks) = ca.expand();
                 //
                 // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
                 // Providing it a 'static', non-changing struct is safe.
@@ -100,7 +105,7 @@ pub(crate) fn zigbee_spawn(cfg: ConfigAccess, auto_start: bool) -> Result<(),std
             let inner = || -> Result<!,EspError> {
                 zigbee_init(cc)?;
                 zigbee_setup_commissioning(channel_masks)?;
-                zigbee_create_endpoints(&cfg);
+                zigbee_create_endpoints(endpoint_cfg);
 
                 zigbee_run(auto_start)?
             };
@@ -180,19 +185,12 @@ fn zigbee_setup_commissioning(channel_masks: &[ChannelMask;2]) -> Result<(),EspE
 // ESP_ERROR_CHECK(ezb_af_device_desc_register(dev_desc));
 // ezb_zcl_core_action_handler_register(esp_zigbee_zcl_core_action_handler);
 //
-fn zigbee_create_endpoints(creator: &EndpointCreator) -> Result<(), EspError> {
+fn zigbee_create_endpoints(creator: EndpointCreator) -> Result<(), EspError> {
 
     // Device where the endpoints will be added to.
     let dev_desc: ezb_af_device_desc_t = unsafe { ezb_af_create_device_desc() };
 
-    creator.create_all(dev_desc);
-//rmatch entry {
-//r    #[cfg(feature = "ep_color_dimmable_light")]
-//r    EndpointConfig::ColorDimmableLightEPC(common_fields) => {
-//r        create_color_dimmable_light(dev_desc, ep_id, common_fields);
-//r    }
-//r    // must be exhaustive match
-//r}
+    creator.create_all(dev_desc)?;
 
     let err = unsafe { ezb_af_device_desc_register(dev_desc) };
     EspError::from(err).map_or(Ok(()), Err)?;

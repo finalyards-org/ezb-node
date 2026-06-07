@@ -14,6 +14,7 @@ use ezb_node::{
     Node,
     ConfigAccess,
     ZclEvent,
+    ZclError,
 };
 
 use crate::{scheduler::schedule};
@@ -40,7 +41,7 @@ impl LightCoordinator {
     /**
     * Behaviour of this particular node.
     */
-    pub async fn run(&mut self) -> ! {
+    pub async fn run(mut self) -> ! {
         Node::run(self,
   |this, sig| this.on_app_signal(sig),
   |this, ev| this.on_zcl_event(ev)
@@ -149,13 +150,19 @@ impl LightCoordinator {
 
         match ev {
             SetAttrValue { .. } => {
-                unimplemented!()
+                unimplemented!();
+
                 //set_attr_value(message);  // i.e. steer the light (color, intensity, on/off)
                 log::debug!("Setting light to: {}", "..something..");   // TEMP
             },
-            DefaultResp { in_status_code, .. } => {
+            DefaultResp { err, .. } => {
                 //ezb_zcl_cmd_default_rsp_message_t *default_rsp = (ezb_zcl_cmd_default_rsp_message_t *)message;
-                log::info!("Received ZCL Default Response, status_code: {}", in_status_code);
+                log::info!("Received ZCL Default Response, status: {}",
+                    match err {
+                        None => "success".into(),
+                        Some(e) => e.display()
+                    }
+                );
             },
             _ => {
                 log::warn!("ZCL Core Action: {?:}", ev);

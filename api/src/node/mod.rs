@@ -35,9 +35,9 @@ use ezb_node_raw::{
 
 use crate::{
     AppSignal,
+    Config,
     BdbMode,
     IeeeAddr,
-    config_views::ConfigAccess,
     Error,
     ZclEvent
 };
@@ -50,6 +50,7 @@ pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channe
     // tx: in 'zigbee_task'
     // rx: us, passing to the application (application task)
 
+#[derive(Debug, Clone)]
 enum Payload {
     AppSignal(AppSignal),
     ZclEvent(ZclEvent)
@@ -74,8 +75,8 @@ pub trait Node {
     //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
     //      activated by a call to '...'.
     //
-    fn init(cv: impl Into<&'static ConfigAccess>, auto_start: bool) -> Result<(), crate::Error> {
-        let () = zigbee_spawn(cv, auto_start)
+    fn init(cfg: &'static Config, auto_start: bool) -> Result<(), crate::Error> {
+        let () = zigbee_spawn(cfg, auto_start)
             .map_err(|e| { Error::SpawnFailed(e) })?;
         Ok(())
     }
@@ -85,8 +86,11 @@ pub trait Node {
     *
     * The closures/functions get us (an application struct implementing 'Node' as a parameter, allowing them to
     * access the Zigbee APIs, via 'Node' methods. We ensure that locking is in place for such methods (see ZigbeeGuard).
+    *
+    * @note: The 'this' is mutable, in case the application has fields in there (state) that the handlers want to
+    *       change. 'ezb_node' itself carries no state in 'T' (it couldn't, since the 'struct' is application defined).
     */
-    async fn run<T: Node, F1, F2>(&mut this: /*move*/ T, on_app_signal: F1, on_zcl_event: F2) -> !
+    async fn run<T: Node, F1, F2>(mut this: /*move*/ T, on_app_signal: F1, on_zcl_event: F2) -> !
     where
         F1: Fn(&mut T, AppSignal),
         F2: Fn(&mut T, Result<ZclEvent, ZclError>)
@@ -96,8 +100,8 @@ pub trait Node {
         loop {
             let x = rx.receive().await;
             match x {
-                Payload::AppSignal(x) => on_app_signal(this, x),
-                Payload::ZclEvent(x) => on_zcl_event(this, x)
+                Payload::AppSignal(x) => on_app_signal(&mut this, x),
+                Payload::ZclEvent(x) => on_zcl_event(&mut this, x)
             }
         }
     }
@@ -161,7 +165,7 @@ pub trait Node {
     fn start_top_level_commissioning(&self, mask: BdbMode) -> Option<EspError> {
         let _guard = ZigbeeGuard::acquire();
         let err= unsafe {
-            ezb_bdb_start_top_level_commissioning(mask.bits())
+            ezb_bdb_start_top_level_commissioning(mask.into())
         };
         EspError::from(err) // provides 'Option'
     }

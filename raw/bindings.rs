@@ -213,6 +213,17 @@ pub unsafe fn ezb_zcl_basic_cluster_desc_add_attr(
     }
 }
 
+// Allow use of '_e', not u8
+/// @brief  Start top level commissioning procedure with specified mode
+/// mask.
+///
+/// @param[in] mode_mask commissioning modes
+///
+/// @return - EZB_ERR_NONE on success
+pub unsafe fn ezb_bdb_start_top_level_commissioning(mode_mask: ezb_bdb_comm_mode_e) -> ezb_err_t {
+    a::ezb_bdb_start_top_level_commissioning(mode_mask.0 as u8)
+}
+
 // Make things 'parse' for the 'api' level; more consistent.
 //
 impl ezb_zcl_status_e {
@@ -222,6 +233,9 @@ impl ezb_zcl_status_e {
 }
 
 // Many anonymous structs are essentially the same. This helps 'api' level deal with them, as one.
+//
+// The struct is essentially two-in-one. We do the split into two, and we take care of the 'next' pointer
+// (implementing an Iterator for the 'api' level).
 //
 //pub struct ezb_zcl_read_attr_rsp_variable_s {
 //     ///< Attribute ID that was read.
@@ -238,12 +252,20 @@ impl ezb_zcl_status_e {
 //     pub next: *mut ezb_zcl_read_attr_rsp_variable_s,
 // }
 //
-#[derive(Debug, Clone)]
-pub struct RspVariableEntry {
-    pub attr_id: u16,
-    pub status: u8,
-    pub attr_type: u8,
-    pub attr_value: *mut ::core::ffi::c_void
+#[derive(Debug)]
+pub enum RspVariableEntry {
+    Success{ attr_id: u16, attr_type: ezb_zcl_attr_type_t /*u8*/, attr_value: *const core::ffi::c_void }, // status: 0
+    Failure{ attr_id: u16, status: u8 }
+}
+
+impl RspVariableEntry {
+    fn new(attr_id: u16, status: u8, attr_type: u8, attr_value: *const core::ffi::c_void) -> Self {
+        if status == ezb_zcl_status_e::EZB_ZCL_STATUS_SUCCESS as _ {
+            Self::Success { attr_id, attr_type, attr_value }
+        } else {
+            Self::Failure { attr_id, status }
+        }
+    }
 }
 
 pub struct RspVariableIter<'a> {
@@ -251,7 +273,7 @@ pub struct RspVariableIter<'a> {
     _marker: core::marker::PhantomData<&'a ezb_zcl_read_attr_rsp_variable_s>,
 }
 
-impl<'a> Iterator for RspVariableIter {
+impl<'a> Iterator for RspVariableIter<'a> {
     type Item = RspVariableEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -264,15 +286,14 @@ impl<'a> Iterator for RspVariableIter {
         //  - ensuring we handle all their fields
         //
         let ezb_zcl_read_attr_rsp_variable_s {
-            attr_id, status, attr_type, attr_value, next
-        } = unsafe { core::ptr::read_unaligned(self.current) };
-
-        let entry = RspVariableEntry {
             attr_id,
             status,
             attr_type,
-            attr_value
-        };
+            attr_value,
+            next
+        } = unsafe { core::ptr::read_unaligned(self.current) };
+
+        let entry = RspVariableEntry::new(attr_id, status, attr_type, attr_value);
 
         // move the iterator
         self.current = next;
@@ -291,3 +312,11 @@ impl ezb_zcl_read_attr_rsp_variable_s {
         }
     }
 }
+
+impl<'a> From<&'a ezb_zcl_read_attr_rsp_variable_s> for RspVariableIter<'a> {
+    fn from(s: &'a ezb_zcl_read_attr_rsp_variable_s) -> Self {
+        s.iter()
+    }
+}
+
+// tbd. make into a macro, for other types with similar fields

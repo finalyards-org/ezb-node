@@ -19,6 +19,30 @@ pub enum ZclAttrResp {
 
 impl ZclAttrResp {
     /**
+    * Parse a single success/failure entry, from its 'raw' representation (plain numbers, may carry bad data).
+    *
+    * @note In reality, the fields are always as a linked list (raw), i.e. multiple fields.
+    */
+    //pub enum RspVariableEntry {
+    //     Success{ attr_id: u16, attr_type: ezb_zcl_attr_type_t /*u8*/, attr_value: core::ffi::c_void }, // status: SUCCESS (0)
+    //     Failure{ attr_id: u16, status: u8 }
+    // }
+    fn parse_one(entry: &RspVariableEntry) -> Option<Self> {
+
+        let o = match *entry {
+            RspVariableEntry::Success{ attr_id, attr_type, attr_value } => {
+                let attr = ZclAttr::parse2(&entry)?;
+                Self::Success(attr)
+            },
+            RspVariableEntry::Failure{ attr_id, status } => {
+                let err = ZclError::parse(status)?.unwrap();     // st==0 would be a 'Success'
+                Self::Failure(AttrId(attr_id), err)
+            }
+        };
+        Some(o)
+    }
+
+    /**
     * Parse a list of successful or failed variable responses.
     *
     * @return None if there is a problem (bad data, or internal problems logged); Some if conversion took place.
@@ -32,82 +56,10 @@ impl ZclAttrResp {
     //     pub attr_type: u8,
     //     pub attr_value: *mut ::core::ffi::c_void
     // }
-    pub(crate) fn parse_list(iter: RspVariableIter) -> Option<Vec<Self>> {
+    pub(crate) fn parse_list<I: Into<RspVariableIter>>(vars: I) -> Option<Vec<Self>> {
+        let iter: RspVariableIter = vars.into();
 
-        iter.map(|RspVariableEntry{ attr_id, status, attr_type, attr_value }| {
-
-            let st = ZclError::parse(status)?;
-
-            match st {
-                None => {
-                    let attr = ZclAttr::parse2(entry)?;
-                    Some(ZclAttrResp::Success(attr))
-                }
-                Some(err) => Some(ZclAttrResp::Failure(AttrId(entry.attr_id), err)),
-            }
-        })
-            .flatten() // Siivoaa mahdolliset None-arvot pois, jos parse2 epäonnistuu
-            .collect();
-    }
-}
-
-
-
-#[cfg(false)]  //R; took the iteration approach
-impl ZclAttrResp {
-    //pub struct ezb_zcl_read_attr_rsp_variable_s {
-    //     ///< Attribute ID that was read.
-    //     pub attr_id: u16,
-    //     ///< Status of the read operation. See @ref ezb_zcl_status_t.
-    //     pub status: u8,
-    //     ///< Data type of the attribute. See @ref ezb_zcl_attr_type_t. Only valid
-    //     /// if status is SUCCESS.
-    //     pub attr_type: u8,
-    //     ///< Pointer to the attribute value buffer. Only valid if status is
-    //     /// SUCCESS.
-    //     pub attr_value: *mut ::core::ffi::c_void,
-    //     ///< Pointer to the next variable in the response list, or NULL if last.
-    //     pub next: *mut ezb_zcl_read_attr_rsp_variable_s,
-    // }
-    fn parse_next<T>(o: &T) -> Option<(ZclAttrResp,*const T)> {
-        let T {
-            attr_id,
-            status,
-            attr_type,
-            attr_value,
-            next
-        } = *o;
-
-        let entry = match ZclError::from(status) {
-            None => {
-                let attr = ZclAttr::parse2(attr_id, attr_type, attr_value)?;
-                ZclAttrResp::Success(attr)
-            },
-            Some(err) => {
-                // note: 'attr_type', 'attr_value' not to be used
-                ZclAttrResp::Failure(AttrId(attr_id), err)
-            }
-        };
-        Some((entry,next))
-    }
-
-    /**
-    * Parse a list of responses on variable access (read/write/...).
-    */
-    pub(crate) fn parse_list<T>(raw: &T) -> Option<Vec<ZclAttrResp>> {
-        let mut vec = Vec::new();
-
-        let mut next: &T = raw;
-        loop {
-            let Some((entry,next)) = Self::parse_next(next) else {
-                log::error!("Parsing attribute responses failed!");
-                return None;
-            };
-            vec.push(entry);
-
-            if next.is_null() { break; }
-            todo!()
-        }
-        Some(vec)
+        iter.map(Self::parse_one)
+            .collect();     // Any entry being 'None' (parsing failed) fails the whole list.
     }
 }

@@ -1,6 +1,6 @@
 use strum;
-use ezb_node_raw::ezb_zcl_status_e;
 
+use ezb_node_raw::ezb_zcl_status_e;
 
 // Design:
 //  instead of using C-like enums (mapping to integers), doing this as separate structs allows for additional
@@ -10,7 +10,7 @@ use ezb_node_raw::ezb_zcl_status_e;
 /// @brief ZCL status codes.
 ///
 /// Returned by ZCL operations to indicate success or various error conditions.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, strum::Display)]
 #[repr(u8)]    // In C, carried by 'ezb_zcl_status_t' which is 'u8'; range is 0..=195; bindgen expands to 'u32'
 pub enum ZclError {
     ///< ZCL Fail

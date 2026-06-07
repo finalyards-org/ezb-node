@@ -1,14 +1,15 @@
 
 use std::{mem, slice};
 
-use core::ffi::c_void;
+//use core::ffi::c_void;
 
-use ezb_node_raw::{
-    ezb_zcl_attribute_s,
-    ezb_zcl_attribute_s__bindgen_ty_1,
-    ezb_zcl_attr_type_e,
+use ezb_node_raw::{ezb_zcl_attribute_s, ezb_zcl_attribute_s__bindgen_ty_1, ezb_zcl_attr_type_e, RspVariableEntry};
+
+use crate::{
+    AttrId,
+    utils::PascalString,
 };
-use crate::AttrId;
+
 // ZCL attributes are defined by the protocol specification.
 // 'esp_zigbee_lib' has ~58 of them, in 'zcl_type.h'.
 //
@@ -58,16 +59,24 @@ impl ZclAttr {
 
         let o= Self{
             id: AttrId(id),
-            data: ZclValue::parse(&data)?
+            data: ZclValue::parse(data.type_, data.value)?
         };
         Some(o)
     }
 
     /**
-    * Alternative parsing, when the input is more scattered..
+    * Alternative parsing. 'RspVariableEntry::Success' carries the same fields as 'ezb_zcl_attribute_s'.
     */
-    pub(crate) fn parse2(attr_id: AttrId, attr_type: u64, data: c_void) -> Option<Self> {
+    pub(crate) fn parse2(entry: &RspVariableEntry::Success) -> Option<Self> {
+        let RspVariableEntry::Success{
+            attr_id, attr_type, attr_value
+        } = *entry;
 
+        let o= Self{
+            id: AttrId(attr_id),
+            data: ZclValue::parse(attr_type, attr_value)?
+        };
+        Some(o)
     }
 }
 
@@ -92,19 +101,26 @@ pub enum ZclValue {
 }
 
 impl ZclValue {
-    fn parse(type_: u8, size: u16, value: *mut c_void) -> Option<Self> {
+    // Note: size is not necessary (one caller doesn't have it, either): it can be deduced from the
+    //      type and '*value' (for Pascal strings).
+    //
+    fn parse(type_: u8, /*r size: u16,*/ value: *const core::ffi::c_void) -> Option<Self> {
 
         // tbd. How are 'NoData' presented? Alternative is to return 'None'.
         if value.is_null() {
             if type_ != 0 {
                 // One could think this to occur, e.g. on an empty string?
-                log::warn!("Null pointer, but type not 'NO_DATA' (skipping): type: {}, size: {}", type_, size);
+                log::warn!("Null pointer, but type not 'NO_DATA' (skipping): type: {}", type_);
                 return None;
             } else {
-                log::debug!("Null pointer, no data (type: {}, size: {})", type_, size);
+                log::debug!("Null pointer, no data (type: {})", type_);
                 return Some(Self::NoData);
             }
         }
+
+        // note: 'NonNull' is only implemented for '*mut'. It does not really matter for us.
+        //
+        let p = core::ptr::NonNull::new(value as *mut core::ffi::c_void).unwrap();
 
         let Some(tmp_e) = ezb_zcl_attr_type_e::from_repr(type_ as u32) else {
             log::error!("[data error] ZCL value type NOT RECOGNIZED by 'esp_zigbee_lib'!: {}", type_);
@@ -114,18 +130,15 @@ impl ZclValue {
         let happy_cow = match tmp_e {
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_NO_DATA => Self::NoData,
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA8 => {
-                let v = read_ptr::<u8>(value, size)?;
+                let v = read_ptr::<u8>(p);
                 Self::Data8(v)
             },
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA16 => {
-                let v = read_ptr::<u16>(value, size)?;
+                let v = read_ptr::<u16>(p);
                 Self::Data16(v)
             }
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_STRING => {
-                let p = value as *const u8;
-                let byte_slice = unsafe { std::slice::from_raw_parts(p, size as usize) };
-                let s = String::from_utf8_lossy(byte_slice).into_owned();
-                Self::String(s)
+                Self::String( read_pascal_string(p) )
             },
 
             //    EZB_ZCL_ATTR_TYPE_DATA8        = 0x08U, /*!< 8-bit data. */
@@ -202,9 +215,10 @@ impl ZclValue {
 //
 // This clones the value; those are normally short and it's useful anyhow for passing the value further.
 //
-fn read_ptr<T>(p: *const core::ffi::c_void, size: u16) -> Option<T> {
+fn read_ptr<T>(p: core::ptr::NonNull<core::ffi::c_void> /*r, size: u16*/) -> T {
 
     // Validate the 'size' field matches. Note: NEVER PANIC based on input fields.
+    #[cfg(false)] //R
     {
         const EXPECTED_SZ: usize = mem::size_of::<T>();
         if size as usize != EXPECTED_SZ {
@@ -213,8 +227,26 @@ fn read_ptr<T>(p: *const core::ffi::c_void, size: u16) -> Option<T> {
         }
     }
 
-    let p = p as *const T;
+    let p = p.as_ptr() as *const T;
     // Use 'read_unaligned' to ensure no alignment problems
-    let v = unsafe { std::ptr::read_unaligned(p) };
-    Some(v)
+    unsafe { std::ptr::read_unaligned(p) };
+}
+
+/**
+* Incoming Pascal strings.
+*/
+// Implementation: It's more suitable to do this here, than in 'crate::utils::PascalString'. We just want a straight
+//      down '*const u8' -> 'String' conversion, whereas 'PascalString' is about storing the bytes.
+//
+fn read_pascal_string(p: core::ptr::NonNull<core::ffi::c_void>) -> String {
+    let p = p.as_ptr() as *const u8;
+
+    let len: u8 = unsafe { core::ptr::read_unaligned(p) };  // Pascal string: [0] is length
+
+    if len == 0 {
+        String::new()
+    } else {
+        let byte_slice = unsafe { core::slice::from_raw_parts(p.add(1), len as usize) };
+        String::from_utf8_lossy(byte_slice).into_owned()
+    }
 }

@@ -375,7 +375,6 @@ impl ZclEvent {
             EZB_ZCL_CORE_READ_ATTR_RSP_CB_ID => {
                 let msg = get_msg::<ezb_zcl_cmd_read_attr_rsp_message_t>(p);
 
-                let vars = ;
                 Self::ReadAttrResp{
                     info: CommonInfo::parse(&msg.info)?,
                     header: CommandHeader::parse(&msg.in_.header)?,
