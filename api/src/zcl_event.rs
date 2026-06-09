@@ -377,8 +377,8 @@ impl ZclEvent {
 
                 Self::ReadAttrResp{
                     info: CommonInfo::parse(&msg.info)?,
-                    header: CommandHeader::parse(&msg.in_.header)?,
-                    variables: ZclAttrResp::parse_list(&msg.in_.variables)   // ezb_zcl_read_attr_rsp_variable_t
+                    header: CommandHeader::parse(msg.in_.header)?,
+                    variables: ZclAttrResp::parse_list(&msg.in_.variables)?
                 }
             },
 
@@ -387,8 +387,8 @@ impl ZclEvent {
 
                 Self::WriteAttrResp{
                     info: CommonInfo::parse(&msg.info)?,
-                    header: CommandHeader::parse(&msg.in_.header)?,
-                    variables: ZclAttrResp::parse_list(&msg.in_.variables)
+                    header: CommandHeader::parse(msg.in_.header)?,
+                    variables: ZclAttrResp::parse_list(&msg.in_.variables)?
                 }
             }
 
@@ -407,7 +407,7 @@ impl ZclEvent {
 
                 Self::DefaultResp{
                     info: CommonInfo::parse(&msg.info)?,
-                    header: CommandHeader::parse(&msg.in_.header)?,
+                    header: CommandHeader::parse(msg.in_.header)?,
                     cmd_id: msg.in_.rsp_to_cmd,
                     err: ZclError::parse(msg.in_.status_code)?
                 }
@@ -550,16 +550,15 @@ struct ConfigReportRespM {
 /**
 * Re-interpret a void pointer, as a message of a certain type.
 *
-* @note #safety: The caller must ensure that `T` is properly aligned in the C memory!
+* @note #safety:
+*       'esp_zigbee_lib' (2.0.1) uses '#[repr(packed)]' for the 'ezb_eui64_s' type (IEEE / Extended PAN addresses).
+*       You CAN use this function with messages that contain such an address. Just DO NOT USE that resulting reference
+*       to it. Instead, value-read the IEEE field with 'std::ptr::read_unaligned()'.
 *
-*       Within 'esp_zigbee_sdk' 2.0.1), only the 'ezb_eui64_s' type (IEEE / Extended PAN addresses) is tagged 'packed'.
-*       You CAN use this function with messages that _contain_ such an address. Just DO NOT USE that resulting
-*       reference to it. Instead, value-read the IEEE field with 'std::ptr::read_unaligned()'.
-*
-*       Alternatively, we can make this function return 'T' (by value), using '::read_unaligned'.
+*       Alternatively, we can make this function return 'T' (by value), and use '::read_unaligned'.
 */
 fn get_msg<'a, T>(vp: core::ptr::NonNull<core::ffi::c_void>) -> &'a T {
-    let typed_ptr = vp as *const T;
+    let typed_ptr = vp.as_ptr() as *const T;
     unsafe { &*typed_ptr }
-    //unsafe { Some(std::ptr::read_unaligned(typed_ptr)) }
+    //or: unsafe { Some(std::ptr::read_unaligned(typed_ptr)) }
 }

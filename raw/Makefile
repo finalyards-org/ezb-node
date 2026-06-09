@@ -150,6 +150,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --with-derive-custom "ezb_zcl_core_action_callback_id_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_status_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \

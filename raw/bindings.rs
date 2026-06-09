@@ -48,6 +48,10 @@ pub use a::*;
 unsafe impl Send for esp_zigbee_config_s {}
 unsafe impl Sync for esp_zigbee_config_s {}
 
+// Larger constructs are grouped together, but they are still within this module.
+include!("bindings_iter_read.rs");
+include!("bindings_iter_write.rs");
+
 /*
 * Default for a device configuration.
 */
@@ -221,102 +225,45 @@ pub unsafe fn ezb_zcl_basic_cluster_desc_add_attr(
 ///
 /// @return - EZB_ERR_NONE on success
 pub unsafe fn ezb_bdb_start_top_level_commissioning(mode_mask: ezb_bdb_comm_mode_e) -> ezb_err_t {
-    a::ezb_bdb_start_top_level_commissioning(mode_mask.0 as u8)
+    unsafe { a::ezb_bdb_start_top_level_commissioning(mode_mask.0 as u8) }
 }
 
-// Make things 'parse' for the 'api' level; more consistent.
+
+//---
+// Provide '::parse()' instead of strum's '::from_repr' to the API level; more consistent.
 //
-impl ezb_zcl_status_e {
-    fn parse(v: ezb_zcl_status_t /*u8*/) -> Option<Self> {
+impl ezb_addr_mode_e {
+    pub fn parse(v: ezb_addr_mode_t) -> Option<Self> {
         Self::from_repr(v as u32)
     }
 }
-
-// Many anonymous structs are essentially the same. This helps 'api' level deal with them, as one.
-//
-// The struct is essentially two-in-one. We do the split into two, and we take care of the 'next' pointer
-// (implementing an Iterator for the 'api' level).
-//
-//pub struct ezb_zcl_read_attr_rsp_variable_s {
-//     ///< Attribute ID that was read.
-//     pub attr_id: u16,
-//     ///< Status of the read operation. See @ref ezb_zcl_status_t.
-//     pub status: u8,
-//     ///< Data type of the attribute. See @ref ezb_zcl_attr_type_t. Only valid
-//     /// if status is SUCCESS.
-//     pub attr_type: u8,
-//     ///< Pointer to the attribute value buffer. Only valid if status is
-//     /// SUCCESS.
-//     pub attr_value: *mut ::core::ffi::c_void,
-//     ///< Pointer to the next variable in the response list, or NULL if last.
-//     pub next: *mut ezb_zcl_read_attr_rsp_variable_s,
-// }
-//
-#[derive(Debug)]
-pub enum RspVariableEntry {
-    Success{ attr_id: u16, attr_type: ezb_zcl_attr_type_t /*u8*/, attr_value: *const core::ffi::c_void }, // status: 0
-    Failure{ attr_id: u16, status: u8 }
-}
-
-impl RspVariableEntry {
-    fn new(attr_id: u16, status: u8, attr_type: u8, attr_value: *const core::ffi::c_void) -> Self {
-        if status == ezb_zcl_status_e::EZB_ZCL_STATUS_SUCCESS as _ {
-            Self::Success { attr_id, attr_type, attr_value }
-        } else {
-            Self::Failure { attr_id, status }
-        }
+impl ezb_nwk_network_status_t { // is an enum, in 'bindings_0.rs'
+    pub fn parse(v: u8) -> Option<Self> {
+        Self::from_repr(v as u32)
     }
 }
-
-pub struct RspVariableIter<'a> {
-    current: *mut ezb_zcl_read_attr_rsp_variable_s,
-    _marker: core::marker::PhantomData<&'a ezb_zcl_read_attr_rsp_variable_s>,
-}
-
-impl<'a> Iterator for RspVariableIter<'a> {
-    type Item = RspVariableEntry;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current.is_null() {     // end of list
-            return None;
-        }
-
-        // Read current struct
-        //  - alignment safely (only IEEE addresses have 'packed' alignment in the C library (2.0.1))
-        //  - ensuring we handle all their fields
-        //
-        let ezb_zcl_read_attr_rsp_variable_s {
-            attr_id,
-            status,
-            attr_type,
-            attr_value,
-            next
-        } = unsafe { core::ptr::read_unaligned(self.current) };
-
-        let entry = RspVariableEntry::new(attr_id, status, attr_type, attr_value);
-
-        // move the iterator
-        self.current = next;
-
-        Some(entry)
+impl ezb_app_signal_type_e {
+    pub fn parse(v: ezb_app_signal_type_t) -> Option<Self> {
+        Self::from_repr(v as u32)
     }
 }
-
-impl ezb_zcl_read_attr_rsp_variable_s {
-    // The iterator's lifespan is tied to ours, meaning the linked list remains available to it.
-    //
-    pub fn iter(&self) -> RspVariableIter<'_> {
-        RspVariableIter {
-            current: self as *const Self as *mut Self,
-            _marker: core::marker::PhantomData,
-        }
+impl ezb_zcl_attr_type_e {
+    pub fn parse(v: ezb_zcl_attr_type_t) -> Option<Self> {
+        Self::from_repr(v as u32)
     }
 }
-
-impl<'a> From<&'a ezb_zcl_read_attr_rsp_variable_s> for RspVariableIter<'a> {
-    fn from(s: &'a ezb_zcl_read_attr_rsp_variable_s) -> Self {
-        s.iter()
+impl ezb_zcl_core_action_callback_id_e {
+    pub fn parse(v: ezb_zcl_core_action_callback_id_t) -> Option<Self> {
+        Self::from_repr(v as u32)
     }
 }
-
-// tbd. make into a macro, for other types with similar fields
+impl ezb_zcl_status_e {
+    pub fn parse(v: ezb_zcl_status_t) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+}
+impl ezb_zcl_cluster_id_e {
+    pub fn parse(v: ezb_zcl_cluster_id_t) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+}

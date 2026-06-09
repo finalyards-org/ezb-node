@@ -122,7 +122,7 @@ impl ZclValue {
         //
         let p = core::ptr::NonNull::new(value as *mut core::ffi::c_void).unwrap();
 
-        let Some(tmp_e) = ezb_zcl_attr_type_e::from_repr(type_ as u32) else {
+        let Some(tmp_e) = ezb_zcl_attr_type_e::parse(type_) else {
             log::error!("[data error] ZCL value type NOT RECOGNIZED by 'esp_zigbee_lib'!: {}", type_);
             return None;
         };
@@ -229,7 +229,7 @@ fn read_ptr<T>(p: core::ptr::NonNull<core::ffi::c_void> /*r, size: u16*/) -> T {
 
     let p = p.as_ptr() as *const T;
     // Use 'read_unaligned' to ensure no alignment problems
-    unsafe { std::ptr::read_unaligned(p) };
+    unsafe { std::ptr::read_unaligned(p) }
 }
 
 /**

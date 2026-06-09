@@ -592,7 +592,7 @@ impl AppSignal {
                 //      On the other hand, such a case would not arise from unexpected wire(less) traffic, but be a bug
                 //      in 'esp-zigbee-lib'. Which means, probably we can panic? >:)
                 //
-                let status = ezb_nwk_network_status_t::from_repr(x.status as u32)
+                let status = ezb_nwk_network_status_t::parse(x.status)
                     .unwrap_or_else(|| {
                         panic!("EZB_NWK_SIGNAL_NETWORK_STATUS: unexpected '.status': {}", x.status);
                     });

@@ -19,9 +19,8 @@ remote_component = { name = "espressif/esp-zigbee-lib", version = "2.0.1" }
 [dependencies]
 log.workspace = true
 
-#bitflags = { version = "0.9.1" }
-
-esp-idf-sys = { version = "0.37", default-features = false, features = ["native"] }
+#esp-idf-sys = { version = "0.37", default-features = false, features = ["native"] }
+esp-idf-sys = { workspace = true, default-features = false, features = ["native"] }
     # "native": recommended by 'google.ai', to make sure linking external components succeeds.
     #
     # Carries ESP-IDF headers, libraries, and pulls in 'esp-zigbee-lib' headers.

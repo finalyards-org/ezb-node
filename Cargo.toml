@@ -10,7 +10,7 @@ resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
 [workspace.dependencies]
-#esp-idf-sys = { version = "0.37", default-features = false }
+esp-idf-sys = { version = "0.37", default-features = false }
 esp-idf-svc = { version = "0.52", default-features = false, features = ["native"] }
 log = { version = "0.4" }
 
@@ -32,3 +32,7 @@ embuild = { version = "0.33.1", features = ["espidf"] }
 
 [profile.release]
 opt-level = "s"
+
+# Needed for https://github.com/esp-rs/embuild/issues/105 (using ESP-IDF 6.0.1)
+[patch.crates-io]
+embuild = { git = "https://github.com/esp-rs/embuild" }

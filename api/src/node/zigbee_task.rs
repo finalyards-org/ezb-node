@@ -264,7 +264,7 @@ extern "C" fn zcl_action_handler(action_id: ezb_zcl_core_action_callback_id_t /*
 
     // Note: It's possible the '.out' field of 'msg' would need to be written. .. #later
 
-    let Some(action_e) = ezb_zcl_core_action_callback_id_e::from_repr(action_id as _) else {
+    let Some(action_e) = ezb_zcl_core_action_callback_id_e::parse(action_id) else {
         log::error!("Unexpected ZCL core action (skipped): {}", action_id);
         return;
     };

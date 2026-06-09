@@ -80,4 +80,4 @@ pub enum Specific {
 }
 
 // Each config has both common fields, and their specific type (and possibly config).
-pub struct EndpointConfig(CommonFields, Specific);
+pub struct EndpointConfig(pub CommonFields, pub Specific);

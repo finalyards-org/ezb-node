@@ -56,10 +56,11 @@ impl ZclAttrResp {
     //     pub attr_type: u8,
     //     pub attr_value: *mut ::core::ffi::c_void
     // }
-    pub(crate) fn parse_list<I: Into<RspVariableIter>>(vars: I) -> Option<Vec<Self>> {
+    pub(crate) fn parse_list<'a, I: Into<RspVariableIter<'a>>>(vars: I) -> Option<Vec<Self>> {
         let iter: RspVariableIter = vars.into();
 
-        iter.map(Self::parse_one)
-            .collect();     // Any entry being 'None' (parsing failed) fails the whole list.
+        iter //r ).into_iter() // Rust note: iterate by references
+            .map(|x| Self::parse_one(&x))
+            .collect()  // Any entry being 'None' (parsing failed) fails the whole list.
     }
 }

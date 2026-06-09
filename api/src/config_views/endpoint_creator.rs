@@ -34,7 +34,7 @@ use crate::{
 *
 * Covers TOML sections '[endpoint.default]', '[endpoint.{id}]'.
 */
-pub struct EndpointCreator(&'static BTreeMap<u8, EndpointConfig>);
+pub(crate) struct EndpointCreator(&'static BTreeMap<u8, EndpointConfig>);
 
 impl EndpointCreator {
     pub(crate) fn create_all(&self, dev: ezb_af_device_desc_t) -> Result<(), EspError> {
@@ -67,7 +67,7 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: &EndpointConfig) -> Resu
         Specific::ColorDimmableLightEPC => {
             let light_cfg = unsafe { EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG };
             unsafe { ezb_zha_create_color_dimmable_light(ep_id, &light_cfg) }
-        }
+        },
     };
 
     // ezb_zcl_cluster_desc_t basic_desc = {0};

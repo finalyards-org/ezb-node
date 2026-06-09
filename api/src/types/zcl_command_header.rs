@@ -64,10 +64,15 @@ pub struct CommandHeader {
 impl CommandHeader {
     /**
     * Prepare a command header from C struct.
-    *
-    * @note Most conversion is 1-to-1 but 'ZclClusterId' might have cluster id's we have yet to prepare for.
     */
-    pub(crate) fn parse(v: &ezb_zcl_cmd_hdr_s) -> Option<Self> {
+    // Note: The caller has '*const' but we don't wish to burden them with the syntax of conversion.
+    //      Don't want to burden the actual 'parse_ref' either.
+    //
+    pub(crate) fn parse(p: *const ezb_zcl_cmd_hdr_s) -> Option<Self> {
+        Self::parse_ref(unsafe { p.as_ref() }?)
+    }
+
+    fn parse_ref(v: &ezb_zcl_cmd_hdr_s) -> Option<Self> {
         let ezb_zcl_cmd_hdr_s{
             src_addr, dst_addr,
             src_ep, dst_ep,
@@ -82,11 +87,11 @@ impl CommandHeader {
             // if new fields are added, won't compile!
 
         let o = Self {
-            src_addr: Addr::from(src_addr),
-            dst_addr: Addr::from(dst_addr),
+            src_addr: Addr::parse(src_addr)?,
+            dst_addr: Addr::parse(dst_addr)?,
             src_ep,
             dst_ep,
-            cluster_id: ClusterId::from(cluster_id)?,
+            cluster_id: ClusterId::parse(cluster_id)?,
             profile_id_X: profile_id,
             fc_X: fc,
             manuf_code: (manuf_code!=0).then(|| manuf_code),
@@ -170,11 +175,11 @@ impl Addr {
     /**
     * @return None if some of the fields seem invalid/corrupt; Some for a valid conversion.
     */
-    fn parse(v: &ezb_address_s) -> Option<Self> {
+    fn parse(v: ezb_address_s) -> Option<Self> {
         let ezb_address_s {
             addr_mode,
             u
-        } = *v;
+        } = v;
 
         match ezb_addr_mode_e::parse(addr_mode)? {
             ezb_addr_mode_e::EZB_ADDR_MODE_NONE => {
@@ -193,7 +198,7 @@ impl Addr {
             },
             ezb_addr_mode_e::EZB_ADDR_MODE_EXT => {
                 let x = unsafe { u.extended_addr };
-                Some( Self::Extended(x) )
+                Some( Self::Extended(x.into()) )
             }
         }
     }

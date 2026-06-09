@@ -1,9 +1,9 @@
 #
 # Created by 'cargo build --release'. CHANGES WILL BE LOST!
 #
-DEP_ESP_IDF_EMBUILD_ENV_PATH=/home/ubuntu/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin:/home/ubuntu/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin:/home/ubuntu/.espressif/tools/cmake/3.30.2/bin:/home/ubuntu/.espressif/tools/ninja/1.12.1:/home/ubuntu/.espressif/tools/esp-rom-elfs/20241011:/home/ubuntu/.espressif/python_env/idf5.5_py3.14_env/bin:/home/ubuntu/bin:/home/ubuntu/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/bin:/home/ubuntu/bin
+DEP_ESP_IDF_EMBUILD_ENV_PATH=/home/ubuntu/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin:/home/ubuntu/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin:/home/ubuntu/.espressif/tools/cmake/3.30.2/bin:/home/ubuntu/.espressif/tools/ninja/1.12.1:/home/ubuntu/.espressif/tools/esp-rom-elfs/20241011:/home/ubuntu/.espressif/python_env/idf5.5_py3.14_env/bin:/home/ubuntu/bin:/home/ubuntu/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/bin
 DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/.espressif/esp-idf/v5.5.4
-DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-6bfa69de6939993f/out
+DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-adc281cf5938260e/out
 ESP_IDF_TOOLS_INSTALL_DIR=global
 ESP_IDF_VERSION=5.5.4
 MCU=esp32c6
