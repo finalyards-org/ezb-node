@@ -16,11 +16,15 @@ Rust-projekti `esp-zigbee-lib`-kirjaston (v.2.0.1) käyttämiseksi rustista. `es
 
 Tavoite: saada vastaava koodi kuin C-puolen `color_dimmable_light` (ja sitten `color_dimmable_switch` kääntymään ja toimimaan Rust-sovelluksena).
 
-<!--
-Tilanne: rakenne on pääosin kunnossa ja ylläpidettävä. Koodi ei vielä kuitenkaan tällä hetkellä käänny.
--->
+Tilanne: `raw`, `config` ja `api`-tasot kääntyvät, `apps` ei vielä. Kun kääntyy, edessä ovat:
 
-Akuutti focus: koodin rakenne on kokonaisuutena kunnossa, mutta kääntäjäongelmia esiintyy vielä. Niiden pois saanti (Rust-työ) on siis kesken.
+- kokeilu ESP-IDF 5.5.4 -> 6.0.1 siirtymän mahdollisesta toimivuudesta / raportointi, jos siinä kohtaa ongelmia
+- varsinainen ajokokeilu ensin C-vastaesimerkin (switch) kanssa
+- valon tekeminen toimivaksi (ei pelkkä lokitus)
+- myös switch Rustilla
+
+
+Akuutti focus: `apps` kääntökuntoon.
 
 Ehdotus: pyydän sinulta apua pienissä ongelmissa, mitä tulee eteen. Tiedän, miten tämä rakennetaan joten kovin paljon aktiivisia ehdotuksia en tässä vaiheessa tarvitse; voit jättää ne pois vastauksista. Kiitos!
 
@@ -51,6 +55,11 @@ Flashaus on etänä ohjattavalla `espflash` (v.4.4.0) -ohjelmalla (VM -> RPi -> 
 ## Kommenttien kieli
 
 Koodin kommentit, stringit voit kirjoittaa suoraan englanniksi. Muussa vuoropuhelussa käytämme suomea. 
+
+
+## Lisäyksiä
+
+- ESP-IDF tuodaan mukaan `esp-idf-sys`:n "native"-moodissa, eli työkalut latautuvat `~/.espressif`-hakemiston alle osana buildia.
 
 
 ## Palaute

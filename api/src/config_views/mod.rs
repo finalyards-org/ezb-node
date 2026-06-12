@@ -5,10 +5,10 @@
 * These are all internal details.
 */
 mod config_access;
-pub use config_access::ConfigAccess;
+pub(crate) use config_access::ConfigAccess;
 
 //r mod device_descriptor_view;
 //r pub use device_descriptor_view::*;
 
 mod endpoint_creator;
-pub use endpoint_creator::EndpointCreator;
+pub(crate) use endpoint_creator::EndpointCreator;

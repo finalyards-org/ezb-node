@@ -149,4 +149,8 @@ pub use bindings::{
     ezb_zcl_cmd_write_attr_rsp_message_t,
     RspVariableEntry,
     RspVariableIter,
+    ezb_zcl_read_attr_rsp_variable_s,
+    WriteRspVariableEntry,
+    WriteRspVariableIter,
+    ezb_zcl_attr_type_t,
 };

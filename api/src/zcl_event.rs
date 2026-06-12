@@ -27,7 +27,8 @@ use crate::types::{
     CommandHeader,
     ClusterId,
     ZclAttr,
-    ZclAttrResp,
+    ZclAttrReadResp,
+    ZclAttrWriteResp,
     ZclError,
 };
 
@@ -55,11 +56,11 @@ pub enum ZclEvent {
 
     /// A ZCL general ReadAttribute response is received.
     // ezb_zcl_cmd_read_attr_rsp_message_s
-    ReadAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrResp> },
+    ReadAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrReadResp> },
 
     /// A ZCL general WriteAttribute response is received.
     // ezb_zcl_cmd_write_attr_rsp_message_s
-    WriteAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrResp> },
+    WriteAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrWriteResp> },
 
     /// A ZCL general ConfigureReporting response is received.
     // ezb_zcl_cmd_config_report_rsp_message_s
@@ -378,7 +379,8 @@ impl ZclEvent {
                 Self::ReadAttrResp{
                     info: CommonInfo::parse(&msg.info)?,
                     header: CommandHeader::parse(msg.in_.header)?,
-                    variables: ZclAttrResp::parse_list(&msg.in_.variables)?
+                    variables: ZclAttrReadResp::parse_list( unsafe{ msg.in_.variables.as_ref() }? )?
+                        // { attr_id, status, attr_type, attr_value, next }
                 }
             },
 
@@ -388,7 +390,8 @@ impl ZclEvent {
                 Self::WriteAttrResp{
                     info: CommonInfo::parse(&msg.info)?,
                     header: CommandHeader::parse(msg.in_.header)?,
-                    variables: ZclAttrResp::parse_list(&msg.in_.variables)?
+                    variables: ZclAttrWriteResp::parse_list( unsafe{ msg.in_.variables.as_ref() }? )?
+                        // { status, attr_id, next }
                 }
             }
 
@@ -501,6 +504,7 @@ impl From<&ezb_zcl_set_attr_value_message_t> for ReadAttrRespM {
         Self {
             in_x: ReadAttrRespM_In,
             st: OutStatus::from_try(v.out.result)
+        }
     }
 }
 
@@ -522,8 +526,6 @@ impl From<&ezb_zcl_set_attr_value_message_t> for ReadAttrRespM {
 // } ezb_zcl_cmd_write_attr_rsp_message_t;
 struct WriteAttrRespM {
     r#in: WriteAttrRespM_In,
-}
-
 }
 
 /**

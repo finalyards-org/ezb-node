@@ -138,7 +138,7 @@ fn main() {
     // Sudden problems where the 'ldproxy' isn't finding the 'esp_zigbee_lib' though it's mentioned in the
     // "extra components" and *should* be approachable.
     //
-    #[cfg(false)] //R
+    #[cfg(false)]
     {
         let dep_esp_idf_root = env::var("DEP_ESP_IDF_ROOT").unwrap();
         let mcu = env::var("MCU").unwrap();  // "esp32c6"

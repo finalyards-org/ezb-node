@@ -1,9 +1,8 @@
-//use alloc::collections::BTreeMap;
-
-use core::time::Duration;
-
 use embassy_sync::channel::{
     DynamicReceiver
+};
+use embassy_time::{
+    Duration
 };
 
 use ezb_node::{
@@ -12,7 +11,6 @@ use ezb_node::{
     BdbStatus,
     Config,
     Node,
-    ConfigAccess,
     ZclEvent,
     ZclError,
 };
@@ -26,15 +24,14 @@ where Self: Node {
     // can have state here
 }
 
+impl Node for LightCoordinator {}
+
 impl LightCoordinator {
     pub fn new(c: &'static Config) -> Result<Self, ezb_node::Error> {
         const AUTO_START: bool = false;
         // Note: This might disappear, see comment of 'Node::init()'.
 
-        let () = <Self as Node>::init(c, c, AUTO_START)?;
-
-        //r Self::add_endpoints(c)?;
-
+        let () = <Self as Node>::init(c, AUTO_START)?;
         Ok(Self {})
     }
 
@@ -42,10 +39,10 @@ impl LightCoordinator {
     * Behaviour of this particular node.
     */
     pub async fn run(mut self) -> ! {
-        Node::run(self,
+        <Self as Node>::run(self,
   |this, sig| this.on_app_signal(sig),
   |this, ev| this.on_zcl_event(ev)
-        ).await;
+        ).await
     }
 
     /**
@@ -54,22 +51,22 @@ impl LightCoordinator {
     // Note: In the prototypes, 'this: &mut Self' to underline that the method is called
     //      indirectly, via the 'Node' mechanism.
     //
-    fn on_app_signal(this: &mut Self, sig: AppSignal) {
+    fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
 
         match sig {
             ZdoSignalSkipStartup => {
                 log::info!("Initialize Zigbee stack");
-                this.start_top_level_commissioning(BdbMode::Initialization);
+                self.start_top_level_commissioning(BdbMode::Initialization);
             },
 
             BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
                 // Could do delayed hw initialization, here
 
-                let is_new = this.is_factory_new();
+                let is_new = self.is_factory_new();
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
-                    this.start_top_level_commissioning(BdbMode::NetworkFormation);
+                    self.start_top_level_commissioning(BdbMode::NetworkFormation);
                 } else {
                     log::info!("Device rebooted");
                 }
@@ -84,12 +81,12 @@ impl LightCoordinator {
 
             BdbSignalFormation(BdbStatus::Success) => {
                 log::info!("Formed network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
-                    this.get_extended_panid(),
-                    this.get_panid(),
-                    this.get_current_channel(),
-                    this.get_short_address()
+                    self.get_extended_panid(),
+                    self.get_panid(),
+                    self.get_current_channel(),
+                    self.get_short_address()
                 );
-                this.start_top_level_commissioning(BdbMode::NetworkSteering);
+                self.start_top_level_commissioning(BdbMode::NetworkSteering);
             },
             BdbSignalFormation(st) => {
                 log::info!("Failed to form network: {}, st = {}", sig, st);
@@ -113,7 +110,7 @@ impl LightCoordinator {
             },
 
             NwkSignalPermitJoinStatus { is_opened_for } => {
-                let pan_id = this.get_panid();
+                let pan_id = self.get_panid();
                 match is_opened_for {
                     Some(dur) =>
                         log::info!("Network {} is open for {} seconds", pan_id, dur.as_secs()),
@@ -135,7 +132,7 @@ impl LightCoordinator {
     /**
     * Run the received ZCL event through our logic.
     */
-    fn on_zcl_event(this: &mut Self, ev_res: Result<ZclEvent, ZclError>) {
+    fn on_zcl_event(&mut self, ev_res: Result<ZclEvent, ZclError>) {
         use ZclEvent::*;
 
         // Note: It may be that we need to know more about the event, when errors arise. Let's, however, keep the
@@ -143,10 +140,10 @@ impl LightCoordinator {
         //      there is a need. All this information is available in the C level, but dividing it to success/fail
         //      will make applications easier to read.
 
-        let ev = ev_res.unwrap_or_else(|e| {
-            log::warn!("ZCL event error: {e}");
+        let Ok(ev) = ev_res else {
+            log::warn!("ZCL event error: {}", ev_res.err().unwrap());
             return;
-        });
+        };
 
         match ev {
             SetAttrValue { .. } => {
@@ -159,13 +156,13 @@ impl LightCoordinator {
                 //ezb_zcl_cmd_default_rsp_message_t *default_rsp = (ezb_zcl_cmd_default_rsp_message_t *)message;
                 log::info!("Received ZCL Default Response, status: {}",
                     match err {
+                        Some(e) => e.to_string(),
                         None => "success".into(),
-                        Some(e) => e.display()
                     }
                 );
             },
             _ => {
-                log::warn!("ZCL Core Action: {?:}", ev);
+                log::warn!("ZCL Core Action: {:?}", ev);
             }
         }
     }

@@ -14,12 +14,17 @@ impl ChannelMask {
     pub const PREFERRED: Self = ChannelMask( 1 << 11 | 1 << 15 | 1 << 20 | 1 << 25 );
         // note: generating from an array would not be 'const fn', because of the for loop
 
+    // Generated snippets use this (from application crate; possibly as 'const')
+    pub const fn new(v: u32) -> Self {
+        Self(v)
+    }
+
     pub fn bits(&self) -> u32 {
         self.0
     }
 }
 
-// Generated snippets use this
+#[cfg(false)]
 impl<const N: usize> From<[u8;N]> for ChannelMask {
     fn from(channels: [u8;N]) -> Self {
         let mut mask: u32 = 0;

@@ -31,10 +31,13 @@
 */
 
 use std::collections::BinaryHeap;
-//r? use embassy_time::{Duration, Instant, Timer};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
 use core::cmp::Ordering;
+
+use embassy_time::{Duration, Instant, Timer};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::Channel,
+};
 use embassy_futures::select::{select, Either};
 
 use crate::LightCoordinator;

@@ -1,9 +1,13 @@
 
 use std::{mem, slice};
 
-//use core::ffi::c_void;
-
-use ezb_node_raw::{ezb_zcl_attribute_s, ezb_zcl_attribute_s__bindgen_ty_1, ezb_zcl_attr_type_e, RspVariableEntry};
+use ezb_node_raw::{
+    ezb_zcl_attribute_s,
+    ezb_zcl_attribute_s__bindgen_ty_1,
+    ezb_zcl_attr_type_e,
+    RspVariableEntry,
+    ezb_zcl_attr_type_t,
+};
 
 use crate::{
     AttrId,
@@ -18,26 +22,15 @@ use crate::{
 //
 // We _don't_ need to support all attributes, just the ones actually needed (at any given time). 🔅🔆
 
-// Sample on how C code provides an attribute (bindgen level):
-//  <<
-//      pub struct ezb_zcl_attribute_s {
-//           ///< Attribute identifier.
-//           pub id: u16,
-//           ///< Attribute data and type information.
-//           pub data: ezb_zcl_attribute_s__bindgen_ty_1,
-//       }
-//       #[repr(C)]
-//       #[derive(Debug, Copy, Clone)]
-//       pub struct ezb_zcl_attribute_s__bindgen_ty_1 {
-//           ///< Attribute data type, see @ref ezb_zcl_attr_type_t.
-//           pub type_: u8,
-//           ///< Size of the attribute value in bytes.
-//           pub size: u16,
-//           ///< Pointer to the attribute value buffer. Must be valid for the specified
-//           /// size.
-//           pub value: *mut ::core::ffi::c_void,
-//       }
-//  <<
+// NOTE: Done 'zcl_attr_{read|write|...}_resp.rs' since this file. Figure out the right way to present
+//      these. One day.
+
+//pub struct ezb_zcl_attribute_s {
+//     ///< Attribute identifier.
+//     pub id: u16,
+//     ///< Attribute data and type information.
+//     pub data: ezb_zcl_attribute_s__bindgen_ty_1,
+// }
 
 #[derive(Debug, Clone)]
 pub struct ZclAttr {
@@ -47,10 +40,11 @@ pub struct ZclAttr {
 
 impl ZclAttr {
     /**
-    * Convert input data to a Rustified struct.
+    * Convert input data to a rustified struct.
     *
     * @return None if there's a problem in the parsing (details are logged); Some when parsing was possible.
     */
+    // tbd. likely need macros some day; see 'raw/bindings_iter_*.rs'
     pub(crate) fn parse(v: &ezb_zcl_attribute_s) -> Option<Self> {
         let ezb_zcl_attribute_s {
            id,
@@ -65,13 +59,10 @@ impl ZclAttr {
     }
 
     /**
-    * Alternative parsing. 'RspVariableEntry::Success' carries the same fields as 'ezb_zcl_attribute_s'.
+    * Alternative parsing.
     */
-    pub(crate) fn parse2(entry: &RspVariableEntry::Success) -> Option<Self> {
-        let RspVariableEntry::Success{
-            attr_id, attr_type, attr_value
-        } = *entry;
-
+    // tbd. A bit of a #cludge
+    pub(crate) fn parse2(attr_id: u16, attr_type: ezb_zcl_attr_type_t /*u8*/, attr_value: *const core::ffi::c_void) -> Option<Self> {
         let o= Self{
             id: AttrId(attr_id),
             data: ZclValue::parse(attr_type, attr_value)?
@@ -104,7 +95,7 @@ impl ZclValue {
     // Note: size is not necessary (one caller doesn't have it, either): it can be deduced from the
     //      type and '*value' (for Pascal strings).
     //
-    fn parse(type_: u8, /*r size: u16,*/ value: *const core::ffi::c_void) -> Option<Self> {
+    fn parse(type_: u8, value: *const core::ffi::c_void) -> Option<Self> {
 
         // tbd. How are 'NoData' presented? Alternative is to return 'None'.
         if value.is_null() {
@@ -127,7 +118,7 @@ impl ZclValue {
             return None;
         };
 
-        let happy_cow = match tmp_e {
+        let happy_x = match tmp_e {
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_NO_DATA => Self::NoData,
             ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA8 => {
                 let v = read_ptr::<u8>(p);
@@ -207,7 +198,7 @@ impl ZclValue {
                 return None;
             }
         };
-        Some(happy_cow)
+        Some(happy_x)
     }
 }
 

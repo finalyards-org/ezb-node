@@ -10,7 +10,7 @@ use esp_idf_svc::sys::EspError;
 /**
 * An error that can arise either from the application (e.g. initialization), or some library (e.g. 'esp_zb').
 */
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum AppError {
     Other(&'static str),
     ApiError(ezb_node::Error),

@@ -6,7 +6,8 @@
 #
 #channel = "nightly-2026-05-01"
 channel = "nightly"
-components = [ "rust-src", "clippy", "rustfmt" ]
+components = ["rust-src", "clippy"]
+    # "rust-fmt"    # disabled, perhaps it was at times messing with 'use' formatting
 
 # Automatically installs the target, if you don't have it, yet.
 # However. ESP32 don't come with pre-built std libraries. In fact, this causes a warning in the build output.

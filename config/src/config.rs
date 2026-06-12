@@ -23,10 +23,6 @@ pub struct Config {
     pub node: NodeType,
 
     // Endpoints
-    /// @note Always has one. If config didn't have this section, all its fields are 'None'.
-    //r #[cfg(false)] //r
-    //r pub endpoint_defs: BaseConfig,
-
     pub endpoints: BTreeMap<u8, EndpointConfig>,
 }
 
@@ -69,15 +65,18 @@ pub enum NodeType {
     // }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct CommonFields {
-    pub manufacturer_name: &'static str,
-    pub model_identifier: &'static str,
+    pub manufacturer_name: Option<&'static str>,
+    pub model_identifier: Option<&'static str>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Specific {
     #[cfg(feature = "ep_color_dimmable_light")]
     ColorDimmableLightEPC,
 }
 
 // Each config has both common fields, and their specific type (and possibly config).
+#[derive(Debug, Clone)]
 pub struct EndpointConfig(pub CommonFields, pub Specific);

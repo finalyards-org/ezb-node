@@ -134,6 +134,7 @@ impl CommandHeader {
 //     EZB_ADDR_MODE_EXT = 3,
 // };
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // ..until we use 'Group' et.al.
 pub(crate) enum Addr {
     #[cfg(false)]
     /**

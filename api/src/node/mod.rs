@@ -39,7 +39,8 @@ use crate::{
     BdbMode,
     IeeeAddr,
     Error,
-    ZclEvent
+    ZclError,
+    ZclEvent,
 };
 
 // Channel:
@@ -53,7 +54,7 @@ pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channe
 #[derive(Debug, Clone)]
 enum Payload {
     AppSignal(AppSignal),
-    ZclEvent(ZclEvent)
+    ZclEvent(Result<ZclEvent,ZclError>)
 }
 
 /**

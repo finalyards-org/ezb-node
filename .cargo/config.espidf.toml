@@ -67,7 +67,6 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
     # "global":     '~/.espressif'
     #               Also needs 'ldproxy' to be installed and configured (see above)
-    # (default):    tooling to '{project-folder}/.embuild/espressif'
 
 # Force 'esp_idf_component_manager' to be used.
 # Note: This like does not matter, since "as per the build documentation it is "on"/"y" by default" |1|.

@@ -276,7 +276,9 @@ extern "C" fn zcl_action_handler(action_id: ezb_zcl_core_action_callback_id_t /*
 
     let tx = super::CHANNEL.sender();
 
-    if let Err(err) = tx.try_send(super::Payload::ZclEvent(ev)) {
+    // tbd. How are errors processed? Why do we pass 'Ok(ev)', below???
+
+    if let Err(err) = tx.try_send(super::Payload::ZclEvent(Ok(ev))) {
         log::error!("[internal] Failure in channel, likely full ('ZclEvent' skipped!!): {:?}", err);
         return;
     }

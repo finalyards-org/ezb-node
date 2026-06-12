@@ -21,7 +21,7 @@ static BAKED: OnceLock<esp_zigbee_config_t> = OnceLock::new();
 *
 * Covers TOML sections '[network]', '[platform]' and '[node]'.
 */
-pub struct ConfigAccess(&'static Config);
+pub(crate) struct ConfigAccess(&'static Config);
 
 impl ConfigAccess {
 

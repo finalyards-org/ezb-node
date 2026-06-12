@@ -1,5 +1,12 @@
 #![cfg(feature = "toml")]
 
+use std::string::String;
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
+use toml;
+
+use crate::{CommonFields, Config};
+
 mod in_;
 use in_::*;
 
@@ -9,12 +16,6 @@ use error::ConfigError::{
     FeatureConflict,
     //ContentError
 };
-
-use std::string::String;
-
-use quote::{format_ident, quote};
-use toml;
-use crate::Config;
 
 /**
 * Convert TOML input string to Rust snippet that generates an 'esp_zb::Config' instance, when read in.
@@ -27,14 +28,20 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     //--- network
     // tbd. Secondary channel masks from the TOML. Should we? What options to give?
     //
-    // [ChannelMask::from([13]), ChannelMask::ALL];
+    // [ChannelMask::new(1 << 13), ChannelMask::ALL];
     //
     let q_channel_masks = {
         if c.network.primary_channels.is_empty() {
             Err("'network.primary_channels' is empty: please provide at least one channel to scan.")?;
         }
 
-        let primary_channels = c.network.primary_channels;
+        let q_primary_channels = {
+            let qs = c.network.primary_channels.into_iter().map(|v| {
+                quote!{ 1 << #v }
+            });
+            quote!{ #(#qs)|* }    // 1 << 11u8 | 1 << 12u8 | ...
+        };
+
         let secondary_channels = match c.network.secondary_channels {
             SecondaryChannels::Preferred => {
                 quote!{ ChannelMask::PREFERRED }
@@ -45,7 +52,7 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         };
 
         quote! { [
-            ChannelMask::from( [ #(#primary_channels),* ] ),
+            ChannelMask::new( #q_primary_channels ),
             #secondary_channels
         ] }
     };
@@ -108,34 +115,10 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         }
     };
 
-    //--- endpoint.defaults
-    //
-    //    BaseConfig{ manufacturer_name: "...", model_identifier: "..." }
-    //
-    let q_bc = {
-        let endpoint_defaults = c.endpoint.defaults;
-
-        // 'quote!' normally unwraps on 'Option' so we need to do this, to have output "Some(...)|None".
-        //
-        let mfn = endpoint_defaults.manufacturer_name.as_ref()
-            .map(|s| quote! { Some(#s) })
-            .unwrap_or_else(|| quote! { None });
-
-        let mid = endpoint_defaults.model_identifier.as_ref()
-            .map(|s| quote! { Some(#s) })
-            .unwrap_or_else(|| quote! { None });
-
-        quote! {
-            BaseConfig{
-                manufacturer_name: #mfn,
-                model_identifier: #mid,
-            }
-        }
-    };
-
     //--- endpoint.{id}
+    //--- endpoint.defaults
     // {
-    //    let ep_10 = EndpointConfig::ColorDimmableLightEPC;
+    //    let ep_10 = (CommonFields{ ... }, Specific::ColorDimmableLightEPC);
     //    BTreeMap::from([(10, ep_10)])
     // }
     let q_endpoints = {
@@ -146,10 +129,19 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
             Err("Need at least one end point. Please define an '[endpoint.{id}]' section.")?;
         }
 
+        let EndpointDefaults {
+            manufacturer_name: manufacturer_name_def,
+            model_identifier: model_identifier_def
+        } = &c.endpoint.defaults;
+
+        // '.as_ref()'s turn to 'Option<&String>' (important later)
+        let manufacturer_name_def = manufacturer_name_def.as_ref();
+        let model_identifier_def = model_identifier_def.as_ref();
+
         c.endpoint.instances.iter().try_for_each(|(k,v)| -> Result<(),ConfigError> {
             // Skip ".defaults", turn others to 'u8'
             let k = match k.as_str() {
-                "defaults" => { return Ok(()) },    // bypass, we get it through its own struct
+                "defaults" => { return Ok(()) }, // skip
                 id => {
                     let endpoint_id = id.parse::<u8>().map_err(|_| {
                         format!("Invalid endpoint ID (not 'u8'): {}", id)
@@ -163,15 +155,34 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
             let ident = format_ident!("ep_{}", k);
 
+            let q_cf = {
+                // Note: Endpoints could override the common fields, but we haven't implemented (/needed) that.
+                //
+                let q_manufacturer_name = manufacturer_name_def
+                    .map(|s| quote!{ Some(#s) })
+                    .unwrap_or_else(|| quote!{ None });
+
+                let q_model_identifier = model_identifier_def
+                    .map(|s| quote!{ Some(#s) })
+                    .unwrap_or_else(|| quote!{ None });
+
+                quote!{
+                    CommonFields{
+                        manufacturer_name: #q_manufacturer_name,
+                        model_identifier: #q_model_identifier,
+                    }
+                }
+            };
+
             // tbd. when this grows, detach to a function
-            let value = match v {
+            let q_specific = match v {
                 EndpointInstance::ColorDimmableLight {} => quote! {
-                    EndpointConfig::ColorDimmableLightEPC
+                    Specific::ColorDimmableLightEPC
                 },
                 // exhaustive match
             };
 
-            q_lets.extend(quote!{ let #ident = #value; });
+            q_lets.extend(quote!{ let #ident = EndpointConfig(#q_cf, #q_specific); });
             q_arr_contents.extend(quote!{ (#k, #ident) });
 
             Ok(())  // next
@@ -187,19 +198,17 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     //
     let q_all = quote!{ {
         use alloc::collections::BTreeMap;
-        use ezb_node::config::*;    // Config, BaseConfig, ...
+        use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
 
         let channel_masks = #q_channel_masks;
         let storage_partition_name = #q_storage_partition_name;
         let node = #q_node;
-        let endpoint_defs = #q_bc;
         let endpoints = #q_endpoints;
 
         Config {
             channel_masks,
             storage_partition_name,
             node,
-            endpoint_defs,
             endpoints
         }
     } };
@@ -213,20 +222,24 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
 
     // Note: 'prettyplease' is designed to handle full files. To handle an expression, we do some wrapping and unwrapping,
-    //      suggested by google.ai.
     //
-    let q_file = quote::quote! {
+    let q_file = quote! {
         fn dummy_wrapper() { #q }
     };
 
     let syntax_tree: syn::File = syn::parse2(q_file)?;
     let formatted = prettyplease::unparse(&syntax_tree);
 
-    let cleaned = formatted
-        .replace("fn dummy_wrapper() {", "")
-        .trim_end() // remove newlines from the end
-        .strip_suffix('}').unwrap() // the closing brace of the dummy
-        .trim() // final clean, both ends
-        .to_string();
-    Ok(cleaned)
+    // Just the innards of the function (skip first and last line)
+    let ls: Vec<&str> = formatted.lines().collect();
+    assert!(ls.len() > 2);
+
+    let inner_lines = & ls[1..ls.len() -1];
+
+    let ret: String = inner_lines.into_iter()
+        .map(|line| { line.strip_prefix("    ").unwrap_or(line).to_string() })
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    Ok(ret)
 }

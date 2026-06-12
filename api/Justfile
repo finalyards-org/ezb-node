@@ -19,4 +19,4 @@ b: build
 build:
 	cargo {{nightly}} build --release -vv \
 		--jobs 1 \
-		--features coordinator,router
+		--features coordinator,router,ep_color_dimmable_light

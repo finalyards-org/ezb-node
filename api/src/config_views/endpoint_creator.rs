@@ -37,7 +37,7 @@ use crate::{
 pub(crate) struct EndpointCreator(&'static BTreeMap<u8, EndpointConfig>);
 
 impl EndpointCreator {
-    pub(crate) fn create_all(&self, dev: ezb_af_device_desc_t) -> Result<(), EspError> {
+    pub(crate) fn create_all(self, dev: ezb_af_device_desc_t) -> Result<(), EspError> {
         for (&ep_id, entry) in self.0 {
             create_one(dev, ep_id, entry)?;
         }
@@ -87,16 +87,24 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: &EndpointConfig) -> Resu
             model_identifier,
         } = *common_fields;
 
-        let manufacturer_name: &'static [u8] = PascalString::from(manufacturer_name).into_leaked();
-        let model_identifier: &'static [u8] = PascalString::from(model_identifier).into_leaked();
-
         let basic_desc: ezb_zcl_cluster_desc_t = unsafe {
             ezb_af_endpoint_get_cluster_desc(ep_desc, EZB_ZCL_CLUSTER_ID_BASIC as u16, EZB_ZCL_CLUSTER_SERVER as u8)
             // basic cluster: id 0
         };
 
-        unsafe { ezb_zcl_basic_cluster_desc_add_attr(basic_desc, EZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID, manufacturer_name.as_ptr() as *const c_void); }
-        unsafe { ezb_zcl_basic_cluster_desc_add_attr(basic_desc, EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID, model_identifier.as_ptr() as *const c_void); }
+        [
+            (manufacturer_name, EZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID),
+            (model_identifier, EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID),
+        ]
+        .into_iter()
+        .filter_map(|(opt,id)| {
+            let s = opt?; // break on 'None' of .0
+            Some((s, id))
+        })    // ones actually having a string
+        .for_each(|(s, which)| {
+            let ps: &'static [u8] = PascalString::from(s).into_leaked();
+            unsafe { ezb_zcl_basic_cluster_desc_add_attr(basic_desc, which, ps.as_ptr() as *const c_void); }
+        });
 
         let err = unsafe { ezb_af_device_add_endpoint_desc(dev, ep_desc) };
         EspError::from(err).map_or(Ok(()), Err)?;

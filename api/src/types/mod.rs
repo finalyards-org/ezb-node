@@ -25,11 +25,11 @@ pub use zcl_command_header::CommandHeader;
 mod zcl_cluster_id;
 pub use zcl_cluster_id::ClusterId;
 
-mod zcl_attr_resp;
-pub use zcl_attr_resp::ZclAttrResp;
+mod zcl_attr_read_resp;
+pub use zcl_attr_read_resp::ZclAttrReadResp;
 
-mod zcl_write_attr_resp;
-pub use zcl_write_attr_resp::ZclWriteAttrResp;
+mod zcl_attr_write_resp;
+pub use zcl_attr_write_resp::ZclAttrWriteResp;
 
 /**
 * @brief Base Device Behavior (BDB) operation mode.

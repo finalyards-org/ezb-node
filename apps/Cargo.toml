@@ -16,6 +16,8 @@ partition_table = "partitions.csv"
 [dependencies]
 ezb-node = { path = "../api", features = [] }   # "coordinator", "router"
 
+anyhow = { version = "1.0"}
+
 log.workspace = true
 
 # 'esp-idf-svc' is *vital for Embassy integration*

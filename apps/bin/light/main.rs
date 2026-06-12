@@ -6,6 +6,8 @@
 #![feature(never_type)]
 extern crate alloc;
 
+use anyhow::*;
+
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
@@ -24,7 +26,6 @@ use ezb_node::{
 use ezb_node_apps::{
     init_nvs,
     set_panic_hook,
-    AppError,
 };
 use crate::light_coordinator::LightCoordinator;
 
@@ -48,22 +49,25 @@ async fn main(_spawner: Spawner) {
 
     log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
 
-    const CONFIG: &Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
+    //static CFG: &'static Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
 
-    // Initialize and provide error message
-    //
-    let _keep: (_,_);
+    static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
+        include!(concat!(env!("OUT_DIR"), "/light_conf.in"))
+    });
 
-    let lc: LightCoordinator = (|| {    // Rust note: scope the '?' by an anonymous closure
-        _keep = init_nvs(CONFIG.storage_partition_name)?;
-        let tmp = LightCoordinator::new(CONFIG)?;
-            // The Zigbee task is now running (will be, at least..)
+    let (_keep, lc) = (|| -> anyhow::Result<(_,LightCoordinator)> {    // Rust note: scope the '?' by an anonymous closure
+        let nvs_res = init_nvs(CFG.storage_partition_name)
+            .context("Failed to initialize NVS")?;
 
-        Ok(tmp)
+        let tmp = LightCoordinator::new(&CFG)
+            .context("Failed to initialize the Zigbee node")?;
+
+        Ok((nvs_res, tmp))
     })()
-    .unwrap_or_else(|e: ezb_node::Error| {
+    .unwrap_or_else(|e| {
         panic!("Initialization failed: {:?}", e);
     });
 
     lc.run() .await;
 }
+
