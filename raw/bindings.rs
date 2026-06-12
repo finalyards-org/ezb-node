@@ -52,14 +52,18 @@ unsafe impl Sync for esp_zigbee_config_s {}
 include!("bindings_iter_read.rs");
 include!("bindings_iter_write.rs");
 
+//include!("bindings_cdl_default.rs");
+
 /*
 * Default for a device configuration.
 */
 impl Default for ezb_zha_color_dimmable_light_config_t {
     fn default() -> Self {
+        #[cfg(false)]   // did not get this work, see 'wrap.h'; coding by hand
         unsafe {
             EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG
         }
+        unimplemented!()
     }
 }
 

@@ -75,14 +75,45 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
 #   'relative' path definitions are relative to the project workspace root |1| (not the working directory).
 #       |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults
 #
+#       ‼️‼️THIS IS NOT TRUE !!!
+#
+#       In observed reality, these lines, when built under the 'apps' folder:
+#       <<
+#           ESP_IDF_SDKCONFIG = { value = "sdkconfig", relative = true }
+#           ESP_IDF_SDKCONFIG_DEFAULTS = { value = "raw/sdkconfig.defaults", relative = true }
+#       <<
+#       ..cause such paths in the build output:
+#       <<
+#           [esp-idf-sys 0.37.2]     esp_idf_sdkconfig: Some(
+#           [esp-idf-sys 0.37.2]         "/home/ubuntu/ezb-node/apps/sdkconfig",
+#           [esp-idf-sys 0.37.2]     ),
+#           [esp-idf-sys 0.37.2]     esp_idf_sdkconfig_defaults: Some(
+#           [esp-idf-sys 0.37.2]         [
+#           [esp-idf-sys 0.37.2]             "/home/ubuntu/ezb-node/apps/raw/sdkconfig.defaults",
+#           [esp-idf-sys 0.37.2]         ],
+#           [esp-idf-sys 0.37.2]     ),
+#       <<
+#
+#       FIX:
+#           Since *any* build folder (raw|api|apps) can refer to us, we take "one step up" (..) and then
+#           dive back in.
+#
+#       IT WOULD ALSO HELP TREMENDOUSLY if 'esp-idf-sys' terminated a build, if there's a non-existing
+#       path for either 'sdkconfig' or 'sdkconfig.defaults'. Why not?
+#
 # Allow 'esp-idf-sys' to find 'CMakeLists.txt', through which our copy of the Zigbee component.
 # IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
 ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
+    # ^-- NO IDEA ANY MORE, what that means???! Is this line needed? tbd. @ai
 
-# AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
-#ESP_IDF_SDKCONFIG = { value = "/tmp/.no-such" }
+# DO NOT SET 'ESP_IDF_SDKCONFIG'!!!
+# 'esp-idf-sys' then creates 'sdkconfig' to some out folder, from where CMake can access it.
+#
+#| AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
+#|ESP_IDF_SDKCONFIG = { value = "/tmp/.no-such" }
+ESP_IDF_SDKCONFIG = { value = "../sdkconfig", relative = true }
 
-ESP_IDF_SDKCONFIG_DEFAULTS = { value = "apps/sdkconfig.defaults", relative = true }
+ESP_IDF_SDKCONFIG_DEFAULTS = { value = "../apps/sdkconfig.defaults", relative = true }
 
 # The name of the crate that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
 #   - esp_zigbee_lib
@@ -137,11 +168,10 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #       it's _also_ on the Rust whitelist.
 #   <<
 #
-#|ESP_IDF_COMPONENTS = """\
-#|  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
-#|  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
-#|  esp_timer;ieee802154;mbedtls;openthread;\
-#|"""
+ESP_IDF_COMPONENTS = """\
+  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
+  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
+"""
     # vfs, nvs_flash: 'PRIV_REQUIRES' in the 'color_dimmable_light' C sample.
     # fatfs:    'esp-idf-svc-0.52.1' must have it
     #   <<

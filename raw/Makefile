@@ -121,6 +121,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 			--allowlist-function 'ezb_nwk_.+' \
 			--allowlist-function 'ezb_zcl_(?:basic_cluster|core|ota_upgrade)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light)' \
+			--allowlist-function 'wrap_.+' \
 			\
 	    --allowlist-type 'ezb_addr_mode_e' \
 	    --allowlist-type 'ezb_af_(?:device|endpoint)_.+' \
