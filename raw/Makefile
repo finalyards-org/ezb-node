@@ -133,7 +133,6 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    \
 	    --allowlist-var 'ESP_ERR_.+' \
 	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \
-	    --allowlist-var 'EZB_ZHA_(?:COLOR_DIMMABLE_LIGHT|XXX)_.+' \
 	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \

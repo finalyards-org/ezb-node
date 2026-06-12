@@ -110,6 +110,25 @@ fn main() -> Result<()> {
         }
     }
 
+    //R EXPERIMENT!!
+    #[cfg(false)]
+    {
+        //println!("cargo:rustc-link-arg=-lesp-zigbee");
+        //println!("cargo:rustc-link-arg=-lesp-zigbee-idf.native");
+        //println!("cargo:rustc-link-arg=-lesp-zigbee-core.zczr");    // ".release"?
+
+        /***r let lib_dir =
+            "/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-6fedde765f63b3e3/out/managed_components/espressif__esp-zigbee-lib/lib/esp32c6/";
+
+        println!("cargo::rustc-link-search=native={}", lib_dir);
+        ***/
+        //|println!("cargo::rustc-link-arg=-Wl,--start-group");
+        println!("cargo::rustc-link-lib=static=esp-zigbee");
+        //println!("cargo::rustc-link-lib=static=esp-zigbee-idf");
+        println!("cargo::rustc-link-lib=static=esp-zigbee-core.zczr");
+        //|println!("cargo::rustc-link-arg=-Wl,--end-group");
+    }
+
     // Run _this build script_ again, if these change:
     //
     // Note! Recompilation will happen, if 'src/*' changes, but 'build.rs' won't get run. Which is good.

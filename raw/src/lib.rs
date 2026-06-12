@@ -114,7 +114,6 @@ pub use bindings::{
     ezb_zcl_core_action_handler_register,
     ezb_af_create_device_desc,
     ezb_af_device_desc_t,
-    EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG,
     EZB_ZCL_CLUSTER_SERVER,
     EZB_ZCL_CLUSTER_CLIENT,
     //ezb_zcl_core_action_callback_id_t,    // DO NOT expose this (it's u32), use '..._e' instead

@@ -19,9 +19,9 @@ use ezb_node_raw::{
     ezb_zcl_basic_cluster_desc_add_attr,
     ezb_zcl_cluster_desc_t,
     ezb_zha_create_color_dimmable_light,
-    EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG,
     ezb_zcl_basic_server_attr_t,
     ezb_zcl_cluster_id_e,
+    ezb_zha_color_dimmable_light_config_t,
     EZB_ZCL_CLUSTER_SERVER,
 };
 
@@ -65,7 +65,8 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: &EndpointConfig) -> Resu
         // ezb_af_ep_desc_t       ep_desc = ezb_zha_create_color_dimmable_light(ESP_ZIGBEE_HA_COLOR_DIMMABLE_LIGHT_EP_ID, &light_cfg);
         //
         Specific::ColorDimmableLightEPC => {
-            let light_cfg = unsafe { EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG };
+            let mut light_cfg = ezb_zha_color_dimmable_light_config_t::default();
+
             unsafe { ezb_zha_create_color_dimmable_light(ep_id, &light_cfg) }
         },
     };

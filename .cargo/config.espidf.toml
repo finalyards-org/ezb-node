@@ -1,8 +1,7 @@
 #
 # /.cargo/config.espidf.toml
 #
-# This is a repo specific workaround for 'cargo' not allowing to stop the '.cargo/config.toml'
-# cascade.
+# This is a repo specific workaround for 'cargo' not allowing to stop the '.cargo/config.toml' cascade.
 #
 # The problem we fix:
 #   - insulating 'config' (which is not part of the larger workspace, and does not need esp-idf) from getting
@@ -10,15 +9,16 @@
 #     sub-projects.
 #
 # How we fix it:
-#   - This file has another name ('config.espidf.toml'); we symbolically link to it from all the workspace
+#   - This file has another name ('config.espidf.toml'); we symbolically link to it from the ESP32-specific workspace
 #     folders, allowing us to distribute settings, without duplicating them.
 #
 [build]
 target = "riscv32imac-esp-espidf"
 
 # Instructions on what kind of library to build for the target.
-#   - 'ldproxy' requires "std" even if our application would not.
-#   - "apps/bin" do require it (even when 'no_std' + alloc), for Embassy + IDF to coexist ('embassy_time_driver'; long story...)
+#   - 'ldproxy' requires "std" even if our application were to use 'esp-idf-sys' only (which we.. don't ;).
+#   - use of Embassy + FreeRTOS is dependent on 'embassy_time_driver', which... needs 'esp-idf-svc', and thus we are
+#     firmly in the "std" land.
 #   - panic type does not really matter: we catch it with a hook anyways to avoid a reset-loop
 #
 [unstable]
@@ -52,10 +52,10 @@ rustflags = [
     # Time was 32bit in ESP-IDF 4.x and will be 64bit from now on.
     # |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#rust-configuration-flags
     #
-    "--cfg",  "espidf_time64"
+    "--cfg", "espidf_time64",
 ]
 
-# Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and '_', we
+# Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and 'api', we
 #       provide them here. You can make local overrides in either.
 #
 [env]
@@ -68,32 +68,26 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "global":     '~/.espressif'
     #               Also needs 'ldproxy' to be installed and configured (see above)
 
-# Force 'esp_idf_component_manager' to be used.
-# Note: This like does not matter, since "as per the build documentation it is "on"/"y" by default" |1|.
-#   |1|: https://github.com/esp-rs/esp-idf-sys/issues/415#issuecomment-4234782429
-#
-#ESP_IDF_COMPONENT_MANAGER = "y"
-
 #---
 # ESP-IDF steering
 #
 # NOTE:
-#   'relative' path definitions are relative to the project workspace root |*| (not the working directory).
-#       |*|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults
+#   'relative' path definitions are relative to the project workspace root |1| (not the working directory).
+#       |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults
 #
 # Allow 'esp-idf-sys' to find 'CMakeLists.txt', through which our copy of the Zigbee component.
 # IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
 ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
 
 # AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
-ESP_IDF_SDKCONFIG = { value = "/tmp/.no-such" }
+#ESP_IDF_SDKCONFIG = { value = "/tmp/.no-such" }
 
 ESP_IDF_SDKCONFIG_DEFAULTS = { value = "apps/sdkconfig.defaults", relative = true }
 
-# The name of the sub-project that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
+# The name of the crate that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
 #   - esp_zigbee_lib
 #
-# The content is the name of the package, _not_ a folder name!
+# The content is the name of the crate, _not_ a folder name!
 #
 # NOTE! If this is out of sync, the 'raw' build will break but not in any decent, helpful manner!  You will see this
 #       warning somewhere in the output:
@@ -104,9 +98,7 @@ ESP_IDF_SDKCONFIG_DEFAULTS = { value = "apps/sdkconfig.defaults", relative = tru
 #       The best way is to check the output JSON starting "Build configuration: BuildConfig {", every now and then.
 #       If things work, you did get this right! ⛱️☀️
 #
-# Note: Undecided, whether this is better at 'raw' or 'apps'.
-#
-# Note 3: The _real_ error you'll get if this is wrong is:
+# Note 2: The _real_ error you'll get if this is wrong is:
 #       <<
 #           $ make manual
 #           Makefile:68: *** No 'managed_components' pulled by Rust build.  Stop.
@@ -137,10 +129,19 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #       $ cat {above} | jq common_component_reqs -C
 #   <<
 #
-ESP_IDF_COMPONENTS = """\
-  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
-  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
-"""
+# google.ai claims:
+#   <<
+#       Because ESP-IDF's CMake system is built in a way that esp-idf-sys only picks up the components listed in
+#       'ESP_IDF_COMPONENTS', it cuts the chain of transitive dependencies from the Rust side of things.
+#       That is, even if C side (esp-zigbee-lib) asks for "openthread", esp-idf-sys won't take it in, unless
+#       it's _also_ on the Rust whitelist.
+#   <<
+#
+#|ESP_IDF_COMPONENTS = """\
+#|  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
+#|  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
+#|  esp_timer;ieee802154;mbedtls;openthread;\
+#|"""
     # vfs, nvs_flash: 'PRIV_REQUIRES' in the 'color_dimmable_light' C sample.
     # fatfs:    'esp-idf-svc-0.52.1' must have it
     #   <<

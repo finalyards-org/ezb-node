@@ -10,14 +10,18 @@ resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
 [workspace.dependencies]
-esp-idf-sys = { version = "0.37", default-features = false }
-esp-idf-svc = { version = "0.52", default-features = false, features = ["native"] }
-    # tbd. try linking without the 'native'; edit 'apps/Cargo.toml' to update whether it's needed.
-log = { version = "0.4" }
-
 embassy-time = { version = "0.5", features = ["log"] }
 
 embuild = { version = "0.33.1", features = ["espidf"] }
+
+# Take all 'esp-idf-{hal|sys|svc}' and 'embuild' from the workspace level: they are inter-related.
+#
+esp-idf-hal = { version = "0.46" }  # not used, but will..
+esp-idf-sys = { version = "0.37", default-features = false }
+esp-idf-svc = { version = "0.52", default-features = false }
+    # tbd. try linking without the 'native'; edit 'apps/Cargo.toml' to update whether it's needed.
+
+log = { version = "0.4" }
 
 # Referenced in '{api|apps}/Cargo.toml':
 #   <<
@@ -34,12 +38,13 @@ embuild = { version = "0.33.1", features = ["espidf"] }
 [profile.release]
 opt-level = "s"
 
-# Needed for https://github.com/esp-rs/embuild/issues/105 (using ESP-IDF 6.0.1)
-[patch.crates-io]
-embuild = { git = "https://github.com/esp-rs/embuild" }
-# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
-esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
-# > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
-esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
-# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
-esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
+# Needed for using with ESP-IDF 6.x (breaks stuff with 5.5.4):
+#|[patch.crates-io]
+#|# https://github.com/esp-rs/embuild/issues/105
+#|embuild = { git = "https://github.com/esp-rs/embuild" }
+#|# > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
+#|esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
+#|# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
+#|esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
+#|# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
+#|esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }

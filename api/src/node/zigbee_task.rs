@@ -39,7 +39,6 @@ use ezb_node_raw::{
     ezb_app_signal_add_handler,
     ezb_af_create_device_desc,
     ezb_af_device_desc_t,
-    EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG,
     ezb_zha_create_color_dimmable_light,
     ezb_af_endpoint_get_cluster_desc,
     ezb_zcl_basic_cluster_desc_add_attr,

@@ -11,13 +11,6 @@
 */
 #pragma once
 
-// Bring in 'nvs_flash' ESP-IDF C component. This because it allows us to do 1:1 code parity with C examples.
-// Was NOT able to find the 'nvs_flash_init()' via 'esp-idf-svc::sys'; that's strange!
-//
-// Note: We might later do this in the 'esp-idf-svc' way; then we can remove the header here (and the Makefile).
-//
-//#include "nvs_flash.h"
-
 #include "esp_zigbee.h"
 
 // #later
@@ -28,10 +21,16 @@
 #include "ezbee/zha.h"
   // ezb_zha_color_dimmable_light_config_t
 
-// Manifest device type specific configurations (macros in C) to 'const'.
+// Manifest device type specific configurations (macros in C) to 'const' (or something accessible in Rust!).
 // Further used by 'bindings.rs' to make them 'Default' for said type.
 //
+// This did not work; 'bindgen' passes it as 'extern "C"' but it's in no archive to be linked.
 const ezb_zha_color_dimmable_light_config_t EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG = EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG();
+
+// This does not create _anything_ in the output. :|
+// tbd. disable 'clang' warning: macro-redefined
+//#define EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG \
+//  (((ezb_zha_color_dimmable_light_config_t))EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG())
 
 // Version
 //
