@@ -125,41 +125,13 @@ fn main() {
     println!("cargo:rerun-if-changed=Makefile");
     println!("cargo:rerun-if-changed=wrap.h");
     //
+    //#[cfg(false)]   // might also be harmful, causing rebuild loops (disabling for now, at least on ESP-IDF 6.0 builds)
     println!("cargo:rerun-if-changed=tmp/bindings_0.rs");
         //
         // This is  *output* but helps _dependent_crates_ to realize if it has been removed, and avoid a failing
         // upstream build.
 
     // Note 2: 'Cargo.{toml|lock}' are tracked nonetheless.
-
-    // LINK FIX
-    //
-    // Enable this if 'ldproxy' isn't finding the 'esp_zigbee_lib' though it's mentioned in the "extra components" and
-    // should be reachable. tbd. @ai: can you suggest a reason why this is needed?
-    //
-    #[cfg(false)]   // DOES NOT seem to matter, in the Grand scheme of things.
-    {
-        let dep_esp_idf_root = env::var("DEP_ESP_IDF_ROOT").unwrap();
-        let mcu = env::var("MCU").unwrap();  // "esp32c6"
-
-        let lib_dir = format!("{dep_esp_idf_root}/managed_components/espressif__esp-zigbee-lib/lib/{mcu}");
-
-        // <<
-        //   $ ls -1 /home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-5222ed692f93d886/out/managed_components/espressif__esp-zigbee-lib/lib/esp32c6/
-        //   libesp-zigbee-core.zczr.debug.a
-        //   libesp-zigbee-core.zczr.release.a 💥
-        //   libesp-zigbee-core.zed.debug.a
-        //   libesp-zigbee-core.zed.release.a
-        //   libesp-zigbee-idf.native.debug.a
-        //   libesp-zigbee-idf.native.release.a 💥
-        //   libesp-zigbee-idf.remote.debug.a
-        //   libesp-zigbee-idf.remote.release.a
-        //   libesp-zigbee.debug.a
-        //   libesp-zigbee.release.a 💥
-        // <<
-
-        println!("cargo::rustc-link-search=native={}", lib_dir);
-    }
 }
 
 fn idf_stuff() {

@@ -77,6 +77,18 @@ When you see the build output, pay attention to certain parts of it. Especially 
 	
 	Keep an eye on this, casually. If you see something other than you expected, the configuration is somehow faulty.
 
+>Note: Pay special attention to the `sdkconfig.defaults` field. When we use "relative" paths (see `.cargo/config.espidf.conf`), there may be absolute **non-existing** paths here. Spot them in time and you'll save your sorries, later!
+>
+>```
+>[esp-idf-sys 0.37.2]     esp_idf_sdkconfig: Some(
+>[esp-idf-sys 0.37.2]         "/home/ubuntu/ezb-node/apps/sdkconfig", # NOT INTENDED
+>[esp-idf-sys 0.37.2]     ),
+>[esp-idf-sys 0.37.2]     esp_idf_sdkconfig_defaults: Some(
+>[esp-idf-sys 0.37.2]         [
+>[esp-idf-sys 0.37.2]             "/home/ubuntu/ezb-node/apps/raw/sdkconfig.defaults",   # <-- NO SUCH THING!
+>[esp-idf-sys 0.37.2]         ],
+>[esp-idf-sys 0.37.2]     ),
+>```
 
 ### Warnings in the output
 	

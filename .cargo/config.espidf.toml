@@ -100,19 +100,30 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
 #
 #       IT WOULD ALSO HELP TREMENDOUSLY if 'esp-idf-sys' terminated a build, if there's a non-existing
 #       path for either 'sdkconfig' or 'sdkconfig.defaults'. Why not?
-#
-# Allow 'esp-idf-sys' to find 'CMakeLists.txt', through which our copy of the Zigbee component.
-# IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
-ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
-    # ^-- NO IDEA ANY MORE, what that means???! Is this line needed? tbd. @ai
 
-# DO NOT SET 'ESP_IDF_SDKCONFIG'!!!
-# 'esp-idf-sys' then creates 'sdkconfig' to some out folder, from where CMake can access it.
+# Tells 'esp-idf-sys' where the "root" of the C/CMake project is (this project does not really need one, unless we
+# start shipping C objects).
 #
-#| AVOIDS 'esp-idf-sys' from using an 'sdkconfig' that - by mistake - has been left in the project root.
-#|ESP_IDF_SDKCONFIG = { value = "/tmp/.no-such" }
+# Earlier comment:
+#   >IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
+#
+ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
+
+# ESP_IDF_SDKCONFIG
+#
+# This is a bit fuzzy. The default is said to be 'sdkconfig' (presumably in the folder where the build originated?)
+# but if we leave this out, the build configuration shows 'None', and things will work.
+#
+# No entry:
+#   - build works
+#   - 'sdkconfig' gets generated in:
+#       /home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-{..hash..}/out/sdkconfig
+#   - things work
 ESP_IDF_SDKCONFIG = { value = "../sdkconfig", relative = true }
 
+# Trick: Use '../' to work equally well in 'raw', 'api', 'apps'. !! Since the file contains things like stack size,
+# it is regarded belonging to the application's custody.
+#
 ESP_IDF_SDKCONFIG_DEFAULTS = { value = "../apps/sdkconfig.defaults", relative = true }
 
 # The name of the crate that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
@@ -172,8 +183,10 @@ ESP_IDF_COMPONENTS = """\
   cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
   vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
 """
-    # vfs, nvs_flash: 'PRIV_REQUIRES' in the 'color_dimmable_light' C sample.
-    # fatfs:    'esp-idf-svc-0.52.1' must have it
+    # vfs, nvs_flash:
+    #   - 'color_dimmable_light' C sample has them as 'PRIV_REQUIRES'; needed
+    #
+    # fatfs:    'esp-idf-svc-0.52.1' needs it
     #   <<
     #       error[E0433]: cannot find `fatfs` in `fs`
     #       --> /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-svc-0.52.1/src/io.rs:126:51
@@ -182,6 +195,7 @@ ESP_IDF_COMPONENTS = """\
     #       |                                                   ^^^^^ could not find `fatfs` in `fs`
     #       |
     #   <<
+    #
     # spiffs:   'esp-idf-svc-0.52.1' needs it
     #   <<
     #       error[E0433]: cannot find `spiffs` in `fs`
