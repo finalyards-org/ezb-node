@@ -107,7 +107,9 @@ _BLOCKLIST_VARS:=$(strip EZB_ZCL_VALUE_NaN)
 #|)
 _OPAQUE_TYPES:=""
 
-${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
+# GNU Make note:
+#		- '&:' syntax (GNU Make 4.3+) states that _both_ targets are created on the same run.
+${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
 	| bindgen
 	bindgen $< \
 	    --allowlist-file wrap.h \
@@ -120,8 +122,7 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --allowlist-function 'ezb_get_current_.+' \
 			--allowlist-function 'ezb_nwk_.+' \
 			--allowlist-function 'ezb_zcl_(?:basic_cluster|core|ota_upgrade)_.+' \
-			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light)' \
-			--allowlist-function 'wrap_.+' \
+			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch)' \
 			\
 	    --allowlist-type 'ezb_addr_mode_e' \
 	    --allowlist-type 'ezb_af_(?:device|endpoint)_.+' \
@@ -152,6 +153,9 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
+			--wrap-static-fns \
+	    --wrap-static-fns-path ${_TMP}/wrap.c \
+	    --wrap-static-fns-suffix _ext \
 		-- \
 		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
 		\
@@ -191,6 +195,38 @@ ${_BIND_RS}: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H
 #			--raw-line 'use strum::FromRepr;' \
 #			--no-copy 'VL_(?:(Configuration)|(Platform))' \
 
+${_TMP}/wrap.o: ${_TMP}/wrap.c
+	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
+	  riscv32-esp-elf-gcc -c $< -o $@ -O2 \
+		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
+	  -I. -I${_TMP} \
+	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
+		-I $(dir ${_SDKCONFIG_H}) \
+	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
+		-I ${_SYSROOT}/riscv32-esp-elf/include \
+		-I ${_ESP_IDF_PATH}/components/esp_common/include \
+		-I ${_ESP_IDF_PATH}/components/hal/include \
+		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
+		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/register \
+		-I ${_ESP_IDF_PATH}/components/esp_driver_uart/include \
+		-I ${_ESP_IDF_PATH}/components/esp_hw_support/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
+		-I ${_ESP_IDF_PATH}/components/freertos/config/include \
+		-I ${_ESP_IDF_PATH}/components/freertos/config/include/freertos \
+		-I ${_ESP_IDF_PATH}/components/freertos/config/riscv/include \
+		-I ${_ESP_IDF_PATH}/components/riscv/include \
+		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
+		-I ${_ESP_IDF_PATH}/components/heap/include \
+		-I ${_ESP_IDF_PATH}/components/esp_system/include \
+		-I ${_ESP_IDF_PATH}/components/ieee802154/include \
+		-I ${_ESP_IDF_PATH}/components/log/include \
+		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
+
+
+${_TMP}/libezb_wrap.a: ${_TMP}/wrap.o
+	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
+	  riscv32-esp-elf-ar rcs $@ $<
 
 # Test the above (for manual development, only)
 #
@@ -224,7 +260,7 @@ bindgen:
 
 #---
 _clean:
-	-rm ${_BIND_RS}
+	-rm ${_BIND_RS} ${_TMP}/wrap.[co] ${_TMP}/libezb_wrap.a
 
 echo:
 	@echo ${_SDKCONFIG}

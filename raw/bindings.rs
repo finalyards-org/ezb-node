@@ -52,18 +52,39 @@ unsafe impl Sync for esp_zigbee_config_s {}
 include!("bindings_iter_read.rs");
 include!("bindings_iter_write.rs");
 
-//include!("bindings_cdl_default.rs");
-
 /*
 * Default for a device configuration.
 */
 impl Default for ezb_zha_color_dimmable_light_config_t {
     fn default() -> Self {
-        #[cfg(false)]   // did not get this work, see 'wrap.h'; coding by hand
+        // See 'wrap.h' for details.
+        //
+        // ATTEMPT 1: "undefined reference to `EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG'" in linkage (i.e. either
+        //      the 'const' does not generate any C object, or 'bindgen' is wrongly configured to take one along).
+        #[cfg(false)]
         unsafe {
             EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG
         }
-        unimplemented!()
+
+        // ATTEMPT 2: Did not generate output in 'tmp/bindings_0.rs'
+
+        // ATTEMPT 3: "undefined reference to `wrap_EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG'"
+        //#[cfg(false)]
+        unsafe {
+            wrap_EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG()
+        }
+
+        // ATTEMPT 4:
+        #[cfg(false)]
+        include!("bindings_default.rs");
+    }
+}
+
+impl Default for ezb_zha_color_dimmer_switch_config_t {
+    fn default() -> Self {
+        unsafe {
+            wrap_EZB_ZHA_COLOR_DIMMER_SWITCH_CONFIG()
+        }
     }
 }
 

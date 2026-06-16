@@ -1,0 +1,21 @@
+#
+# Setup for the Zigbee node.
+#
+[network]
+primary_channels = [13]
+secondary_channels = "all"
+
+[platform]
+storage_partition_name = "zb_storage"
+
+[node]
+type = "router"
+install_code_policy = false
+max_children = 10
+
+[endpoint.defaults]
+manufacturer_name = "Your name"
+model_identifier = "Your model"
+
+[endpoint.1]
+device_type = "color_dimmer_switch"

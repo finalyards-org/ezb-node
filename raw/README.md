@@ -33,7 +33,7 @@ Pros/cons of the current approach:
 ## Requirements
 
 - `bindgen` CLI
-- GNU `make`
+- GNU `make` >= 4.3
 
 <!-- Author uses:
 - bindgen 0.72.1

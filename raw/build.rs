@@ -90,7 +90,8 @@ fn main() {
     // make stuff
     //
     let st = Command::new("make")
-        .arg( format!("tmp/bindings_0.rs") )      // generate the Rust bindings
+        .arg( "tmp/bindings_0.rs" ) // generate the Rust bindings
+        .arg( "tmp/libezb_wrap.a" )     // + the C-sourced object archive
         .output()
         .expect("to be able to launch `make`")   // shown if 'make' not found on PATH
         .status;
@@ -112,7 +113,14 @@ fn main() {
         }
     }
 
-    println!("cargo:rustc-link-search=tmp");
+    // Take in the 'tmp/libezb_wrap.a'
+    {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+
+        println!("cargo:rustc-link-search={}/tmp", manifest_dir);
+
+        println!("cargo::rustc-link-lib=static=ezb_wrap");
+    }
 
     // What files should trigger a new 'build.rs' run, if they change?
     //

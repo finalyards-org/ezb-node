@@ -211,3 +211,20 @@ target: esp32c6
 version: 2.0.0
 ```
 
+## `project_description.json`: `CONFIG_ONLY´ or `LIBRARY`
+
+```
+/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-6fedde765f63b3e3/out/build/project_description.json
+```
+
+If the `sdkconfig.defaults` file is not properly found, build proceeds but the Zigbee component is marked as `CONFIG_ONLY` (whatever that means?).
+
+Symptoms:
+
+- `esp_zigbee_lib` symbols are not found at linkage
+
+Cure:
+
+- observe what the build configuration states about `sdkconfig.defaults`
+- fix the path
+
