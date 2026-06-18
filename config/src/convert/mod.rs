@@ -118,7 +118,7 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     //--- endpoint.{id}
     //--- endpoint.defaults
     // {
-    //    let ep_10 = (CommonFields{ ... }, Specific::ColorDimmableLightEPC);
+    //    let ep_10 = (CommonFields{ ... }, Specific::ColorDimmableLight);
     //    BTreeMap::from([(10, ep_10)])
     // }
     let q_endpoints = {
@@ -176,8 +176,13 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
             // tbd. when this grows, detach to a function
             let q_specific = match v {
+                #[cfg(feature = "ep_color_dimmable_light")]
                 EndpointInstance::ColorDimmableLight {} => quote! {
-                    Specific::ColorDimmableLightEPC
+                    Specific::ColorDimmableLight
+                },
+                #[cfg(feature = "ep_color_dimmer_switch")]
+                EndpointInstance::ColorDimmerSwitch {} => quote! {
+                    Specific::ColorDimmerSwitch
                 },
                 // exhaustive match
             };

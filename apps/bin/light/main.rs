@@ -11,9 +11,7 @@ use anyhow::*;
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
-    log::{init as log_init},
     sys::{link_patches},
-    //hal,
 };
 
 use log::LevelFilter;
@@ -32,7 +30,6 @@ use crate::light_coordinator::LightCoordinator;
 //use hal::peripherals::Peripherals;
 
 mod light_coordinator;
-mod scheduler;
 
 /**
 * The entry point.
@@ -47,7 +44,8 @@ async fn main(_spawner: Spawner) {
 
     set_panic_hook();
 
-    log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
+    // Recommended logging, level steered by 'sdkconfig.defaults'. Guarantees C and Rust sides observe same logging.
+    esp_idf_svc::log::EspIdfLogger::initialize_default();
 
     //static CFG: &'static Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
 

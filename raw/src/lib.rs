@@ -152,4 +152,9 @@ pub use bindings::{
     WriteRspVariableEntry,
     WriteRspVariableIter,
     ezb_zcl_attr_type_t,
+    ezb_zha_color_dimmer_switch_config_t,
+    ezb_zha_create_color_dimmer_switch,
+    ezb_zdo_match_desc_req,
+    ezb_zdo_match_desc_req_s,
+    ezb_zdo_match_desc_req_callback_t,
 };

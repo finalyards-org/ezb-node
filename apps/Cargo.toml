@@ -20,6 +20,8 @@ anyhow = { version = "1.0"}
 
 log.workspace = true
 
+esp-idf-hal = { workspace = true }
+
 # 'esp-idf-svc' is *vital for Embassy integration*
 #   - 'embassy_time_driver' comes through there, which is essential in tying ESP-IDF and Embassy together.
 #   - 'alloc' is needed for logging
@@ -34,12 +36,12 @@ embassy-time    = { workspace = true, features = ["generic-queue-8"] }
     # generic-queue-X: 'esp-idf-template' comments: "any 'generic-queue' implementation will work"
 
 [build-dependencies]
-ezb-node-config = { path = "../config", features = ["toml"] }
+ezb-node-config = { path = "../config", features = ["toml", "ep_color_dimmable_light", "ep_color_dimmer_switch"] }
 anyhow = { version = "1.0" }
 embuild.workspace = true
 
 [features]
-default = ["esp32c6", "_coordinator", "_router", "_eps"]
+default = ["esp32c6", "_coordinator", "_router"]
 
 esp32c6 = [
     "ezb-node/esp32c6",
@@ -48,8 +50,6 @@ esp32c6 = [
 # Note: By defining the creation features like this, we get them in one place.
 _coordinator = ["ezb-node-config/coordinator", "ezb-node/coordinator"]
 _router = ["ezb-node-config/router", "ezb-node/router"]
-
-_eps = ["ezb-node/ep_color_dimmable_light"]
 
 [lints]
 workspace = true

@@ -22,7 +22,9 @@ use ezb_node_raw::{
     ezb_zcl_basic_server_attr_t,
     ezb_zcl_cluster_id_e,
     ezb_zha_color_dimmable_light_config_t,
+    ezb_zha_color_dimmer_switch_config_t,
     EZB_ZCL_CLUSTER_SERVER,
+    ezb_zha_create_color_dimmer_switch
 };
 
 use crate::{
@@ -64,10 +66,18 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: &EndpointConfig) -> Resu
         // ezb_zha_color_dimmable_light_config_t light_cfg = EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG();
         // ezb_af_ep_desc_t       ep_desc = ezb_zha_create_color_dimmable_light(ESP_ZIGBEE_HA_COLOR_DIMMABLE_LIGHT_EP_ID, &light_cfg);
         //
-        Specific::ColorDimmableLightEPC => {
-            let mut light_cfg = ezb_zha_color_dimmable_light_config_t::default();
+        Specific::ColorDimmableLight => {
+            let mut cfg = ezb_zha_color_dimmable_light_config_t::default();
+            unsafe { ezb_zha_create_color_dimmable_light(ep_id, &cfg) }
+        }
 
-            unsafe { ezb_zha_create_color_dimmable_light(ep_id, &light_cfg) }
+        #[cfg(feature = "ep_color_dimmer_switch")]
+        // ezb_zha_color_dimmer_switch_config_t switch_cfg = EZB_ZHA_COLOR_DIMMER_SWITCH_CONFIG();
+        // ezb_af_ep_desc_t       ep_desc = ezb_zha_create_color_dimmer_switch(ESP_ZIGBEE_HA_COLOR_DIMMER_SWITCH_EP_ID, &switch_cfg);
+        //
+        Specific::ColorDimmerSwitch => {
+            let mut cfg = ezb_zha_color_dimmer_switch_config_t::default();
+            unsafe { ezb_zha_create_color_dimmer_switch(ep_id, &cfg) }
         },
     };
 

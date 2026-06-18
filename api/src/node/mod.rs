@@ -87,22 +87,30 @@ pub trait Node {
     *
     * The closures/functions get us (an application struct implementing 'Node' as a parameter, allowing them to
     * access the Zigbee APIs, via 'Node' methods. We ensure that locking is in place for such methods (see ZigbeeGuard).
-    *
-    * @note: The 'this' is mutable, in case the application has fields in there (state) that the handlers want to
-    *       change. 'ezb_node' itself carries no state in 'T' (it couldn't, since the 'struct' is application defined).
     */
-    async fn run<T: Node, F1, F2>(mut this: /*move*/ T, on_app_signal: F1, on_zcl_event: F2) -> !
+    async fn run<T,F1,F2>(this: T, on_app_signal: F1, on_zcl_event: F2) -> !
     where
-        F1: Fn(&mut T, AppSignal),
-        F2: Fn(&mut T, Result<ZclEvent, ZclError>)
+        T: Node + 'static,
+        F1: for<'a> Fn(&'a T, AppSignal) -> core::pin::Pin<Box<dyn Future<Output = ()> + 'a>>,
+            // Rust note:
+            //      This signature navigates a complex lifetime requirement, allowing:
+            //          - The application programmer to use '&self' (no 'Arc' wrapper)
+            //          - Having active 'async' yields (.await points) inside the closure
+            //          - The application state (T) to support internal mutability if needed.
+            //
+            //      The 'for<'a>' trait bound (Higher-Rank Trait Bound) ensures the reference is valid for the duration
+            //      of the async execution. 'Pin<Box<dyn Future<...>>>' is used to assist the Rust compiler with type
+            //      erasure and to ensure the future's internal state remains safe and stable across await boundaries.
+            //
+        F2: Fn(&T, Result<ZclEvent, ZclError>),
     {
         let rx = CHANNEL.receiver();
 
         loop {
             let x = rx.receive().await;
             match x {
-                Payload::AppSignal(x) => on_app_signal(&mut this, x),
-                Payload::ZclEvent(x) => on_zcl_event(&mut this, x)
+                Payload::AppSignal(x) => on_app_signal(&this, x) .await,
+                Payload::ZclEvent(x) => on_zcl_event(&this, x)
             }
         }
     }

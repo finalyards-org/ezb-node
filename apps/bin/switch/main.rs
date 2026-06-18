@@ -8,10 +8,11 @@ extern crate alloc;
 
 use anyhow::*;
 
-use embassy_executor::Spawner;
+use embassy_executor::{
+    Spawner,
+};
 
 use esp_idf_svc::{
-    log::{init as log_init},
     sys::{link_patches},
     //hal,
 };
@@ -27,11 +28,17 @@ use ezb_node_apps::{
     init_nvs,
     set_panic_hook,
 };
-use crate::router::LightSwitchRouter;
 
-//use hal::peripherals::Peripherals;
+use esp_idf_hal::{
+    gpio::{PinDriver, Pull},
+    peripherals::Peripherals,
+};
 
-mod router;
+mod switch_router;
+use switch_router::LightSwitchRouter;
+
+mod button_task;
+use button_task::button_task;
 
 /**
 * The entry point.
@@ -40,14 +47,27 @@ mod router;
 * called within the application (main) thread.
 */
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     // 'esp-idf-sys' needs it. See https://github.com/esp-rs/esp-idf-template/issues/71
     link_patches();
 
     set_panic_hook();
 
-    log_init(LevelFilter::Debug);    // or '::init_from_env()' and 'RUST_LOG'
+    // Recommended logging, level steered by 'sdkconfig.defaults'. Guarantees C and Rust sides observe same logging.
+    esp_idf_svc::log::EspIdfLogger::initialize_default();
 
+    let peripherals = Peripherals::take().unwrap();
+    {
+        // Set GPIO9 (BOOT btn) as input
+        let mut btn = PinDriver::input(peripherals.pins.gpio9).unwrap();
+        btn.set_pull(Pull::Up).unwrap();
+            // pressing BOOT grounds it (tbd. test)
+
+        spawner.spawn(button_task(peripherals.pins.gpio9)).unwrap();
+    }
+
+    // --- Zigbee ---
+    //
     static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
         include!(concat!(env!("OUT_DIR"), "/switch_conf.in"))
     });

@@ -21,7 +21,7 @@ const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub(crate) struct LightSwitchRouter
 where Self: Node {
-    // can have state here
+    // can have internally-mutable state here
 }
 
 impl Node for LightSwitchRouter {}
@@ -37,18 +37,20 @@ impl LightSwitchRouter {
 
     /**
     * Behaviour of this particular node.
+    *
+    * @note: The closures provided to 'Node::run' are run in this application task.
     */
     pub async fn run(mut self) -> ! {
         <Self as Node>::run(self,
-  |this, sig| this.on_app_signal(sig),
-  |this, ev| this.on_zcl_event(ev)
+  |this, sig| Box::pin(this.on_app_signal(sig)),
+  |this, ev| { unimplemented!() }
         ).await
     }
 
     /**
     * Run the received signal through our logic match.
     */
-    fn on_app_signal(&mut self, sig: AppSignal) {
+    async fn on_app_signal(&self, sig: AppSignal) {
         use AppSignal::*;
 
         match sig {
@@ -63,7 +65,7 @@ impl LightSwitchRouter {
                 let is_new = self.is_factory_new();
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
-                    self.start_top_level_commissioning(BdbMode::NetworkFormation);
+                    self.start_top_level_commissioning(BdbMode::NetworkSteering);   // router: steering
                 } else {
                     log::info!("Device rebooted");
                 }
@@ -71,39 +73,28 @@ impl LightSwitchRouter {
             BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
                 log::warn!("{} failed with status = {}; retrying...", sig, st);
 
-                schedule(ONE_SEC, |node| {
-                    node.start_top_level_commissioning(BdbMode::Initialization);
-                });
+                embassy_time::Timer::after_secs(1).await;
+                self.start_top_level_commissioning(BdbMode::Initialization);
             },
 
-            BdbSignalFormation(BdbStatus::Success) => {
-                log::info!("Formed network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
+            BdbSignalSteering(BdbStatus::Success) => {
+                log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
                     self.get_extended_panid(),
                     self.get_panid(),
                     self.get_current_channel(),
                     self.get_short_address()
                 );
-                self.start_top_level_commissioning(BdbMode::NetworkSteering);
-            },
-            BdbSignalFormation(st) => {
-                log::info!("Failed to form network: {}, st = {}", sig, st);
-                schedule(ONE_SEC, |node| {
-                    node.start_top_level_commissioning(BdbMode::NetworkFormation);
-                });
-            },
-
-            BdbSignalSteering(BdbStatus::Success) => {
-                log::info!("Network steering completed.")
+                zdo_find_ha_color_dimmable_light_device();
             },
             BdbSignalSteering(st) => {
-                log::info!("Failed the network steering: st = {}", st);
-                schedule(ONE_SEC, |node| {
-                    node.start_top_level_commissioning(BdbMode::NetworkSteering);
-                });
-            }
+                log::info!("Failed to join network: {}, st = {}", sig, st);
 
-            ZdoSignalDeviceAnnce { short_addr, .. } => {
-                log::info!("New device commissioned or rejoined: {}", short_addr);
+                embassy_time::Timer::after_secs(1).await;
+                self.start_top_level_commissioning(BdbMode::NetworkSteering);
+            },
+
+            ZdoSignalLeave { leave_type_X } => {    // tbd. make a proper enum (drop '_X')
+                log::info!("Left network successfully with type: {}", leave_type_X);
             },
 
             NwkSignalPermitJoinStatus { is_opened_for } => {
@@ -116,51 +107,64 @@ impl LightSwitchRouter {
                 };
             },
 
-            ZdoSignalLeaveIndication { short_addr, .. } => {
-                log::info!("Node {} is leaving the network.", short_addr);
-            },
-
             _ => {
                 log::info!("Zigbee APP signal: {sig}");
             },
         }
     }
+}
 
-    /**
-    * Run the received ZCL event through our logic.
-    */
-    fn on_zcl_event(&mut self, ev_res: Result<ZclEvent, ZclError>) {
-        use ZclEvent::*;
 
-        // Note: It may be that we need to know more about the event, when errors arise. Let's, however, keep the
-        //      'ZclEvent' for successful ones, and curry the 'ZclError' with extra information ('CommonInfo'?) if
-        //      there is a need. All this information is available in the C level, but dividing it to success/fail
-        //      will make applications easier to read.
+//static ezb_err_t zdo_find_ha_color_dimmable_light_device(void)
+// {
+//     ezb_err_t ret            = EZB_ERR_FAIL;
+//     uint16_t  cluster_list[] = {EZB_ZCL_CLUSTER_ID_ON_OFF, EZB_ZCL_CLUSTER_ID_LEVEL, EZB_ZCL_CLUSTER_ID_COLOR_CONTROL};
+//
+//     ezb_zdo_match_desc_req_t req = {
+//         .dst_nwk_addr = 0xFFFD,
+//         .field =
+//             {
+//                 .nwk_addr_of_interest = 0xFFFD,
+//                 .profile_id           = EZB_AF_HA_PROFILE_ID,
+//                 .num_in_clusters      = sizeof(cluster_list) / sizeof(cluster_list[0]),
+//                 .num_out_clusters     = 0,
+//                 .cluster_list         = cluster_list,
+//             },
+//         .cb       = zdo_find_ha_color_dimmable_light_device_result,
+//         .user_ctx = NULL,
+//     };
+//     ret = ezb_zdo_match_desc_req(&req);
+//     if (ret == EZB_ERR_NONE) {
+//         ESP_LOGI(TAG, "Attempt to find HA color dimmable light device");
+//     } else {
+//         ESP_LOGE(TAG, "Failed to find HA color dimmable light device with error(0x%04x)", ret);
+//     }
+//     return ret;
+// }
+fn zdo_find_ha_color_dimmable_light_device() -> Option<ZclError> {
 
-        let Ok(ev) = ev_res else {
-            log::warn!("ZCL event error: {}", ev_res.err().unwrap());
-            return;
-        };
+    let req = {
+        //         .dst_nwk_addr = 0xFFFD,
+        //         .field =
+        //             {
+        //                 .nwk_addr_of_interest = 0xFFFD,
+        //                 .profile_id           = EZB_AF_HA_PROFILE_ID,
+        //                 .num_in_clusters      = sizeof(cluster_list) / sizeof(cluster_list[0]),
+        //                 .num_out_clusters     = 0,
+        //                 .cluster_list         = cluster_list,
+        //             },
+        //         .cb       = zdo_find_ha_color_dimmable_light_device_result,      // HA, callback!! we're in trouble here, are we???
+        //         .user_ctx = NULL,
+    };
 
-        match ev {
-            SetAttrValue { .. } => {
-                unimplemented!();
-
-                //set_attr_value(message);  // i.e. steer the light (color, intensity, on/off)
-                log::debug!("Setting light to: {}", "..something..");   // TEMP
-            },
-            DefaultResp { err, .. } => {
-                //ezb_zcl_cmd_default_rsp_message_t *default_rsp = (ezb_zcl_cmd_default_rsp_message_t *)message;
-                log::info!("Received ZCL Default Response, status: {}",
-                    match err {
-                        Some(e) => e.to_string(),
-                        None => "success".into(),
-                    }
-                );
-            },
-            _ => {
-                log::warn!("ZCL Core Action: {:?}", ev);
-            }
+    let ret = match ezb_zdo_match_desc_req(&req);
+    match ret {
+        None => {
+            log::info!("Attempt to find HA color dimmable light device");
+        },
+        Some(err) => {
+            log::error!("Failed to find HA color dimmable light device: {}", err);
         }
     }
+    ret
 }

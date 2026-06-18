@@ -16,10 +16,9 @@ embuild = { version = "0.33.1", features = ["espidf"] }
 
 # Take all 'esp-idf-{hal|sys|svc}' and 'embuild' from the workspace level: they are inter-related.
 #
-esp-idf-hal = { version = "0.46" }  # not used, but will..
-esp-idf-sys = { version = "0.37", default-features = false }
+esp-idf-hal = { version = "0.46" }  # only used by 'apps'
 esp-idf-svc = { version = "0.52", default-features = false }
-    # tbd. try linking without the 'native'; edit 'apps/Cargo.toml' to update whether it's needed.
+esp-idf-sys = { version = "0.37", default-features = false }
 
 log = { version = "0.4" }
 
@@ -29,7 +28,6 @@ log = { version = "0.4" }
 #       workspace = true
 #   <<
 [workspace.lints.rust]
-#unexpected_cfgs = { level = "warn", check-cfg = ['cfg(esp_idf_version_at_least_5_5_3)'] }
 
 # We don't use
 #[profile.dev]

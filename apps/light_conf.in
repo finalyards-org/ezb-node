@@ -12,7 +12,7 @@
             model_identifier: Some("Your model"),
         };
         let endpoints = {
-            let ep_10 = EndpointConfig::ColorDimmableLightEPC;
+            let ep_10 = EndpointConfig::ColorDimmableLight;
             BTreeMap::from([(10u8, ep_10)])
         };
         Config {

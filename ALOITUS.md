@@ -9,31 +9,47 @@ Rust-projekti `esp-zigbee-lib`-kirjaston (v.2.0.1) käyttämiseksi rustista. `es
 
 |nimi|status|Rust|rooli|
 |---|---|---|---|
-|`apps`|"code complete"|`std`|Ylin sovellustaso. Tavoitteena pitää tämä hyvin yksinkertaisena.|
-|`config`|toimii|`std`, host-puolen työkalu|Zigbee-noden konfigurointi (vakiot, rooli coordinator/tms.) tulevat TOML-tiedostosta, jonka `config` kääntää koodiksi. Tämä yksinkertaistaa sovellustasoa.|
-|`api`|Rust-kääntäjäongelmia esiintyy|`std`|Varsinainen API-taso.|
+|`apps`|kääntyy ja linkkautuu|`std`|Ylin sovellustaso. Tavoitteena pitää tämä hyvin yksinkertaisena. <p />Esimerkkinä kaksi `esp_zigbee_lib`:stä portattua sovellusta: `bin/light` ja `bin/switch`.|
+|`config`|toimii|`std`, host-puolen käännöstyökalu|Zigbee-noden konfigurointi (vakiot, rooli coordinator/tms.) tulevat TOML-tiedostosta, jonka `config` kääntää koodiksi. Tämä yksinkertaistaa sovellustasoa.|
+|`api`|ok|`std`|Varsinainen API-taso.|
 |`raw`|Kääntyy, oletettavasti toimii (toimi kirjaston 1.6-versiolla aikoinaan)|`no_std; alloc`|C/Rust -rajapinnan hallinta. Ei nosta abstraktiota, mutta voi paikoitellen helpottaa API-tason tehtäviä lisäämällä ominaisuuksia `bindgen`:n generoimaan raaka-raaka-koodiin. Bindgen-tuotos tulee mukaan `include`:na, mikä mahdollistaa tämän.|
 
-Tavoite: saada vastaava koodi kuin C-puolen `color_dimmable_light` (ja sitten `color_dimmable_switch` kääntymään ja toimimaan Rust-sovelluksena).
+**Arkkitehtuuri**
 
-Tilanne: `raw`, `config` ja `api`-tasot kääntyvät, `apps` ei vielä. Kun kääntyy, edessä ovat:
+Sovelluskoodissa on käytössä Embassy. Tämä tarkoittaa, että myös esimerkeissä ajastimien (kohdat, joissa protokollassa odotetaan 1s ja tehdään jotain) sijaan on `async`-viiveet.
 
-- kokeilu ESP-IDF 5.5.4 -> 6.0.1 siirtymän mahdollisesta toimivuudesta / raportointi, jos siinä kohtaa ongelmia
+Tämä tekee sovellusten kirjoittamisesta ja lukemisesta lineaarista.
+
+`api`-tasolla luodaan Zigbee-kirjastolle oma FreeRTOS-taskinsa (sovellus ei suoraan ole tästä tietoinen). Taskien välillä on `Channel`.
+
+
+**Tavoite** 
+
+Saada vastaava koodi kuin C-puolen `color_dimmable_light` ja `color_dimmable_switch` -demot kääntymään ja toimimaan Rust-sovelluksina.
+
+**Tilanne**
+
+Siirryin äskettäin `async`-käyttöön protokollatason viiveissä. Tämän mahdollistavaa `api`-tason tekniikkaa ei ole vielä implementoitu.
+
+Kun `apps/bin/light` kääntyy, edessä ovat:
+
 - varsinainen ajokokeilu ensin C-vastaesimerkin (switch) kanssa
-- valon tekeminen toimivaksi (ei pelkkä lokitus)
 - myös switch Rustilla
+- valon tekeminen toimivaksi (ei pelkkä lokitus)
 
+Akuutti focus: `async` sovellustason handlerissa.
 
-Akuutti focus: `apps` kääntökuntoon.
+Ehdotus: pyydän sinulta apua pienissä ongelmissa, mitä tulee eteen. Saat esittää ehdotuksia: minulla on ymmärrys Rustin `async`:sta, mutta tämä voi silti olla haastava kohta rakennelmassa.
 
-Ehdotus: pyydän sinulta apua pienissä ongelmissa, mitä tulee eteen. Tiedän, miten tämä rakennetaan joten kovin paljon aktiivisia ehdotuksia en tässä vaiheessa tarvitse; voit jättää ne pois vastauksista. Kiitos!
-
+<!-- #skip
+Tiedän, miten tämä rakennetaan joten kovin paljon aktiivisia ehdotuksia en tässä vaiheessa tarvitse; voit jättää ne pois vastauksista. Kiitos!
+-->
 
 ## Kehitysalusta (Ubuntu, Multipass, RustRover IDE, google.ai neuvonantajan roolissa)
 
 Teen kehitystyön Multipass VM:n sisältä (Ubuntu 26.04 LTS), hostina on macOS.
 
-- Multipass versio 1.16.2
+- Multipass versio 1.16.3
 - Kohderauta: Vain ESP32-C6 (RISC-V, ei muita suunnitteilla)
 
 IDE:nä on RustRover. Lähdekoodit ovat hostin hakemistossa, joka on jaettu VM:n kanssa. `target`-hakemisto on mapattu nopeussyistä Linuxin omaan tiedostojärjestelmään.
@@ -52,14 +68,14 @@ components = [ "rust-src", "clippy", "rustfmt" ]
 
 Flashaus on etänä ohjattavalla `espflash` (v.4.4.0) -ohjelmalla (VM -> RPi -> ESP32), mutta tämän suhteen ei oikeastaan ole kysyttävää. Homma toimii. :)
 
+### ESP-IDF käännösketju
+
+`esp-idf-sys`:iä käytetään "native"-moodissa, eli työkalut latautuvat `~/.espressif`-hakemiston alle osana buildia.
+
+
 ## Kommenttien kieli
 
-Koodin kommentit, stringit voit kirjoittaa suoraan englanniksi. Muussa vuoropuhelussa käytämme suomea. 
-
-
-## Lisäyksiä
-
-- ESP-IDF tuodaan mukaan `esp-idf-sys`:n "native"-moodissa, eli työkalut latautuvat `~/.espressif`-hakemiston alle osana buildia.
+Koodin kommentit, stringit kirjoitetaan suoraan englanniksi. Muussa vuoropuhelussa käytämme suomea. 
 
 
 ## Palaute
@@ -67,14 +83,4 @@ Koodin kommentit, stringit voit kirjoittaa suoraan englanniksi. Muussa vuoropuhe
 Tämä teksti on `ALOITUS.md`-tiedostossa. 
 
 Jos sinulla on lisäkysyttävää, tuo ne esiin saman tien. :) Samoin *työn aikana* arvostan, jos tuot epävarmoja oletuksia esiin.
-
-
-
-<!--
-## Terminologiasta
-
-*Tähän tulee projektissa käytettävästä termistöstä. Joskus.*
-
-- "state machine" (engl.) on suomeksi "tilakone", ei "valtiokone".
--->
 

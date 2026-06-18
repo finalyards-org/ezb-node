@@ -1,38 +1,41 @@
-use embassy_executor::task;
+//use embassy_executor::task;
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::Channel,
+};
 use embassy_time::{Duration, Timer};
+
 use esp_idf_hal::gpio::{PinDriver, Pull, InputPin};
 
-#[task]
-async fn button_task(
-    pin: impl InputPin,
-    task_channel: &'static embassy_sync::channel::Channel<
-        embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
-        light::scheduler::ScheduledTask,
-        4
-    >
-) {
-    // Alustetaan asynkroninen input-ajuri
-    let mut button = PinDriver::input(pin).unwrap();
-    button.set_pull(Pull::Up).unwrap(); // BOOT-nappi vetää yleensä maihin
+pub type ButtonChannel = Channel<CriticalSectionRawMutex, ButtonEvent, 4>; // type alias
+
+pub enum ButtonEvent {
+    Pressed,
+    Depressed,
+}
+
+pub static BUTTON_CHANNEL: ButtonChannel = Channel::new();
+
+/**
+* Listens to the BOOT button, reflecting its state to 'ButtonChannel'
+*/
+pub async fn button_task(pin: impl InputPin) {
+    let mut btn = PinDriver::input(pin).unwrap();
+    btn.set_pull(Pull::Up).unwrap();    // BOOT is active low
 
     loop {
-        // 1. Odotetaan asynkronisesti, että linja laskee alas (painallus alkaa)
-        // Tämä EI blokkaa CPU:ta, vaan antaa muiden taskien ajaa vapaasti
-        button.wait_for_low().await.unwrap();
-
-        // 2. Debounce: Odotetaan 50ms kontaktihäiriöiden ylipääsemiseksi
-        Timer::after(Duration::from_millis(50)).await;
-
-        // Varmistetaan, että nappi on edelleen pohjassa, eikä kyseessä ollut kohina
-        if button.is_low() {
-            log::info!("BOOT-nappia painettu (asynkronisesti)!");
-
-            // 3. Lähetetään komento eteenpäin siihen aiemmin korjaamaamme Embassy-kanavaan
-            task_channel.send(light::scheduler::ScheduledTask::ToggleLight).await;
+        loop {
+            btn.wait_for_low().await.unwrap();
+            Timer::after(Duration::from_millis(50)).await;  // debounce check
+            if btn.is_low() { break; }
         }
+        BUTTON_CHANNEL.send(ButtonEvent::Pressed).await;
 
-        // 4. Odotetaan, että nappi vapautetaan ennen seuraavaa kierrosta
-        button.wait_for_high().await.unwrap();
-        Timer::after(Duration::from_millis(50)).await; // Vapautuksen debounce
+        loop {
+            btn.wait_for_high().await.unwrap();
+            Timer::after(Duration::from_millis(50)).await; // release debounce check
+            if btn.is_high() { break; }
+        }
+        BUTTON_CHANNEL.send(ButtonEvent::Depressed).await;
     }
 }

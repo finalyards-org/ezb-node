@@ -23,17 +23,23 @@ target_dir := `cargo metadata --format-version 1 --no-deps | jq -r '.target_dire
 [group('light')]
 lb: light-build
 light-build:
-	cargo {{nightly}} build --release -vv --bin light \
+	cargo {{nightly}} build --release -vv --bin light --features esp32c6,ezb-node/ep_color_dimmable_light \
 		--jobs 1
 
 [group('light')]
 lbx:
-	cargo {{nightly}} build --release -vv --bin light
+	cargo {{nightly}} build --release -vv --bin light --features esp32c6,ezb-node/ep_color_dimmable_light
 
 [group('light')]
 lr: light-run
 light-run:
-	cargo {{nightly}} run --release -vv --bin light
+	cargo {{nightly}} run --release -vv --bin light --features esp32c6,ezb-node/ep_color_dimmable_light
+
+[group('switch')]
+sb: switch-build
+switch-build:
+	cargo {{nightly}} build --release -vv --bin switch --features esp32c6,ezb-node/ep_color_dimmer_switch \
+		--jobs 1
 
 # List the *last* 'sdkconfig'
 echo-sdkconfig-path:

@@ -15,13 +15,12 @@ use ezb_node::{
     ZclError,
 };
 
-use crate::{scheduler::schedule};
-
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub(crate) struct LightCoordinator
 where Self: Node {
-    // can have state here
+    // Use interior mutability (e.g., 'Mutex') if shared state is needed, as the node (a singleton) is accessed via
+    // immutable references.
 }
 
 impl Node for LightCoordinator {}
@@ -37,10 +36,12 @@ impl LightCoordinator {
 
     /**
     * Behaviour of this particular node.
+    *
+    * @note: The closures provided to 'Node::run' are run in this application task.
     */
-    pub async fn run(mut self) -> ! {
+    pub async fn run(self) -> ! {
         <Self as Node>::run(self,
-  |this, sig| this.on_app_signal(sig),
+  |this, sig| Box::pin(this.on_app_signal(sig)),
   |this, ev| this.on_zcl_event(ev)
         ).await
     }
@@ -48,10 +49,7 @@ impl LightCoordinator {
     /**
     * Run the received signal through our logic match.
     */
-    // Note: In the prototypes, 'this: &mut Self' to underline that the method is called
-    //      indirectly, via the 'Node' mechanism.
-    //
-    fn on_app_signal(&mut self, sig: AppSignal) {
+    async fn on_app_signal(&self, sig: AppSignal) {
         use AppSignal::*;
 
         match sig {
@@ -74,9 +72,8 @@ impl LightCoordinator {
             BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
                 log::warn!("{} failed with status = {}; retrying...", sig, st);
 
-                schedule(ONE_SEC, |node| {
-                    node.start_top_level_commissioning(BdbMode::Initialization);
-                });
+                embassy_time::Timer::after_secs(1).await;
+                self.start_top_level_commissioning(BdbMode::Initialization);
             },
 
             BdbSignalFormation(BdbStatus::Success) => {
@@ -90,9 +87,9 @@ impl LightCoordinator {
             },
             BdbSignalFormation(st) => {
                 log::info!("Failed to form network: {}, st = {}", sig, st);
-                schedule(ONE_SEC, |node| {
-                    node.start_top_level_commissioning(BdbMode::NetworkFormation);
-                });
+
+                embassy_time::Timer::after_secs(1).await;
+                self.start_top_level_commissioning(BdbMode::NetworkFormation);
             },
 
             BdbSignalSteering(BdbStatus::Success) => {
@@ -100,9 +97,9 @@ impl LightCoordinator {
             },
             BdbSignalSteering(st) => {
                 log::info!("Failed the network steering: st = {}", st);
-                schedule(ONE_SEC, |node| {
-                    node.start_top_level_commissioning(BdbMode::NetworkSteering);
-                });
+
+                embassy_time::Timer::after_secs(1).await;
+                self.start_top_level_commissioning(BdbMode::NetworkSteering);
             }
 
             ZdoSignalDeviceAnnce { short_addr, .. } => {
@@ -132,7 +129,7 @@ impl LightCoordinator {
     /**
     * Run the received ZCL event through our logic.
     */
-    fn on_zcl_event(&mut self, ev_res: Result<ZclEvent, ZclError>) {
+    fn on_zcl_event(&self, ev_res: Result<ZclEvent, ZclError>) {
         use ZclEvent::*;
 
         // Note: It may be that we need to know more about the event, when errors arise. Let's, however, keep the
