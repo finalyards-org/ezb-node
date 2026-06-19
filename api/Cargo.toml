@@ -36,8 +36,8 @@ touchlink = []
 # Device types
 _ep_all = ["ep_color_dimmable_light", "ep_color_dimmer_switch"]
 
-ep_color_dimmable_light = ["ezb-node-config/ep_color_dimmable_light"]
-ep_color_dimmer_switch = ["ezb-node-config/ep_color_dimmer_switch"]
+ep_color_dimmable_light = ["ezb-node-config/color_dimmable_light"]
+ep_color_dimmer_switch = ["ezb-node-config/color_dimmer_switch"]
 
 esp32c6 = [
     "ezb-node-raw/esp32c6",

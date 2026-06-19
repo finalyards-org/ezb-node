@@ -73,9 +73,9 @@ pub struct CommonFields {
 
 #[derive(Debug, Clone)]
 pub enum Specific {
-    #[cfg(feature = "ep_color_dimmable_light")]
+    #[cfg(feature = "color_dimmable_light")]
     ColorDimmableLight,
-    #[cfg(feature = "ep_color_dimmer_switch")]
+    #[cfg(feature = "color_dimmer_switch")]
     ColorDimmerSwitch,
 }
 

@@ -21,6 +21,5 @@ coordinator = []
 router = []
 #end_device_UNTESTED = []
 
-# tbd. consider no features here, only in 'api' level
-ep_color_dimmable_light = []
-ep_color_dimmer_switch = []
+color_dimmable_light = []
+color_dimmer_switch = []

@@ -76,9 +76,8 @@ pub struct EndpointDefaults {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "device_type", rename_all = "snake_case")]
 pub enum EndpointInstance {
-    #[cfg(feature = "ep_color_dimmable_light")]
+    #[cfg(feature = "color_dimmable_light")]
     ColorDimmableLight,
-    #[cfg(feature = "ep_color_dimmer_switch")]
+    #[cfg(feature = "color_dimmer_switch")]
     ColorDimmerSwitch,
-    //EndpointDefaults
 }

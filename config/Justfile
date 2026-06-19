@@ -9,12 +9,14 @@
 default:
 	@just --list
 
-#R light_features := "esp-zb/ep_color_dimmable_light"
+all_profiles := \
+	"color_dimmable_light,"+\
+	"color_dimmer_switch,"+\
+	""
 
-#[group('xx')]
 b: build
 build:
-	cargo build --release --features toml
+	cargo build --release --features toml,{{all_profiles}}
 
 t: test
 test:
