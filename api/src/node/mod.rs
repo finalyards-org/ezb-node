@@ -13,6 +13,9 @@
 mod zigbee_task;
 use zigbee_task::zigbee_spawn;
 
+mod zdo;
+use zdo::*;
+
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::Channel,

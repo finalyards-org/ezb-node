@@ -126,13 +126,14 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch)' \
 			\
 	    --allowlist-type 'ezb_addr_mode_e' \
-	    --allowlist-type 'ezb_af_(?:device|endpoint)_.+' \
+	    --allowlist-type 'ezb_af_(?:device|endpoint|profile_id)_.+' \
 	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_bdb_.+' \
+	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    --allowlist-type 'ezb_nwk_.+' \
 	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|cmd|core|set|status)_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
-	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
+	    --allowlist-type 'ezb_zdp_(?:match|xxx)_.+' \
 	    \
 	    --allowlist-var 'ESP_ERR_.+' \
 	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \

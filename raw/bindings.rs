@@ -2,6 +2,7 @@
 * Gathering the bindgen-generated binding like this allows us to attach
 * 'Default' (and/or other traits) to its types.
 */
+use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 
@@ -131,6 +132,48 @@ impl esp_zigbee_platform_config_t {
                 __bindgen_anon_1: unsafe { core::mem::zeroed() } // not needed
             }
         }
+    }
+}
+
+//pub struct ezb_zdp_match_desc_req_field_s {
+//     ///< Network address of the device to query
+//     pub nwk_addr_of_interest: ezb_shortaddr_t,
+//     ///< Profile ID to match at the destination, see @ref ezb_af_profile_id_t
+//     pub profile_id: u16,
+//     ///< Number of input clusters (server clusters) in the cluster_list
+//     pub num_in_clusters: u8,
+//     ///< Number of output clusters (client clusters) in the cluster_list
+//     pub num_out_clusters: u8,
+//     ///< Pointer to array of cluster IDs. First num_in_clusters entries are
+//     /// input clusters,   followed by num_out_clusters entries for output
+//     /// clusters. Total size must be   (num_in_clusters + num_out_clusters)
+//     /// * sizeof(uint16_t)
+//     pub cluster_list: *mut u16,
+// }
+//
+impl ezb_zdp_match_desc_req_field_s {
+    pub fn new(
+        addr_of_interest: ezb_shortaddr_t,  // 0xFFFD
+        profile_id: ezb_af_profile_id_e,    // ...HA...
+        in_clusters: &[ezb_zcl_cluster_id_e],
+        out_clusters: &[ezb_zcl_cluster_id_e]
+    ) -> (Self, Vec<u16>) {
+        let in_n = in_clusters.len();
+        let out_n = out_clusters.len();
+
+        let mut all_clusters: Vec<u16> = Vec::with_capacity(in_n + out_n);
+
+        all_clusters.extend_from_slice(in_clusters.map(|x| x as u16));
+        all_clusters.extend_from_slice(out_clusters.map(|x| x as u16));
+
+        let me = Self {
+            nwk_addr_of_interest: addr_of_interest,
+            profile_id: profile_id as u16,
+            num_in_clusters: in_n as u8,
+            num_out_clusters: out_n as u8,
+            cluster_list: all_clusters.as_ptr()
+        };
+        (me, all_clusters)
     }
 }
 
@@ -292,3 +335,27 @@ impl ezb_zcl_cluster_id_e {
         Self::from_repr(v as u32)
     }
 }
+
+// Likely, we don't need any other profiles than 'HA'
+/*** #keep for now
+/**
+ * @brief Zigbee application profile ID
+ *    -
+ */
+// C code carries these in 'ezb_af_profile_id_t' (u16); bindgen repr is u32
+#[repr(u16)]
+enum ezb_af_profile_id_e {
+    #[cfg(false)]   // not needed by applications
+    EZB_AF_ZDP_PROFILE_ID = a::ezb_af_profile_id_e::EZB_AF_ZDP_PROFILE_ID.0, /*!< Zigbee Device Profile (ZDP) ID. Used by Zigbee internal network management. */
+    // Covers all that's Zigbee 3.0
+    //  - defines the standard clusters
+    EZB_AF_HA_PROFILE_ID  = a::ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID.0, /*!< Home Automation (HA) profile ID */
+
+    #[cfg(false)]   // SmartEnergy; not in focus
+    EZB_AF_SE_PROFILE_ID  = 0x0109U, /*!< SE profile ID */
+    #[cfg(feature = "touchlink")]
+    EZB_AF_TL_PROFILE_ID  = a::ezb_af_profile_id_e::EZB_AF_TL_PROFILE_ID.0, /*!< Touchlink profile ID */
+    #[cfg(false)]
+    EZB_AF_GP_PROFILE_ID  = 0xA1E0U, /*!< GreenPower profile ID */
+};
+***/

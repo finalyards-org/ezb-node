@@ -157,4 +157,6 @@ pub use bindings::{
     ezb_zdo_match_desc_req,
     ezb_zdo_match_desc_req_s,
     ezb_zdo_match_desc_req_callback_t,
+    ezb_af_profile_id_e,
+    ezb_zdp_match_desc_req_field_s,
 };

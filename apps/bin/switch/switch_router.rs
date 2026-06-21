@@ -84,7 +84,17 @@ impl LightSwitchRouter {
                     self.get_current_channel(),
                     self.get_short_address()
                 );
-                zdo_find_ha_color_dimmable_light_device();
+
+                let x= self.find_and_bind_color_dimmable_light_device() .await;
+                match x {
+                    Success => {
+                        log::info!("Bound with color dimmable light device");
+                    },
+                    Err(e) => {
+                        log::error!("Failed to bind color dimmable light device: {}", e);
+                    }
+                }
+
             },
             BdbSignalSteering(st) => {
                 log::info!("Failed to join network: {}, st = {}", sig, st);
@@ -112,59 +122,4 @@ impl LightSwitchRouter {
             },
         }
     }
-}
-
-
-//static ezb_err_t zdo_find_ha_color_dimmable_light_device(void)
-// {
-//     ezb_err_t ret            = EZB_ERR_FAIL;
-//     uint16_t  cluster_list[] = {EZB_ZCL_CLUSTER_ID_ON_OFF, EZB_ZCL_CLUSTER_ID_LEVEL, EZB_ZCL_CLUSTER_ID_COLOR_CONTROL};
-//
-//     ezb_zdo_match_desc_req_t req = {
-//         .dst_nwk_addr = 0xFFFD,
-//         .field =
-//             {
-//                 .nwk_addr_of_interest = 0xFFFD,
-//                 .profile_id           = EZB_AF_HA_PROFILE_ID,
-//                 .num_in_clusters      = sizeof(cluster_list) / sizeof(cluster_list[0]),
-//                 .num_out_clusters     = 0,
-//                 .cluster_list         = cluster_list,
-//             },
-//         .cb       = zdo_find_ha_color_dimmable_light_device_result,
-//         .user_ctx = NULL,
-//     };
-//     ret = ezb_zdo_match_desc_req(&req);
-//     if (ret == EZB_ERR_NONE) {
-//         ESP_LOGI(TAG, "Attempt to find HA color dimmable light device");
-//     } else {
-//         ESP_LOGE(TAG, "Failed to find HA color dimmable light device with error(0x%04x)", ret);
-//     }
-//     return ret;
-// }
-fn zdo_find_ha_color_dimmable_light_device() -> Option<ZclError> {
-
-    let req = {
-        //         .dst_nwk_addr = 0xFFFD,
-        //         .field =
-        //             {
-        //                 .nwk_addr_of_interest = 0xFFFD,
-        //                 .profile_id           = EZB_AF_HA_PROFILE_ID,
-        //                 .num_in_clusters      = sizeof(cluster_list) / sizeof(cluster_list[0]),
-        //                 .num_out_clusters     = 0,
-        //                 .cluster_list         = cluster_list,
-        //             },
-        //         .cb       = zdo_find_ha_color_dimmable_light_device_result,      // HA, callback!! we're in trouble here, are we???
-        //         .user_ctx = NULL,
-    };
-
-    let ret = match ezb_zdo_match_desc_req(&req);
-    match ret {
-        None => {
-            log::info!("Attempt to find HA color dimmable light device");
-        },
-        Some(err) => {
-            log::error!("Failed to find HA color dimmable light device: {}", err);
-        }
-    }
-    ret
 }

@@ -22,6 +22,9 @@
   // ezb_zha_color_dimmable_light_config_t
   // ezb_zha_color_dimmer_switch_config_t
 
+#include "ezbee/zdo.h"
+  // zdo_dev_srv_disc.h: service discovery
+
 // Device type specific defaults
 //
 // These are presented as macros in the C API. Moving them on turned out to be a challenge (but a solution was found

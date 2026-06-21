@@ -22,7 +22,10 @@ mod error;
 pub use error::Error;
 
 pub mod utils;
-pub use utils::IeeeAddr;
+pub use utils::{
+    IeeeAddr,
+    ShortAddr,
+};
 
 mod types;
 pub use types::*;
