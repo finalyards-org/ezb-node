@@ -129,6 +129,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_af_(?:device|endpoint|profile_id)_.+' \
 	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
 	    --allowlist-type 'ezb_bdb_.+' \
+	    --allowlist-type 'ezb_err_.+' \
 	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    --allowlist-type 'ezb_nwk_.+' \
 	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|set|status)_.+' \
@@ -136,6 +137,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
 	    \
 	    --allowlist-var 'ESP_ERR_.+' \
+	    --allowlist-var 'EZB_ERR_.+' \
 	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \
 	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \
@@ -154,6 +156,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --with-derive-custom "ezb_zcl_status_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_zdp_status_e=strum::FromRepr,strum::Display" \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 			--wrap-static-fns \
 	    --wrap-static-fns-path ${_TMP}/wrap.c \

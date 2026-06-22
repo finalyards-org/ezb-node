@@ -15,8 +15,8 @@ mod match_color_dimmable_light;
 #[cfg(feature = "bind_color_dimmable_light")]
 pub use match_color_dimmable_light::*;
 
-mod groupcast_matcher;
-pub(self) use groupcast_matcher::*;
+mod matching_context;
+pub(self) use matching_context::*;
 use crate::node::ZigbeeGuard;
 
 pub(self) trait AccessTools {

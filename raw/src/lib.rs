@@ -170,4 +170,6 @@ pub use bindings::{
     ezb_zcl_color_control_move_to_color_cmd_req,
     //ezb_zdp_bind_req_result_s,
     ezb_zdp_status_e,
+    ezb_zdo_match_desc_req_result_s,
+    ezb_zdp_match_desc_rsp_field_s,
 };

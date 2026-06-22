@@ -61,3 +61,25 @@ const char *ESP_ZIGBEE_VER = \
   _TO_STR(ESP_ZIGBEE_VER_MINOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_PATCH);
   // "2.0.1"
+
+// Without this, not all 'EZB_ERR_*' values make it to the Rust side.
+// There is no such 'ezb_err_e' in the C API.
+typedef enum {
+    _ERR_NONE           = EZB_ERR_NONE,  // 0
+    _ERR_FAIL           = EZB_ERR_FAIL,  // -1
+    _ERR_NO_MEM         = EZB_ERR_NO_MEM,
+    _ERR_INV_ARG        = EZB_ERR_INV_ARG,
+    _ERR_INV_STATE      = EZB_ERR_INV_STATE,
+    _ERR_INV_SIZE       = EZB_ERR_INV_SIZE,
+    _ERR_NOT_FOUND      = EZB_ERR_NOT_FOUND,
+    _ERR_NOT_SUPPORTED  = EZB_ERR_NOT_SUPPORTED,
+    _ERR_TIMEOUT        = EZB_ERR_TIMEOUT,
+    _ERR_ABORT          = EZB_ERR_ABORT,
+    _ERR_BUSY           = EZB_ERR_BUSY,
+    _ERR_NOT_FINISHED   = EZB_ERR_NOT_FINISHED,
+    _ERR_NOT_ALLOWED    = EZB_ERR_NOT_ALLOWED,
+    _ERR_PARSE          = EZB_ERR_PARSE,
+    _ERR_EMPTY_DATA     = EZB_ERR_EMPTY_DATA,
+    _ERR_DROP           = EZB_ERR_DROP,
+    _ERR_SECURITY       = EZB_ERR_SECURITY,
+} ezb_err_e;

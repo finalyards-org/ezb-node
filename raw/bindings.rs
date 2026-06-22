@@ -301,6 +301,11 @@ impl ezb_zcl_cluster_id_e {
         Self::from_repr(v as u32)
     }
 }
+impl ezb_zdp_status_e {
+    pub fn parse(v: ezb_zdp_status_t) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+}
 
 // Likely, we don't need any other profiles than 'HA'
 /*** #keep for now
@@ -391,4 +396,31 @@ impl Into<a::ezb_address_s> for ezb_address_s {
             },
         }
     }
+}
+
+// Such values are passed as 'u8' ('ezb_err_t') in the C API.
+//
+// We rename them to return to the C API names (which are #define's and were difficult to bring in, otherwise).
+//
+#[repr(u8)]
+#[allow(non_camel_case_types)]
+pub enum ezb_err_e {
+    EZB_ERR_NONE           = a::ezb_err_e::_ERR_NONE as u8,  // 0
+    EZB_ERR_FAIL           = a::ezb_err_e::_ERR_FAIL as u8,  // -1 (0xff)
+        //
+    EZB_ERR_NO_MEM         = a::ezb_err_e::_ERR_NO_MEM as u8,
+    EZB_ERR_INV_ARG        = a::ezb_err_e::_ERR_INV_ARG as u8,
+    EZB_ERR_INV_STATE      = a::ezb_err_e::_ERR_INV_STATE as u8,
+    EZB_ERR_INV_SIZE       = a::ezb_err_e::_ERR_INV_SIZE as u8,
+    EZB_ERR_NOT_FOUND      = a::ezb_err_e::_ERR_NOT_FOUND as u8,
+    EZB_ERR_NOT_SUPPORTED  = a::ezb_err_e::_ERR_NOT_SUPPORTED as u8,
+    EZB_ERR_TIMEOUT        = a::ezb_err_e::_ERR_TIMEOUT as u8,
+    EZB_ERR_ABORT          = a::ezb_err_e::_ERR_ABORT as u8,
+    EZB_ERR_BUSY           = a::ezb_err_e::_ERR_BUSY as u8,
+    EZB_ERR_NOT_FINISHED   = a::ezb_err_e::_ERR_NOT_FINISHED as u8,
+    EZB_ERR_NOT_ALLOWED    = a::ezb_err_e::_ERR_NOT_ALLOWED as u8,
+    EZB_ERR_PARSE          = a::ezb_err_e::_ERR_PARSE as u8,
+    EZB_ERR_EMPTY_DATA     = a::ezb_err_e::_ERR_EMPTY_DATA as u8,
+    EZB_ERR_DROP           = a::ezb_err_e::_ERR_DROP as u8,
+    EZB_ERR_SECURITY       = a::ezb_err_e::_ERR_SECURITY as u8,
 }

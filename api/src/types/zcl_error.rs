@@ -1,6 +1,6 @@
 use strum;
 
-use ezb_node_raw::ezb_zcl_status_e;
+use ezb_node_raw::{ezb_zcl_status_e, ezb_zdp_status_e};
 
 // Design:
 //  instead of using C-like enums (mapping to integers), doing this as separate structs allows for additional
@@ -63,8 +63,6 @@ pub enum ZclError {
     _Other(u8)
 }
 
-use ezb_zcl_status_e::*;
-
 impl ZclError {
 
     // Design note:
@@ -73,32 +71,35 @@ impl ZclError {
     //  that our match is exhaustive.
     //
     pub(crate) fn new(v: ezb_zcl_status_e) -> Option<Self> {
+        #[allow(non_camel_case_types)]
+        type e = ezb_zcl_status_e;  // trick to make sure 'match' treats them as enums
+
         match v {
-            EZB_ZCL_STATUS_SUCCESS => None,
+            e::EZB_ZCL_STATUS_SUCCESS => None,
               //
-            EZB_ZCL_STATUS_FAIL => Some(ZclError::Fail),
-            EZB_ZCL_STATUS_NOT_AUTHORIZED => Some(ZclError::NotAuthorized),
-            EZB_ZCL_STATUS_MALFORMED_CMD => Some(ZclError::MalformedCmd),
-            EZB_ZCL_STATUS_UNSUP_CMD => Some(ZclError::UnsupCmd),
-            EZB_ZCL_STATUS_INVALID_FIELD => Some(ZclError::InvalidField),
-            EZB_ZCL_STATUS_UNSUP_ATTRIB => Some(ZclError::UnsupAttrib),
-            EZB_ZCL_STATUS_INVALID_VALUE => Some(ZclError::InvalidValue),
-            EZB_ZCL_STATUS_READ_ONLY => Some(ZclError::ReadOnly),
-            EZB_ZCL_STATUS_INSUFFICIENT_SPACE => Some(ZclError::InsufficientSpace),
-            EZB_ZCL_STATUS_NOT_FOUND => Some(ZclError::NotFound),
-            EZB_ZCL_STATUS_UNREPORTBLE_ATTRIB => Some(ZclError::UnreportableAttrib),
-            EZB_ZCL_STATUS_INVALID_TYPE => Some(ZclError::InvalidType),
-            EZB_ZCL_STATUS_INCONSISTENT => Some(ZclError::Inconsistent),
-            EZB_ZCL_STATUS_ACTION_DENIED => Some(ZclError::ActionDenied),
-            EZB_ZCL_STATUS_TIMEOUT => Some(ZclError::Timeout),
-            EZB_ZCL_STATUS_ABORT => Some(ZclError::Abort),
-            EZB_ZCL_STATUS_INVALID_IMAGE => Some(ZclError::InvalidImage),
-            EZB_ZCL_STATUS_WAIT_FOR_DATA => Some(ZclError::WaitForData),
-            EZB_ZCL_STATUS_NO_IMAGE_AVAILABLE => Some(ZclError::NoImageAvailable),
-            EZB_ZCL_STATUS_REQUIRE_MORE_IMAGE => Some(ZclError::RequireMoreImage),
-            EZB_ZCL_STATUS_NOTIFICATION_PENDING => Some(ZclError::NotificationPending),
-            EZB_ZCL_STATUS_CALIBRATION_ERROR => Some(ZclError::CalibrationError),
-            EZB_ZCL_STATUS_UNSUPPORTED_CLUSTER => Some(ZclError::UnsupportedCluster),
+            e::EZB_ZCL_STATUS_FAIL                  => Some(Self::Fail),
+            e::EZB_ZCL_STATUS_NOT_AUTHORIZED        => Some(Self::NotAuthorized),
+            e::EZB_ZCL_STATUS_MALFORMED_CMD         => Some(Self::MalformedCmd),
+            e::EZB_ZCL_STATUS_UNSUP_CMD             => Some(Self::UnsupCmd),
+            e::EZB_ZCL_STATUS_INVALID_FIELD         => Some(Self::InvalidField),
+            e::EZB_ZCL_STATUS_UNSUP_ATTRIB          => Some(Self::UnsupAttrib),
+            e::EZB_ZCL_STATUS_INVALID_VALUE         => Some(Self::InvalidValue),
+            e::EZB_ZCL_STATUS_READ_ONLY             => Some(Self::ReadOnly),
+            e::EZB_ZCL_STATUS_INSUFFICIENT_SPACE    => Some(Self::InsufficientSpace),
+            e::EZB_ZCL_STATUS_NOT_FOUND             => Some(Self::NotFound),
+            e::EZB_ZCL_STATUS_UNREPORTBLE_ATTRIB    => Some(Self::UnreportableAttrib),
+            e::EZB_ZCL_STATUS_INVALID_TYPE          => Some(Self::InvalidType),
+            e::EZB_ZCL_STATUS_INCONSISTENT          => Some(Self::Inconsistent),
+            e::EZB_ZCL_STATUS_ACTION_DENIED         => Some(Self::ActionDenied),
+            e::EZB_ZCL_STATUS_TIMEOUT               => Some(Self::Timeout),
+            e::EZB_ZCL_STATUS_ABORT                 => Some(Self::Abort),
+            e::EZB_ZCL_STATUS_INVALID_IMAGE         => Some(Self::InvalidImage),
+            e::EZB_ZCL_STATUS_WAIT_FOR_DATA         => Some(Self::WaitForData),
+            e::EZB_ZCL_STATUS_NO_IMAGE_AVAILABLE    => Some(Self::NoImageAvailable),
+            e::EZB_ZCL_STATUS_REQUIRE_MORE_IMAGE    => Some(Self::RequireMoreImage),
+            e::EZB_ZCL_STATUS_NOTIFICATION_PENDING  => Some(Self::NotificationPending),
+            e::EZB_ZCL_STATUS_CALIBRATION_ERROR     => Some(Self::CalibrationError),
+            e::EZB_ZCL_STATUS_UNSUPPORTED_CLUSTER   => Some(Self::UnsupportedCluster),
         }
     }
 
