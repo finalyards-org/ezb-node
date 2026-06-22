@@ -10,6 +10,9 @@
 
 use ezb_node_raw::{ezb_bdb_comm_mode_e, ezb_zcl_cluster_id_e};
 
+mod addr_mode;
+pub use addr_mode::AddrMode;
+
 mod zcl_error;
 pub use zcl_error::ZclError;
 
@@ -100,3 +103,30 @@ impl ClusterRole {
         }
     }
 }
+
+/*** keep elsewhere! ;)
+/**
+* Helper for the types: allows input either as a const pointer, or a reference.
+*/
+pub(crate) trait AsPtrOrRef<'a, T> {
+    fn as_ref(self) -> Option<&'a T>;
+}
+
+// Lifetime is the scope where the returned reference is placed.
+impl<'a, T> AsPtrOrRef<'a, T> for *const T {
+    fn as_ref(self) -> Option<&'a T> {
+        if self.is_null() {
+            None
+        } else {
+            unsafe { self.as_ref() }
+        }
+    }
+}
+
+impl<'a,T> AsPtrOrRef<'a,T> for &'a T {
+    fn as_ref(self) -> Option<&'a T> {
+        Some(self)
+    }
+}
+***/
+

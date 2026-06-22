@@ -9,13 +9,7 @@ use embassy_sync::{
     channel::{Channel, DynamicSender, DynamicReceiver},
 };
 
-use ezb_node_raw::{
-    ezb_zcl_cluster_id_e,
-    ezb_zdo_match_desc_req_s,
-    ezb_zdp_match_desc_req_field_s,
-    ezb_zdo_match_desc_req_result_s,
-    ezb_zdp_match_desc_rsp_field_s,
-};
+use ezb_node_raw::{ezb_zcl_cluster_id_e, ezb_zdo_match_desc_req_s, ezb_zdp_match_desc_req_field_s, ezb_zdo_match_desc_req_result_s, ezb_zdp_match_desc_rsp_field_s, ezb_af_profile_id_e};
 
 use crate::{
     ShortAddr,
@@ -55,6 +49,7 @@ impl MatchingContext {
     * Create a pinned matcher (lives in the heap; stationary, i.e. fields can be passed to C APIs).
     */
     pub(super) fn new_pinned(in_clusters: &[ezb_zcl_cluster_id_e], out_clusters: &[ezb_zcl_cluster_id_e]) -> Pin<Box<Self>> {
+        use ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID; // HA = Home Automation
 
         // Create a channel. The sending end is placed in the '.req.useer_ctx' so we can feed it from the C callback
         // (even if there were multiple matches going on).
@@ -83,7 +78,7 @@ impl MatchingContext {
                     dst_nwk_addr: ShortAddr::GROUPCAST.0,   // 0xFFFD
                     field: ezb_zdp_match_desc_req_field_s {
                         nwk_addr_of_interest: ShortAddr::GROUPCAST.0, // 0xFFFD
-                        profile_id,
+                        profile_id: EZB_AF_HA_PROFILE_ID as u16,
                         num_in_clusters: in_clusters.len() as u8,
                         num_out_clusters: out_clusters.len() as u8,
                         cluster_list: core::ptr::null_mut(), // will be set
@@ -131,10 +126,10 @@ extern "C" fn match_c_callback(
         channel.dyn_sender()
     };
 
-    let resp = parse(response).unwrap_or_else(|| {
+    let Some(resp) = parse(response) else {
         log::error!("Unable to parse match response (skipped).");
         return;
-    });
+    };
 
     if let Err(err) = tx.try_send(resp) {
         log::error!("Unable to send 'MatchResult' (skipped!); please try increasing the 'CHANNEL_CAPACITY'.");

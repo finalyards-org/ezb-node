@@ -15,7 +15,6 @@ pub use config_views::*;
 pub mod node;
 pub use node::{
     Node,
-    groupcast_matcher::*,   // AccessColorDimmableLight etc.
 };
 
 mod app_signal;

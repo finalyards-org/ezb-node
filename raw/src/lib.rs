@@ -172,4 +172,6 @@ pub use bindings::{
     ezb_zdp_status_e,
     ezb_zdo_match_desc_req_result_s,
     ezb_zdp_match_desc_rsp_field_s,
+    ezb_addr_mode_e,
+    ezb_grpaddr_s,
 };

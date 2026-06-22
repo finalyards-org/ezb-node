@@ -266,13 +266,8 @@ pub unsafe fn ezb_bdb_start_top_level_commissioning(mode_mask: ezb_bdb_comm_mode
 //---
 // Provide '::parse()' instead of strum's '::from_repr' to the API level; more consistent.
 //
-//|impl ezb_addr_mode_e {
-//|    pub fn parse(v: ezb_addr_mode_t) -> Option<Self> {
-//|        Self::from_repr(v as u32)
-//|    }
-//|}
-impl ezb_nwk_network_status_t { // is an enum, in 'bindings_0.rs'
-    pub fn parse(v: u8) -> Option<Self> {
+impl ezb_addr_mode_e {
+    pub fn parse(v: ezb_addr_mode_t) -> Option<Self> {
         Self::from_repr(v as u32)
     }
 }
@@ -281,8 +276,18 @@ impl ezb_app_signal_type_e {
         Self::from_repr(v as u32)
     }
 }
+impl ezb_nwk_network_status_t { // is an enum, in 'bindings_0.rs'
+    pub fn parse(v: u8) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+}
 impl ezb_zcl_attr_type_e {
     pub fn parse(v: ezb_zcl_attr_type_t) -> Option<Self> {
+        Self::from_repr(v as u32)
+    }
+}
+impl ezb_zcl_cluster_id_e {
+    pub fn parse(v: ezb_zcl_cluster_id_t) -> Option<Self> {
         Self::from_repr(v as u32)
     }
 }
@@ -293,11 +298,6 @@ impl ezb_zcl_core_action_callback_id_e {
 }
 impl ezb_zcl_status_e {
     pub fn parse(v: ezb_zcl_status_t) -> Option<Self> {
-        Self::from_repr(v as u32)
-    }
-}
-impl ezb_zcl_cluster_id_e {
-    pub fn parse(v: ezb_zcl_cluster_id_t) -> Option<Self> {
         Self::from_repr(v as u32)
     }
 }
@@ -337,17 +337,27 @@ enum ezb_af_profile_id_e {
 //
 // Abstract these to just 'ezb_addr_t', as an enum + value.
 //
-#[allow(hidden_glob_reexports)]
-#[allow(non_camel_case_types)]
-pub(self) enum ezb_addr_e {}  // block C API type's visibility
-#[allow(hidden_glob_reexports)]
-#[allow(non_camel_case_types)]
-pub(self) enum ezb_addr_t {}  // block C API type's visibility
+//|#[allow(hidden_glob_reexports)]
+//|#[allow(non_camel_case_types)]
+//|pub(self) enum ezb_addr_e {}  // block C API type's visibility
+//|#[allow(hidden_glob_reexports)]
+//|#[allow(non_camel_case_types)]
+//|pub(self) enum ezb_addr_t {}  // block C API type's visibility
+
+/*
+* 'AsRef' allows a struct to be used either with '&' - or without.
+*/
+impl AsRef<ezb_address_s> for ezb_address_s {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
 
 /**
 * @note When using this, instead of C API 'ezb_address_s', you must append '.into()':
 *       Rust does conversions explicitly.
 */
+#[cfg(false)]   // not here?
 #[allow(non_camel_case_types)]
 pub enum ezb_address_s {
     /// MAC: PAN ID and address fields are not present.
@@ -372,6 +382,7 @@ pub enum ezb_address_s {
     EXT(u64)
 }
 
+#[cfg(false)]
 impl Into<a::ezb_address_s> for ezb_address_s {
     fn into(self) -> a::ezb_address_s {
         type Out = a::ezb_address_s;
@@ -403,6 +414,7 @@ impl Into<a::ezb_address_s> for ezb_address_s {
 // We rename them to return to the C API names (which are #define's and were difficult to bring in, otherwise).
 //
 #[repr(u8)]
+#[cfg(false)]
 #[allow(non_camel_case_types)]
 pub enum ezb_err_e {
     EZB_ERR_NONE           = a::ezb_err_e::_ERR_NONE as u8,  // 0
