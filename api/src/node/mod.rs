@@ -13,8 +13,8 @@
 mod zigbee_task;
 use zigbee_task::zigbee_spawn;
 
-mod zdo;
-use zdo::*;
+mod access;
+pub use access::*;
 
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,

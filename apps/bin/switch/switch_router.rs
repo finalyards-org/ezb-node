@@ -6,25 +6,28 @@ use embassy_time::{
 };
 
 use ezb_node::{
+    AccessColorDimmableLight,
     AppSignal,
     BdbMode,
     BdbStatus,
     Config,
+    MatchColorDimmableLights,
     Node,
     ZclEvent,
     ZclError,
 };
-
-//? use crate::{scheduler::schedule};
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub(crate) struct LightSwitchRouter
 where Self: Node {
     // can have internally-mutable state here
+    //? ep_id: u8   // <-- tbd. Matching needs the asking endpoint, somehow
 }
 
 impl Node for LightSwitchRouter {}
+
+impl MatchColorDimmableLights for LightSwitchRouter {}
 
 impl LightSwitchRouter {
     pub fn new(c: &'static Config) -> Result<Self, ezb_node::Error> {
@@ -84,6 +87,23 @@ impl LightSwitchRouter {
                     self.get_current_channel(),
                     self.get_short_address()
                 );
+
+                const MY_EP_ID_HACK: u8 = 1;    // Config 'endpoint' key - there can be many and the matching needs the number. @ai #review tbd.
+                let bind_stream = self.start_matching_color_dimmable_lights(MY_EP_ID_HACK);
+                    //
+                    // tbd. Try to make something like 'self.start_matching<AccessColorDimmableLight>(...)', i.e. generalizing it
+                    //      (only one trait per Zigbee profile). @ai
+
+                bind_stream.first().recv() .await
+
+                ///A
+                while let Some(light) = light_stream.recv().await {
+                    log::info!("Löytyi uusi lamppu osoitteesta: {:X}", light.nwk_addr());
+
+                    // Voidaan heti käyttää helppolukuisia metodeja
+                    light.set_level(255);
+                }
+                /// /A
 
                 let x= self.find_and_bind_color_dimmable_light_device() .await;
                 match x {

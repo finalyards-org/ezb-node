@@ -139,8 +139,8 @@ pub use bindings::{
     ezb_zcl_attr_type_e,
     ezb_zcl_cmd_hdr_s,
     ezb_address_s,
-    ezb_addr_u,
-    ezb_addr_mode_e,
+    //ezb_addr_u,
+    //ezb_addr_mode_e,
     ezb_zcl_core_action_callback_id_t,
     ezb_zcl_write_attr_rsp_variable_s,
     ezb_zcl_cluster_id_t,
@@ -159,4 +159,15 @@ pub use bindings::{
     ezb_zdo_match_desc_req_callback_t,
     ezb_af_profile_id_e,
     ezb_zdp_match_desc_req_field_s,
+};
+
+// Profiles - color dimmable light
+//
+pub use bindings::{
+    ezb_zcl_color_control_move_to_color_cmd_s,
+    ezb_zcl_color_control_move_to_color_cmd_payload_t,
+    ezb_zcl_cluster_cmd_ctrl_s,
+    ezb_zcl_color_control_move_to_color_cmd_req,
+    //ezb_zdp_bind_req_result_s,
+    ezb_zdp_status_e,
 };

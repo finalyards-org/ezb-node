@@ -13,7 +13,10 @@ pub use config_views::*;
     // PlatformDeviceView,
 
 pub mod node;
-pub use node::Node;
+pub use node::{
+    Node,
+    groupcast_matcher::*,   // AccessColorDimmableLight etc.
+};
 
 mod app_signal;
 pub use app_signal::*;

@@ -39,8 +39,8 @@ _ep_all = ["ep_color_dimmable_light", "ep_color_dimmer_switch"]
 ep_color_dimmable_light = ["ezb-node-config/color_dimmable_light"]
 ep_color_dimmer_switch = ["ezb-node-config/color_dimmer_switch"]
 
-# Device types on the other side (tbd. comment which device roles this affects; all of them?) If not, enforce that in the code.
-bind_color_dimmable_light = []
+# Device types on the other side (find, bind, access).
+match_color_dimmable_light = []
 
 esp32c6 = [
     "ezb-node-raw/esp32c6",

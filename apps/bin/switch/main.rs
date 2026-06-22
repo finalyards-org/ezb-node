@@ -58,10 +58,8 @@ async fn main(spawner: Spawner) {
 
     let peripherals = Peripherals::take().unwrap();
     {
-        // Set GPIO9 (BOOT btn) as input
-        let mut btn = PinDriver::input(peripherals.pins.gpio9).unwrap();
-        btn.set_pull(Pull::Up).unwrap();
-            // pressing BOOT grounds it (tbd. test)
+        // Set GPIO9 (BOOT btn) as input (pressed is Low)
+        let mut btn = PinDriver::input(peripherals.pins.gpio9, Pull::Up).unwrap();
 
         spawner.spawn(button_task(peripherals.pins.gpio9)).unwrap();
     }

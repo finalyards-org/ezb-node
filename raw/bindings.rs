@@ -135,48 +135,6 @@ impl esp_zigbee_platform_config_t {
     }
 }
 
-//pub struct ezb_zdp_match_desc_req_field_s {
-//     ///< Network address of the device to query
-//     pub nwk_addr_of_interest: ezb_shortaddr_t,
-//     ///< Profile ID to match at the destination, see @ref ezb_af_profile_id_t
-//     pub profile_id: u16,
-//     ///< Number of input clusters (server clusters) in the cluster_list
-//     pub num_in_clusters: u8,
-//     ///< Number of output clusters (client clusters) in the cluster_list
-//     pub num_out_clusters: u8,
-//     ///< Pointer to array of cluster IDs. First num_in_clusters entries are
-//     /// input clusters,   followed by num_out_clusters entries for output
-//     /// clusters. Total size must be   (num_in_clusters + num_out_clusters)
-//     /// * sizeof(uint16_t)
-//     pub cluster_list: *mut u16,
-// }
-//
-impl ezb_zdp_match_desc_req_field_s {
-    pub fn new(
-        addr_of_interest: ezb_shortaddr_t,  // 0xFFFD
-        profile_id: ezb_af_profile_id_e,    // ...HA...
-        in_clusters: &[ezb_zcl_cluster_id_e],
-        out_clusters: &[ezb_zcl_cluster_id_e]
-    ) -> (Self, Vec<u16>) {
-        let in_n = in_clusters.len();
-        let out_n = out_clusters.len();
-
-        let mut all_clusters: Vec<u16> = Vec::with_capacity(in_n + out_n);
-
-        all_clusters.extend_from_slice(in_clusters.map(|x| x as u16));
-        all_clusters.extend_from_slice(out_clusters.map(|x| x as u16));
-
-        let me = Self {
-            nwk_addr_of_interest: addr_of_interest,
-            profile_id: profile_id as u16,
-            num_in_clusters: in_n as u8,
-            num_out_clusters: out_n as u8,
-            cluster_list: all_clusters.as_ptr()
-        };
-        (me, all_clusters)
-    }
-}
-
 // About the 'esp_zigbee_lib' (2.0) API design:
 //  - for 'ezb_eui64_s' (used e.g. for IEEE addresses), could it not be passed by-value, also in the C API?
 //  - the use of 'union' is low friction within C, but burdensome for Rust.
@@ -232,6 +190,14 @@ impl ezb_eui64_s {
         unsafe {
             let ptr = core::ptr::addr_of!(self.__bindgen_anon_1.u64_);
             ptr.read_unaligned()
+        }
+    }
+}
+
+impl From<u64> for ezb_eui64_s {
+    fn from(v: u64) -> ezb_eui64_s {
+        Self {
+            __bindgen_anon_1: ezb_eui64_s__bindgen_ty_1 { u64_: v }
         }
     }
 }
@@ -300,11 +266,11 @@ pub unsafe fn ezb_bdb_start_top_level_commissioning(mode_mask: ezb_bdb_comm_mode
 //---
 // Provide '::parse()' instead of strum's '::from_repr' to the API level; more consistent.
 //
-impl ezb_addr_mode_e {
-    pub fn parse(v: ezb_addr_mode_t) -> Option<Self> {
-        Self::from_repr(v as u32)
-    }
-}
+//|impl ezb_addr_mode_e {
+//|    pub fn parse(v: ezb_addr_mode_t) -> Option<Self> {
+//|        Self::from_repr(v as u32)
+//|    }
+//|}
 impl ezb_nwk_network_status_t { // is an enum, in 'bindings_0.rs'
     pub fn parse(v: u8) -> Option<Self> {
         Self::from_repr(v as u32)
@@ -359,3 +325,70 @@ enum ezb_af_profile_id_e {
     EZB_AF_GP_PROFILE_ID  = 0xA1E0U, /*!< GreenPower profile ID */
 };
 ***/
+
+//---
+// 'ezb_addr_mode_e' (enum) is only used in 'ezb_addr_t' which combines the enum and value (as a union),
+// much like Rust enums do.
+//
+// Abstract these to just 'ezb_addr_t', as an enum + value.
+//
+#[allow(hidden_glob_reexports)]
+#[allow(non_camel_case_types)]
+pub(self) enum ezb_addr_e {}  // block C API type's visibility
+#[allow(hidden_glob_reexports)]
+#[allow(non_camel_case_types)]
+pub(self) enum ezb_addr_t {}  // block C API type's visibility
+
+/**
+* @note When using this, instead of C API 'ezb_address_s', you must append '.into()':
+*       Rust does conversions explicitly.
+*/
+#[allow(non_camel_case_types)]
+pub enum ezb_address_s {
+    /// MAC: PAN ID and address fields are not present.
+    /// NWK: Reserved.
+    /// APS: DstAddress and DstEndpoint not present.
+    NONE,
+
+    /// MAC: Address field contains a short address (16 bit).
+    /// NWK: 16-bit network address of a device or a 16-bit broadcast address.
+    /// APS: 16-bit address for DstAddress and DstEndpoint present.
+    SHORT(u16),
+
+    /// MAC: Reserved.
+    /// NWK: Reserved.
+    /// APS: 16-bit group address for DstAddress; DstEndpoint not present.
+    #[cfg(false)]   // #later; needed?
+    GROUP(ezb_grpaddr_s),
+
+    /// MAC: Address field contains an extended address (64 bit).
+    /// NWK: Reserved.
+    /// APS: 64-bit extended address for DstAddress and DstEndpoint present.
+    EXT(u64)
+}
+
+impl Into<a::ezb_address_s> for ezb_address_s {
+    fn into(self) -> a::ezb_address_s {
+        type Out = a::ezb_address_s;
+
+        match self {
+            Self::NONE => Out {
+                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_NONE as u8,
+                u: unsafe { core::mem::zeroed() }
+            },
+            Self::SHORT(v) => Out {
+                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_SHORT as u8,
+                u: ezb_addr_u { short_addr: v }
+            },
+            #[cfg(false)]   // #later
+            Self::GROUP(v) => Out {
+                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_GROUP as u8,
+                u: ezb_addr_u { group_addr: v }
+            },
+            Self::EXT(v) => Out {
+                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_EXT as u8,
+                u: ezb_addr_u { extended_addr: ezb_eui64_s::from(v) }
+            },
+        }
+    }
+}
