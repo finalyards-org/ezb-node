@@ -8,7 +8,7 @@ use std::{
 };
 
 use embassy_sync::{
-    blocking_mutex::Threa,
+    blocking_mutex::ThreadModeMutex,
     channel::{
         Channel,
         DynamicReceiver,

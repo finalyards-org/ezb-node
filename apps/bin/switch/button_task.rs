@@ -1,27 +1,28 @@
-//use embassy_executor::task;
+
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
+    blocking_mutex::raw::NoopRawMutex,
     channel::Channel,
 };
+use embassy_sync::channel::DynamicReceiver;
 use embassy_time::{Duration, Timer};
 
-use esp_idf_hal::gpio::{PinDriver, Pull, InputPin};
-
-pub type ButtonChannel = Channel<CriticalSectionRawMutex, ButtonEvent, 4>; // type alias
+use esp_idf_hal::gpio::{PinDriver, Input};
 
 pub enum ButtonEvent {
     Pressed,
     Depressed,
 }
 
-pub static BUTTON_CHANNEL: ButtonChannel = Channel::new();
+static BUTTON_CHANNEL: Channel<NoopRawMutex, ButtonEvent, 4> = Channel::new();
+
+pub fn button_rx() -> DynamicReceiver<ButtonEvent> {
+    BUTTON_CHANNEL.dyn_receiver()
+}
 
 /**
-* Listens to the BOOT button, reflecting its state to 'ButtonChannel'
+* Listens to the BOOT button, reflecting its state to 'BUTTON_CHANNEL'
 */
-pub async fn button_task(pin: impl InputPin) {
-    let mut btn = PinDriver::input(pin).unwrap();
-    btn.set_pull(Pull::Up).unwrap();    // BOOT is active low
+pub async fn button_task(mut btn: PinDriver<Input>) {
 
     loop {
         loop {

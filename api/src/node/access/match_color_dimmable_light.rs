@@ -1,17 +1,24 @@
 #![cfg(feature = "match_color_dimmable_light")]
 
-use embassy_sync::channel::DynamicReceiver;
-
 use ezb_node_raw::ezb_zcl_cluster_id_e;
 
-use crate::Node;
+use futures_util::Stream;
 
 use super::{
-    AccessColorDimmableLight,
-    MatchError,
-    MatchSuccess,
-    MatchingContext,
+    AccessColorDimmableLight
 };
+
+use crate::{
+    Node,
+    ShortAddr,
+};
+
+use super::MatchingContext;
+
+pub enum MatchEvent {
+    Success(dyn AccessColorDimmableLight),
+    MatchError,
+}
 
 /**
 * Extension to node, allowing finding, binding and accessing nodes with a certain profile.
@@ -29,25 +36,10 @@ pub trait MatchColorDimmableLights: Node {
     /**
     * Start matching; pass matches over as profile-specific access types.
     */
-    fn start_matching_color_dimmable_lights(&self, src_ep: u8) -> DynamicReceiver<AccessColorDimmableLight> {
+    fn start_matching_color_dimmable_lights(&self, src_ep: u8) -> impl Stream<Item = MatchEvent> {
 
         let mc = MatchingContext::new_pinned(Self::IN_CLUSTERS, Self::OUT_CLUSTERS);
 
-        mc.start_matching(src_ep, |match_res| {
-            match match_res {
-                MatchSuccess { short_addr, eps } => {
-
-                },
-
-                MatchError::ZdpError(err) => {
-
-                },
-
-                MatchError::Error(err) => {
-
-                }
-            }
-            AccessColorDimmableLight{ src_ep, f: }
-        })
+        mc.start_matching(&self, src_ep)
     }
 }

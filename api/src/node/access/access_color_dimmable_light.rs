@@ -13,7 +13,10 @@ use ezb_node_raw::{
 use crate::{
     utils::c_zeroed,
     AddrMode,
-    Node,
+};
+
+use super::{
+    Accessor
 };
 
 const TRANSITION_TIME: core::time::Duration = core::time::Duration::from_secs(1);
@@ -21,19 +24,14 @@ const TRANSITION_TIME: core::time::Duration = core::time::Duration::from_secs(1)
 /**
 * Access to a Zigbee node (of color-dimmable-light profile) that we've bounded with.
 */
-pub(self) struct AccessColorDimmableLight<F : Fn<&Node> > {
-    src_ep: u8,
-    guarded: F
-}
+pub(super) trait AccessColorDimmableLight : Accessor {
 
-impl AccessColorDimmableLight {
-
-    pub fn set_color_xy(&self, color_x: u16, color_y: u16) {
+    fn set_color_xy(&self, color_x: u16, color_y: u16) {
 
         let req = ezb_zcl_color_control_move_to_color_cmd_s {
             cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {
                 dst_addr: AddrMode::None .into(),
-                src_ep: self.src_ep,
+                src_ep: self.get().src_ep,
                 ..c_zeroed()    // like in C 'color_dimmer_switch' example
             },
             payload: ezb_zcl_color_control_move_to_color_cmd_payload_t {
@@ -44,16 +42,16 @@ impl AccessColorDimmableLight {
             }
         };
 
-        self.guarded(|| {
+        self.guarded(|&_node| {
             unsafe { ezb_zcl_color_control_move_to_color_cmd_req(&req) }
         });
     }
 
-    pub fn set_level(&self, level: u8) {
+    fn set_level(&self, level: u8) {
         let req = ezb_zcl_level_move_to_level_with_on_off_cmd_t {
             cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {
                 dst_addr: AddrMode::None .into(),
-                src_ep: self.src_ep,
+                src_ep: self.get().src_ep,
                 ..c_zeroed()    // like in C 'color_dimmer_switch' example
             },
             payload: ezb_zcl_level_move_to_level_cmd_payload_t {
@@ -63,7 +61,7 @@ impl AccessColorDimmableLight {
             }
         };
 
-        self.guarded(|| {
+        self.guarded(|&_node| {
             unsafe { ezb_zcl_level_move_to_level_with_on_off_cmd_req(&req) }
         });
     }

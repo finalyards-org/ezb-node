@@ -3,9 +3,12 @@ use core::marker::PhantomPinned;
 use core::pin::Pin;
 
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
+    blocking_mutex::raw::ThreadModeRawMutex,
     channel::{Channel, DynamicReceiver, DynamicSender},
 };
+
+use async_stream::stream;
+use futures_util::Stream;
 
 use ezb_node_raw::{
     ezb_af_profile_id_e,
@@ -13,10 +16,17 @@ use ezb_node_raw::{
     ezb_zdo_match_desc_req_result_s,
     ezb_zdo_match_desc_req_s,
     ezb_zdp_match_desc_req_field_s,
-    ezb_zdp_match_desc_rsp_field_s
+    ezb_zdp_match_desc_rsp_field_s,
+    ezb_err_e,
+};
+
+use super::{
+    AccessorCtx,
+    MatchEvent,
 };
 
 use crate::{
+    Node,
     ShortAddr,
     ZclError,
     ZdpError,
@@ -24,7 +34,7 @@ use crate::{
 
 const CHANNEL_CAPACITY: usize = 8;
 
-type ChannelT = Channel<CriticalSectionRawMutex, Result<MatchSuccess,MatchError>, CHANNEL_CAPACITY>;
+type ChannelT = Channel<ThreadModeRawMutex, MatchInnerEvent, CHANNEL_CAPACITY>;
 
 /**
 * Carries out a groupcast call on the Zigbee network, listing all devices (which are receiving on idle) that match
@@ -115,21 +125,59 @@ impl MatchingContext {
     }
 
     /**
-    * Do the actual matching.
+    * Initiate the matching.
     *
     * @note: In application task.
     */
-    pub(super) async fn start_matching<F>(&self, src_ep: u8, f: F)
-    where
-        F: Fn(Result<(ShortAddr,u8),MatchError>) -> bool
-    {
+    pub(super) fn start_matching<F>(&self, node: &dyn Node, src_ep: u8) -> impl Stream<Item = MatchEvent> {
 
-        // convert 1..n matches to callbacks
-        unimplemented!()
+        let rx: DynamicReceiver<MatchInnerEvent> = self.channel.dyn_receiver();
+
+        let acc_fact = |dst_addr: ShortAddr, dst_ep: u8| {
+            AccessorCtx::new(node, src_ep, dst_addr, dst_ep)    // picks 'node', 'src_ep' from the environment
+        };
+
+        stream! {
+            // This code block gets executed, in a lazy manner, only once the application reads the stream.
+
+            loop {
+                let tmp = rx.receive() .await;
+                match tmp {
+                    MatchInnerEvent::Bound(short_addr, eps) => {
+
+                        for ep in eps {
+                            let acc = acc_fact(short_addr, ep);
+                            yield MatchEvent::Bound(acc);
+                        }
+                    },
+                    MatchInnerEvent::Error(ezb_err_e::_ERR_TIMEOUT) => {
+                        todo!()
+                    },
+                    MatchInnerEvent::ZdpError(v) => {
+                        todo!()
+                    },
+                }
+            }
+
+            /***R
+            while let Ok(res) = rx.recv().await {
+
+                res match {
+                    Ok() =>
+
+
+                }
+
+                yield event;
+
+                if matches!(event, MatchResult::Finished | MatchResult::Failed(_)) {
+                    break;
+                }
+            }***/
+        };
     }
 }
 
-//---
 /**
 * The C callback.
 *
@@ -156,27 +204,34 @@ extern "C" fn match_c_callback(
 }
 
 /**
-* An entry passed from the C side to Rust.
+* The _inner_ delivery mechanism, from Zigbee task to application task.
 */
-pub(super) type MatchResult = Result<MatchSuccess,MatchError>;
+pub(super) enum MatchInnerEvent {
+    Bound(ShortAddr, Vec<u8>),
 
-pub(super) struct MatchSuccess {
-    short_addr: ShortAddr,
-    eps: Vec<u8>
-}
-
-pub(super) enum MatchError {
-    /// Zigbee Device Profile level (routing, timeout)
+    /// Zigbee Device Profile errors; we did reach the other node
     ZdpError(ZdpError),
-    // tbd. document: when do these arise?
-    Error(core::ffi::c_int)
-}
 
-/***r enum MatchStatus {
-    Success{ short_addr: ShortAddr, eps: Vec<u8> },
-    Error(core::ffi::c_int),
-    ZdpError(ZdpError)
-}***/
+    /// Local (early) errors; did not reach outer nodes
+    Error(ezb_err_e)
+        // ezb_err_e::_ERR_NONE as u8,  // 0
+        // ezb_err_e::_ERR_FAIL as u8,  // -1 (0xff)
+        // ezb_err_e::_ERR_NO_MEM as u8,
+        // ezb_err_e::_ERR_INV_ARG as u8,
+        // ezb_err_e::_ERR_INV_STATE as u8,
+        // ezb_err_e::_ERR_INV_SIZE as u8,
+        // ezb_err_e::_ERR_NOT_FOUND as u8,
+        // ezb_err_e::_ERR_NOT_SUPPORTED as u8,
+        // ezb_err_e::_ERR_TIMEOUT as u8,
+        // ezb_err_e::_ERR_ABORT as u8,
+        // ezb_err_e::_ERR_BUSY as u8,
+        // ezb_err_e::_ERR_NOT_FINISHED as u8,
+        // ezb_err_e::_ERR_NOT_ALLOWED as u8,
+        // ezb_err_e::_ERR_PARSE as u8,
+        // ezb_err_e::_ERR_EMPTY_DATA as u8,
+        // ezb_err_e::_ERR_DROP as u8,
+        // ezb_err_e::_ERR_SECURITY as u8,
+}
 
 /**
 * Parse the match response from C structure.
@@ -201,19 +256,17 @@ pub(super) enum MatchError {
 //     ///< Pointer to array of endpoint numbers (uint8_t) that match the criteria
 //     pub match_list: *mut u8,
 // }
-fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<MatchResult> {
-    use MatchError::{Error, ZdpError};
-
+fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<MatchInnerEvent> {
     let resp = unsafe { p.as_ref() }?;
 
     if resp.error != 0 {
-        Some( Err( Error(resp.error) ) )
+        Some( MatchInnerEvent::Error(resp.error) )
     } else {
         let rsp = unsafe { resp.rsp.as_ref() }?;
 
         let st = crate::ZdpError::parse(rsp.status)?;
         if let Some(e) = st {
-            Some( Err( ZdpError(e) ))
+            Some( MatchInnerEvent::ZdpError(e) )
         } else {
             let ezb_zdp_match_desc_rsp_field_s {
                 nwk_addr_of_interest,
@@ -230,7 +283,7 @@ fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<MatchResult> {
                 })
             }?;
 
-            Some( Ok( MatchSuccess{ short_addr, eps: eps.to_vec() }) )
+            Some( MatchInnerEvent::Bound(short_addr, eps.to_vec()) )
         }
     }
 }

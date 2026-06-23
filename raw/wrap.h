@@ -63,23 +63,24 @@ const char *ESP_ZIGBEE_VER = \
   // "2.0.1"
 
 // Without this, not all 'EZB_ERR_*' values make it to the Rust side.
-// There is no such 'ezb_err_e' in the C API.
+// There is no such 'ezb_err_e' in the C API, though 'ezb_err_t' is used. Range is 0..=19, and the -1.
+// Value range is
 typedef enum {
-    _ERR_NONE           = EZB_ERR_NONE,  // 0
-    _ERR_FAIL           = EZB_ERR_FAIL,  // -1
-    _ERR_NO_MEM         = EZB_ERR_NO_MEM,
-    _ERR_INV_ARG        = EZB_ERR_INV_ARG,
-    _ERR_INV_STATE      = EZB_ERR_INV_STATE,
-    _ERR_INV_SIZE       = EZB_ERR_INV_SIZE,
-    _ERR_NOT_FOUND      = EZB_ERR_NOT_FOUND,
-    _ERR_NOT_SUPPORTED  = EZB_ERR_NOT_SUPPORTED,
-    _ERR_TIMEOUT        = EZB_ERR_TIMEOUT,
-    _ERR_ABORT          = EZB_ERR_ABORT,
-    _ERR_BUSY           = EZB_ERR_BUSY,
-    _ERR_NOT_FINISHED   = EZB_ERR_NOT_FINISHED,
-    _ERR_NOT_ALLOWED    = EZB_ERR_NOT_ALLOWED,
-    _ERR_PARSE          = EZB_ERR_PARSE,
-    _ERR_EMPTY_DATA     = EZB_ERR_EMPTY_DATA,
-    _ERR_DROP           = EZB_ERR_DROP,
-    _ERR_SECURITY       = EZB_ERR_SECURITY,
+    NONE           = EZB_ERR_NONE,  // 0
+    FAIL           = EZB_ERR_FAIL,  // -1
+    NO_MEM         = EZB_ERR_NO_MEM,
+    INV_ARG        = EZB_ERR_INV_ARG,
+    INV_STATE      = EZB_ERR_INV_STATE,
+    INV_SIZE       = EZB_ERR_INV_SIZE,
+    NOT_FOUND      = EZB_ERR_NOT_FOUND,
+    NOT_SUPPORTED  = EZB_ERR_NOT_SUPPORTED,
+    TIMEOUT        = EZB_ERR_TIMEOUT,
+    ABORT          = EZB_ERR_ABORT,
+    BUSY           = EZB_ERR_BUSY,
+    NOT_FINISHED   = EZB_ERR_NOT_FINISHED,
+    NOT_ALLOWED    = EZB_ERR_NOT_ALLOWED,
+    PARSE          = EZB_ERR_PARSE,
+    EMPTY_DATA     = EZB_ERR_EMPTY_DATA,
+    DROP           = EZB_ERR_DROP,
+    SECURITY       = EZB_ERR_SECURITY,
 } ezb_err_e;

@@ -184,4 +184,5 @@ pub use bindings::{
     ezb_zcl_level_move_to_level_with_on_off_cmd_t,
     ezb_zcl_level_move_to_level_cmd_payload_t,
     ezb_zcl_level_move_to_level_with_on_off_cmd_req,
+    ezb_err_e,
 };

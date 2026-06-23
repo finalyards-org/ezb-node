@@ -353,62 +353,6 @@ impl AsRef<ezb_address_s> for ezb_address_s {
     }
 }
 
-/**
-* @note When using this, instead of C API 'ezb_address_s', you must append '.into()':
-*       Rust does conversions explicitly.
-*/
-#[cfg(false)]   // not here?
-#[allow(non_camel_case_types)]
-pub enum ezb_address_s {
-    /// MAC: PAN ID and address fields are not present.
-    /// NWK: Reserved.
-    /// APS: DstAddress and DstEndpoint not present.
-    NONE,
-
-    /// MAC: Address field contains a short address (16 bit).
-    /// NWK: 16-bit network address of a device or a 16-bit broadcast address.
-    /// APS: 16-bit address for DstAddress and DstEndpoint present.
-    SHORT(u16),
-
-    /// MAC: Reserved.
-    /// NWK: Reserved.
-    /// APS: 16-bit group address for DstAddress; DstEndpoint not present.
-    #[cfg(false)]   // #later; needed?
-    GROUP(ezb_grpaddr_s),
-
-    /// MAC: Address field contains an extended address (64 bit).
-    /// NWK: Reserved.
-    /// APS: 64-bit extended address for DstAddress and DstEndpoint present.
-    EXT(u64)
-}
-
-#[cfg(false)]
-impl Into<a::ezb_address_s> for ezb_address_s {
-    fn into(self) -> a::ezb_address_s {
-        type Out = a::ezb_address_s;
-
-        match self {
-            Self::NONE => Out {
-                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_NONE as u8,
-                u: unsafe { core::mem::zeroed() }
-            },
-            Self::SHORT(v) => Out {
-                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_SHORT as u8,
-                u: ezb_addr_u { short_addr: v }
-            },
-            #[cfg(false)]   // #later
-            Self::GROUP(v) => Out {
-                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_GROUP as u8,
-                u: ezb_addr_u { group_addr: v }
-            },
-            Self::EXT(v) => Out {
-                addr_mode: a::ezb_addr_mode_e::EZB_ADDR_MODE_EXT as u8,
-                u: ezb_addr_u { extended_addr: ezb_eui64_s::from(v) }
-            },
-        }
-    }
-}
-
 // Such values are passed as 'u8' ('ezb_err_t') in the C API.
 //
 // We rename them to return to the C API names (which are #define's and were difficult to bring in, otherwise).

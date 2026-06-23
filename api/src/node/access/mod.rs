@@ -13,14 +13,5 @@ pub(self) use matching_context::*;
 mod match_event;
 pub use match_event::MatchEvent;
 
-use crate::node::ZigbeeGuard;
-
-pub(self) trait AccessTools {
-    /**
-    * Do something on the 'ezb_zigbee_lib', with locking.
-    */
-    fn guarded<F>(&self, f: F) where F: Fn() {
-        let _guard = ZigbeeGuard::acquire();
-        f();
-    }
-}
+mod accessor;
+use accessor::{Accessor, AccessorCtx};

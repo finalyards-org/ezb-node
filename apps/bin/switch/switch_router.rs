@@ -99,12 +99,8 @@ impl LightSwitchRouter {
                             // Use it
                             light.set_level(128) .await;   // tbd. use in the same way as C example
                         },
-                        MatchEvent::Finished => {
-                            log::info!("Matching done.");
-                            break;
-                        },
-                        MatchEvent::Timeout => {
-                            log::info!("Matching timed out.");
+                        MatchEvent::Finished{ timeout } => {
+                            log::info!("Matching {}.", if timeout {"timed out"} else {"done"});
                             break;
                         },
                         MatchEvent::Failed(err) => {
