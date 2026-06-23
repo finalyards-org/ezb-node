@@ -1,15 +1,20 @@
-/*
-* Finding other nodes and binding to them.
-*/
-use core::pin::Pin;
+use core::ffi::c_void;
 use core::marker::PhantomPinned;
-use std::ffi::c_void;
+use core::pin::Pin;
+
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
-    channel::{Channel, DynamicSender, DynamicReceiver},
+    channel::{Channel, DynamicReceiver, DynamicSender},
 };
 
-use ezb_node_raw::{ezb_zcl_cluster_id_e, ezb_zdo_match_desc_req_s, ezb_zdp_match_desc_req_field_s, ezb_zdo_match_desc_req_result_s, ezb_zdp_match_desc_rsp_field_s, ezb_af_profile_id_e};
+use ezb_node_raw::{
+    ezb_af_profile_id_e,
+    ezb_zcl_cluster_id_e,
+    ezb_zdo_match_desc_req_result_s,
+    ezb_zdo_match_desc_req_s,
+    ezb_zdp_match_desc_req_field_s,
+    ezb_zdp_match_desc_rsp_field_s
+};
 
 use crate::{
     ShortAddr,
@@ -19,7 +24,7 @@ use crate::{
 
 const CHANNEL_CAPACITY: usize = 8;
 
-type ChannelT = Channel<CriticalSectionRawMutex, MatchResult, CHANNEL_CAPACITY>;
+type ChannelT = Channel<CriticalSectionRawMutex, Result<MatchSuccess,MatchError>, CHANNEL_CAPACITY>;
 
 /**
 * Carries out a groupcast call on the Zigbee network, listing all devices (which are receiving on idle) that match
@@ -44,7 +49,6 @@ pub(super) struct MatchingContext {
 }
 
 impl MatchingContext {
-
     /**
     * Create a pinned matcher (lives in the heap; stationary, i.e. fields can be passed to C APIs).
     */
@@ -110,12 +114,27 @@ impl MatchingContext {
         me_pinned
     }
 
-    pub(super) async fn start_matching(&self, src_ep: u8) {
+    /**
+    * Do the actual matching.
+    *
+    * @note: In application task.
+    */
+    pub(super) async fn start_matching<F>(&self, src_ep: u8, f: F)
+    where
+        F: Fn(Result<(ShortAddr,u8),MatchError>) -> bool
+    {
+
+        // convert 1..n matches to callbacks
         unimplemented!()
     }
 }
 
 //---
+/**
+* The C callback.
+*
+* @note Called within the Zigbee task.
+*/
 extern "C" fn match_c_callback(
     response: *const ezb_zdo_match_desc_req_result_s,
     user_ctx: *mut c_void
@@ -139,18 +158,17 @@ extern "C" fn match_c_callback(
 /**
 * An entry passed from the C side to Rust.
 */
-pub(crate) type MatchResult = Result<MatchSuccess,MatchError>;
+pub(super) type MatchResult = Result<MatchSuccess,MatchError>;
 
-pub(crate) struct MatchSuccess {
+pub(super) struct MatchSuccess {
     short_addr: ShortAddr,
     eps: Vec<u8>
 }
 
-pub(crate) enum MatchError {
+pub(super) enum MatchError {
     /// Zigbee Device Profile level (routing, timeout)
     ZdpError(ZdpError),
-    //r /// Zigbee Cluster Library level (e.g. device does not support a cluster)
-    //r Zcl(ZclError),
+    // tbd. document: when do these arise?
     Error(core::ffi::c_int)
 }
 
@@ -206,15 +224,13 @@ fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<MatchResult> {
 
             let short_addr = ShortAddr::from(nwk_addr_of_interest);
 
-            let match_list = unsafe { match_list.as_ref() }?;
-
-            let eps: Vec<u8> = {
-                let a = unsafe {
+            let eps = unsafe {
+                match_list.as_ref().map(|x| {
                     core::slice::from_raw_parts(match_list, match_length as usize)
-                };
-                a.to_vec()
-            };
-            Some( Ok( MatchSuccess{ short_addr, eps }) )
+                })
+            }?;
+
+            Some( Ok( MatchSuccess{ short_addr, eps: eps.to_vec() }) )
         }
     }
 }

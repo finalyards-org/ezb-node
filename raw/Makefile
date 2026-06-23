@@ -121,7 +121,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--allowlist-function 'ezb_bdb_.+' \
 	    --allowlist-function 'ezb_get_current_.+' \
 			--allowlist-function 'ezb_nwk_.+' \
-			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ota_upgrade)_.+' \
+			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|level|ota_upgrade)_.+' \
 	    --allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch)' \
 			\
@@ -149,14 +149,15 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --use-core \
 	    --generate-inline-functions \
 	    --default-enum-style rust \
-	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_attr_type_e=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_core_action_callback_id_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_status_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zdp_status_e=strum::FromRepr,strum::Display" \
+	    \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 			--wrap-static-fns \
 	    --wrap-static-fns-path ${_TMP}/wrap.c \

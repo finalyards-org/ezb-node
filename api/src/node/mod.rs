@@ -17,31 +17,29 @@ mod access;
 pub use access::*;
 
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
-    channel::Channel,
+    blocking_mutex::raw::ThreadModeRawMutex,
+    channel::Channel
 };
-use esp_idf_svc::{
-    sys::EspError
-};
-use log;
+
+use esp_idf_svc::sys::EspError;
 
 use ezb_node_raw::{
-    ezb_bdb_start_top_level_commissioning,
-    ezb_bdb_is_factory_new,
-    ezb_nwk_get_panid,
-    ezb_nwk_get_extended_panid,
-    ezb_nwk_get_short_address,
-    ezb_nwk_get_current_channel,
     esp_zigbee_lock_acquire,
     esp_zigbee_lock_release,
+    ezb_bdb_is_factory_new,
+    ezb_bdb_start_top_level_commissioning,
+    ezb_nwk_get_current_channel,
+    ezb_nwk_get_extended_panid,
+    ezb_nwk_get_panid,
+    ezb_nwk_get_short_address,
 };
 
 use crate::{
     AppSignal,
-    Config,
     BdbMode,
-    IeeeAddr,
+    Config,
     Error,
+    IeeeAddr,
     ZclError,
     ZclEvent,
 };
@@ -50,7 +48,7 @@ use crate::{
 //  - fed by the Zigbee task; blocking
 //  - consumed by the application task; async
 //
-pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channel::new();
+pub(self) static CHANNEL: Channel<ThreadModeRawMutex, Payload, 10> = Channel::new();
     // tx: in 'zigbee_task'
     // rx: us, passing to the application (application task)
 

@@ -62,4 +62,4 @@ required-features = ["esp32c6", "ezb-node/ep_color_dimmable_light"]
 [[bin]]
 name = "switch"
 path = "bin/switch/main.rs"
-required-features = ["esp32c6", "ezb-node/ep_color_dimmer_switch"]
+required-features = ["esp32c6", "ezb-node/ep_color_dimmer_switch", "ezb-node/match_color_dimmable_light"]

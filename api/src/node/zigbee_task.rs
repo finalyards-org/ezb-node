@@ -1,16 +1,14 @@
+use bitflags::bitflags;
+use esp_idf_svc::sys::EspError;
+use log;
 use std::{
     boxed::Box,
     collections::BTreeMap,
     sync::atomic::AtomicBool
 };
-use bitflags::bitflags;
-use esp_idf_svc::{
-    sys::EspError
-};
-use log;
 
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
+    blocking_mutex::Threa,
     channel::{
         Channel,
         DynamicReceiver,
@@ -19,55 +17,55 @@ use embassy_sync::{
 };
 
 use ezb_node_raw::{
-    esp_zigbee_init,
-    ezb_app_signal_t,
-    ezb_bdb_start_top_level_commissioning,
-    ezb_bdb_is_factory_new,
-    ezb_nwk_get_panid,
-    ezb_nwk_get_extended_panid,
-    ezb_nwk_get_short_address,
-    ezb_nwk_get_current_channel,
-    ezb_bdb_comm_mode_t,
     esp_zigbee_config_t,
-    ezb_bdb_set_primary_channel_set,
-    ezb_bdb_set_secondary_channel_set,
+    esp_zigbee_init,
     esp_zigbee_launch_mainloop,
     esp_zigbee_start,
-    ezb_app_signal_get_params,
-    ezb_app_signal_get_type,
-    ezb_aps_secur_enable_distributed_security,
-    ezb_app_signal_add_handler,
     ezb_af_create_device_desc,
-    ezb_af_device_desc_t,
-    ezb_zha_create_color_dimmable_light,
-    ezb_af_endpoint_get_cluster_desc,
-    ezb_zcl_basic_cluster_desc_add_attr,
     ezb_af_device_add_endpoint_desc,
     ezb_af_device_desc_register,
-    ezb_zcl_core_action_handler_register,
-    ezb_zcl_cluster_id_e,
-    ezb_zcl_cluster_desc_t,
+    ezb_af_device_desc_t,
+    ezb_af_endpoint_get_cluster_desc,
+    ezb_app_signal_add_handler,
+    ezb_app_signal_get_params,
+    ezb_app_signal_get_type,
+    ezb_app_signal_t,
+    ezb_aps_secur_enable_distributed_security,
+    ezb_bdb_comm_mode_t,
+    ezb_bdb_is_factory_new,
+    ezb_bdb_set_primary_channel_set,
+    ezb_bdb_set_secondary_channel_set,
+    ezb_bdb_start_top_level_commissioning,
+    ezb_nwk_get_current_channel,
+    ezb_nwk_get_extended_panid,
+    ezb_nwk_get_panid,
+    ezb_nwk_get_short_address,
+    ezb_zcl_basic_cluster_desc_add_attr,
     ezb_zcl_basic_server_attr_t,
+    ezb_zcl_cluster_desc_t,
+    ezb_zcl_cluster_id_e,
     ezb_zcl_core_action_callback_id_e,
     ezb_zcl_core_action_callback_id_t,
+    ezb_zcl_core_action_handler_register,
+    ezb_zha_create_color_dimmable_light,
 };
 
 use crate::{
+    config_views::ConfigAccess,
     AppSignal,
     Config,
     EndpointCreator,
-    IeeeAddr,
     Error::{
         AlreadyInUse,
         InitializationFailed
     },
+    IeeeAddr,
     ZclEvent,
-    config_views::ConfigAccess,
 };
 
-use ezb_node_config::{CommonFields, ChannelMask, EndpointConfig};
-use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 use crate::utils::PascalString;
+use ezb_node_config::{ChannelMask, CommonFields, EndpointConfig};
+use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 
 const TASK_NAME: &str = "Zigbee_main";
 const TASK_STACK_SIZE: usize = 20 * 1024;   // note: C example uses 4k, Rust may need more

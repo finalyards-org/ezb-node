@@ -11,7 +11,7 @@ use ezb_node::{
     BdbMode,
     BdbStatus,
     Config,
-    MatchColorDimmableLights,
+    MatchEvent,
     Node,
     ZclEvent,
     ZclError,
@@ -89,32 +89,30 @@ impl LightSwitchRouter {
                 );
 
                 const MY_EP_ID_HACK: u8 = 1;    // Config 'endpoint' key - there can be many and the matching needs the number. @ai #review tbd.
-                let bind_stream = self.start_matching_color_dimmable_lights(MY_EP_ID_HACK);
-                    //
-                    // tbd. Try to make something like 'self.start_matching<AccessColorDimmableLight>(...)', i.e. generalizing it
-                    //      (only one trait per Zigbee profile). @ai
+                let match_stream = self.start_matching_color_dimmable_lights(MY_EP_ID_HACK);
 
-                bind_stream.first().recv() .await
+                while let Some(ev) = match_stream.recv().await {
+                    match ev {
+                        MatchEvent::Bound(light, short_addr, ep_id) => {
+                            log::info!("Bound with color dimmable light device: 0x{:04X}:{}", short_addr, ep_id);
 
-                ///A
-                while let Some(light) = light_stream.recv().await {
-                    log::info!("Löytyi uusi lamppu osoitteesta: {:X}", light.nwk_addr());
-
-                    // Voidaan heti käyttää helppolukuisia metodeja
-                    light.set_level(255);
-                }
-                /// /A
-
-                let x= self.find_and_bind_color_dimmable_light_device() .await;
-                match x {
-                    Success => {
-                        log::info!("Bound with color dimmable light device");
-                    },
-                    Err(e) => {
-                        log::error!("Failed to bind color dimmable light device: {}", e);
+                            // Use it
+                            light.set_level(128) .await;   // tbd. use in the same way as C example
+                        },
+                        MatchEvent::Finished => {
+                            log::info!("Matching done.");
+                            break;
+                        },
+                        MatchEvent::Timeout => {
+                            log::info!("Matching timed out.");
+                            break;
+                        },
+                        MatchEvent::Failed(err) => {
+                            log::error!("Failed to bind color dimmable light device: {}", err);
+                            break;
+                        }
                     }
                 }
-
             },
             BdbSignalSteering(st) => {
                 log::info!("Failed to join network: {}, st = {}", sig, st);

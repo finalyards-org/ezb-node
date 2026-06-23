@@ -174,4 +174,14 @@ pub use bindings::{
     ezb_zdp_match_desc_rsp_field_s,
     ezb_addr_mode_e,
     ezb_grpaddr_s,
+    ezb_addr_u,
+    ezb_eui64_s,
+};
+
+// Profile - color dimmer switch
+//
+pub use bindings::{
+    ezb_zcl_level_move_to_level_with_on_off_cmd_t,
+    ezb_zcl_level_move_to_level_cmd_payload_t,
+    ezb_zcl_level_move_to_level_with_on_off_cmd_req,
 };

@@ -3,11 +3,27 @@ use ezb_node_raw::{
     ezb_addr_mode_e,
     ezb_address_s,
     ezb_grpaddr_s,
+    ezb_addr_u,
+    ezb_eui64_s,
 };
 
 use crate::{
     IeeeAddr
 };
+
+// There are three possibilities:
+//
+//  - 0xFFFC: Broadcast to all routers
+//  - 0xFFFD: Broadcast to all non-sleepy devices (used in C 'color_dimmer_switch' example)
+//  - 0xFFFF: Broadcast to all devices
+//
+// We currently fix this (for outgoing messages). Can be changed, if there is need for application level control.
+// For _incoming_ messages, the field can be ignored. There does not seem to be a reason to trouble the application
+// level with this.
+//
+// Note! If implementing, consider doing it as a "const generic" because there are only three options.
+//
+const BCAST_FIELD_OUTGOING: u16 = 0xfffd;
 
 /**
  * Address mode, and also the address.
@@ -53,11 +69,6 @@ pub enum AddrMode {
      * MAC: Reserved.
      * NWK: Reserved.
      * APS: 16-bit group address for DstAddress; DstEndpoint not present.
-     *
-     * @note In Rust, we _only_ cater for receiving at the moment. The value is the
-     *      actual group id ('.group_addr.group' in C); the broadcast address is dropped.
-     *      This will need to change, if we ever need to support group _sending_ and want to
-     *      use this struct for doing so!
      */
     Group(u16),
 
@@ -94,10 +105,16 @@ impl AddrMode {
             ezb_addr_mode_e::EZB_ADDR_MODE_GROUP => {
                 let ezb_grpaddr_s {
                     group,
-                    bcast: _bcast
+                    bcast: _bcast   // incoming message; not passed on (expecting 0xFFFC|0xFFFD|0xFFFF)
                 } = unsafe { u.group_addr };
 
-                log::warn!("Converting group address with '.bcast' {} (.bcast omitted)", _bcast);  // tbd.
+                match _bcast {
+                    0xFFFC|0xFFFD|0xFFFF => {}, // expected
+                    x => {
+                        log::warn!("Unexpected '.group_addr.bcast' (let through): 0x{:04x} not among 0xFFFC, 0xFFFD or 0xFFFF", x);
+                    }
+                }
+
                 Some( Self::Group(group) )
             },
             ezb_addr_mode_e::EZB_ADDR_MODE_SHORT => {
@@ -108,6 +125,34 @@ impl AddrMode {
                 let x = unsafe { u.extended_addr };
                 Some( Self::Extended(x.into()) )
             }
+        }
+    }
+}
+
+impl Into<ezb_address_s> for AddrMode {
+    fn into(self) -> ezb_address_s {
+        type Out = ezb_address_s;
+
+        match self {
+            Self::None => Out {
+                addr_mode: ezb_addr_mode_e::EZB_ADDR_MODE_NONE as u8,
+                u: unsafe { core::mem::zeroed() }
+            },
+            Self::Short(v) => Out {
+                addr_mode: ezb_addr_mode_e::EZB_ADDR_MODE_SHORT as u8,
+                u: ezb_addr_u { short_addr: v }
+            },
+            Self::Group(v) => Out {
+                addr_mode: ezb_addr_mode_e::EZB_ADDR_MODE_GROUP as u8,
+                u: ezb_addr_u { group_addr: ezb_grpaddr_s {
+                    group: v,
+                    bcast: BCAST_FIELD_OUTGOING
+                } }
+            },
+            Self::Extended(v) => Out {
+                addr_mode: ezb_addr_mode_e::EZB_ADDR_MODE_EXT as u8,
+                u: ezb_addr_u { extended_addr: ezb_eui64_s::from(v) }
+            },
         }
     }
 }

@@ -18,3 +18,8 @@ indent_size = 4
 [Justfile]
 indent_style = tab
 indent_size = 4
+
+# TEMP: try whether this prevents RustRover IDE from squashing a block onto one line (without asking):
+#|[*.rs]
+#|ij_rust_imports_granularity = crate
+#|ij_rust_spaces_within_use_braces = true

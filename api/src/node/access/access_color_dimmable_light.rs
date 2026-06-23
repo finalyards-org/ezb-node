@@ -1,21 +1,19 @@
-#![cfg(feature = "bind_color_dimmable_light")]
+#![cfg(feature = "match_color_dimmable_light")]
 
 use ezb_node_raw::{
-    ezb_zcl_cluster_id_e,
-    ezb_zcl_color_control_move_to_color_cmd_payload_t,
-    ezb_zcl_color_control_move_to_color_cmd_s,
     ezb_zcl_cluster_cmd_ctrl_s,
-    ezb_address_s,
+    ezb_zcl_color_control_move_to_color_cmd_payload_t,
     ezb_zcl_color_control_move_to_color_cmd_req,
+    ezb_zcl_color_control_move_to_color_cmd_s,
+    ezb_zcl_level_move_to_level_cmd_payload_t,
+    ezb_zcl_level_move_to_level_with_on_off_cmd_req,
+    ezb_zcl_level_move_to_level_with_on_off_cmd_t,
 };
 
 use crate::{
-    Node
-};
-use crate::node::ZigbeeGuard;
-use super::{
-    //Access,
-    //groupcast_matcher::GroupcastMatcher,
+    utils::c_zeroed,
+    AddrMode,
+    Node,
 };
 
 const TRANSITION_TIME: core::time::Duration = core::time::Duration::from_secs(1);
@@ -23,9 +21,9 @@ const TRANSITION_TIME: core::time::Duration = core::time::Duration::from_secs(1)
 /**
 * Access to a Zigbee node (of color-dimmable-light profile) that we've bounded with.
 */
-pub(super) struct AccessColorDimmableLight : AccessTools {
-    //node: &'static dyn Node,
+pub(self) struct AccessColorDimmableLight<F : Fn<&Node> > {
     src_ep: u8,
+    guarded: F
 }
 
 impl AccessColorDimmableLight {
@@ -34,24 +32,39 @@ impl AccessColorDimmableLight {
 
         let req = ezb_zcl_color_control_move_to_color_cmd_s {
             cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {
-                dst_addr: ezb_address_s::NONE .into(),
+                dst_addr: AddrMode::None .into(),
                 src_ep: self.src_ep,
-                ..Default::default()    // fill with 0 like in C 'color_dimmer_switch' example
+                ..c_zeroed()    // like in C 'color_dimmer_switch' example
             },
             payload: ezb_zcl_color_control_move_to_color_cmd_payload_t {
                 color_x,
                 color_y,
                 transition_time: ((TRANSITION_TIME.as_millis() +50) / 100) as u16,
-                ..Default::default()    // fill with 0 like in C 'color_dimmer_switch' example
+                ..c_zeroed()    // like in C 'color_dimmer_switch' example
             }
         };
 
         self.guarded(|| {
-            unsafe { ezb_zcl_color_control_move_to_color_cmd_req(req) }
+            unsafe { ezb_zcl_color_control_move_to_color_cmd_req(&req) }
         });
     }
 
     pub fn set_level(&self, level: u8) {
-        unimplemented!()
+        let req = ezb_zcl_level_move_to_level_with_on_off_cmd_t {
+            cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {
+                dst_addr: AddrMode::None .into(),
+                src_ep: self.src_ep,
+                ..c_zeroed()    // like in C 'color_dimmer_switch' example
+            },
+            payload: ezb_zcl_level_move_to_level_cmd_payload_t {
+                level,
+                transition_time: ((TRANSITION_TIME.as_millis() +50) / 100) as u16,
+                ..c_zeroed()    // like in C 'color_dimmer_switch' example
+            }
+        };
+
+        self.guarded(|| {
+            unsafe { ezb_zcl_level_move_to_level_with_on_off_cmd_req(&req) }
+        });
     }
 }

@@ -1,27 +1,23 @@
+#![cfg(feature = "match_color_dimmable_light")]
 
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
-    channel::Receiver,
-};
+use embassy_sync::channel::DynamicReceiver;
 
-use ezb_node_raw::{
-    ezb_zcl_cluster_id_e
-};
+use ezb_node_raw::ezb_zcl_cluster_id_e;
 
-use crate::{
-    Node
-};
+use crate::Node;
 
 use super::{
     AccessColorDimmableLight,
-    GroupcastMatcher,
+    MatchError,
+    MatchSuccess,
+    MatchingContext,
 };
 
 /**
-* Extension to node, allowing finding, binding and accessing other nodes with a certain profile.
+* Extension to node, allowing finding, binding and accessing nodes with a certain profile.
 */
 #[cfg(feature = "match_color_dimmable_light")]
-pub trait MatchColorDimmableLights<'a, const N: usize>: Node<'static> {
+pub trait MatchColorDimmableLights: Node {
     // The clusters we demand from the other end
     const IN_CLUSTERS: &[ezb_zcl_cluster_id_e] = &[
         ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_ON_OFF,
@@ -30,12 +26,28 @@ pub trait MatchColorDimmableLights<'a, const N: usize>: Node<'static> {
     ];
     const OUT_CLUSTERS: &[ezb_zcl_cluster_id_e] = &[];
 
-    fn start_matching_color_dimmable_lights(&self, src_ep: u8) -> Receiver<'a, CriticalSectionRawMutex, AccessColorDimmableLight, N> {
+    /**
+    * Start matching; pass matches over as profile-specific access types.
+    */
+    fn start_matching_color_dimmable_lights(&self, src_ep: u8) -> DynamicReceiver<AccessColorDimmableLight> {
 
-        let m = GroupcastMatcher::new_pinned(Self::IN_CLUSTERS, Self::OUT_CLUSTERS);
+        let mc = MatchingContext::new_pinned(Self::IN_CLUSTERS, Self::OUT_CLUSTERS);
 
-        m.start_matching(src_ep, |()| {
-            AccessColorDimmableLight::new()
+        mc.start_matching(src_ep, |match_res| {
+            match match_res {
+                MatchSuccess { short_addr, eps } => {
+
+                },
+
+                MatchError::ZdpError(err) => {
+
+                },
+
+                MatchError::Error(err) => {
+
+                }
+            }
+            AccessColorDimmableLight{ src_ep, f: }
         })
     }
 }
