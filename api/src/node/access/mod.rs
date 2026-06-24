@@ -15,4 +15,5 @@ mod match_event;
 pub use match_event::MatchEvent;
 
 mod accessor;
-use accessor::{Accessor, AccessorCtx};
+use accessor::{AccessorCtx};
+pub use accessor::Accessor; // needed by applications, for using '.get()'

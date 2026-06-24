@@ -132,10 +132,8 @@ impl MatchingContext {
     pub(super) fn start_matching<T,Gen>(ctx: Pin<Box<Self>>, node: &'static dyn Node, src_ep: u8, make: Gen) -> impl Stream<Item = MatchEvent<T>>
     where
         T: Accessor,
-        Gen: Fn(AccessorCtx) -> T,
+        Gen: Fn(AccessorCtx) -> T + 'static,
     {
-        let rx: DynamicReceiver<Option<MatchInnerEvent>> = ctx.channel.dyn_receiver();
-
         let acc_fact = move |dst_addr: ShortAddr, dst_ep: u8| {
             make(
                 AccessorCtx::new(node, src_ep, dst_addr, dst_ep)
@@ -144,6 +142,11 @@ impl MatchingContext {
 
         stream! {
             // This code block gets executed, in a lazy manner, only once the application reads the stream.
+
+            // Note: It matters to the lifetimes that things are done *within* the 'stream!' block. The inside lasts
+            //      longer than the function body.
+            //
+            let rx: DynamicReceiver<Option<MatchInnerEvent>> = ctx.channel.dyn_receiver();
 
             // 'None' is a marker that the channel will terminate
             //
@@ -160,7 +163,27 @@ impl MatchingContext {
                     }
                 }
             }
-        }
+
+            // Controlled drop of 'ctx'.
+            {
+                // Extra safety:
+                //  - we let the 'MatchingContext' remain on heap (leaking memory), with its
+                //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error' really
+                //      is the final call (from C library).
+                //
+                #[cfg(feature = "_extra_safety")]
+                {
+                    log::debug!("Extra caution: writing '.user_ctx' to NULL");
+
+                    let ptr = core::ptr::addr_of!(ctx.req.user_ctx) as *mut *mut c_void;
+                    unsafe{ ptr.write( core::ptr::null_mut() ) };
+                }
+
+                // Release 'MatchingContext' from the heap.
+                #[cfg(not(feature = "_extra_safety"))]
+                let _drop = unsafe{ Box::from_raw(ctx as *mut MatchingContext) };
+            }
+        } // stream!
     }
 }
 
@@ -187,8 +210,6 @@ extern "C" fn match_c_callback(
     match res {
         // If a local error (or timeout), terminate the whole binding process.
         Err(e) => {
-            let ctx = &mut unsafe { &*(user_ctx as *mut MatchingContext) };
-
             // Embassy channel has no '.close()' - so we use a sentinel to stop the consumption.
             //
             if let Err(err) = tx.try_send(None) {
@@ -201,24 +222,6 @@ extern "C" fn match_c_callback(
                     }
                 }
             }
-
-            // Extra safety:
-            //  - we let the 'MatchingContext' remain on heap (leaking memory), with its
-            //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error' really
-            //      is the final call (from C library).
-            //
-            #[cfg(feature = "_extra_safety")]
-            {
-                log::debug!("Extra caution: writing '.user_ctx' to NULL");
-
-                let ptr = core::ptr::addr_of!(ctx.req.user_ctx) as *mut *mut c_void;
-                unsafe{ ptr.write( core::ptr::null_mut() ) };
-            }
-
-            // Release 'MatchingContext' from the heap.
-            #[cfg(not(feature = "_extra_safety"))]
-            let _drop = unsafe{ Box::from_raw(user_ctx as *mut MatchingContext) };
-
             return;
         },
         Ok(ev) => {
@@ -239,6 +242,7 @@ extern "C" fn match_c_callback(
 /**
 * The _inner_ delivery mechanism, from Zigbee task to application task.
 */
+#[derive(Debug)]
 pub(super) enum MatchInnerEvent {
     /// Successful binding
     ///

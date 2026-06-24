@@ -88,33 +88,29 @@ pub trait Node {
     /**
     * Run the event loop, passing Zigbee events to the application task (that calls us).
     *
-    * The closures/functions get us (an application struct implementing 'Node' as a parameter, allowing them to
-    * access the Zigbee APIs, via 'Node' methods. We ensure that locking is in place for such methods (see ZigbeeGuard).
+    * @note 'on_app_signal' is an 'async' callback, allowing one to use async waits within it (very handy!).
     */
     async fn run<T,F1,F2>(this: T, on_app_signal: F1, on_zcl_event: F2) -> !
     where
         T: Node + 'static,
-        F1: for<'a> Fn(&'a T, AppSignal) -> core::pin::Pin<Box<dyn Future<Output = ()> + 'a>>,
+        F1: Fn(&'static T, AppSignal) -> core::pin::Pin<Box<dyn Future<Output = ()>>>,
             // Rust note:
-            //      This signature navigates a complex lifetime requirement, allowing:
-            //          - The application programmer to use '&self' (no 'Arc' wrapper)
-            //          - Having active 'async' yields (.await points) inside the closure
-            //          - The application state (T) to support internal mutability if needed.
+            //      'Pin<Box<...>>' is used to assist the Rust compiler with type erasure and to
+            //      ensure the future's internal state remains safe and stable across await boundaries.
             //
-            //      The 'for<'a>' trait bound (Higher-Rank Trait Bound) ensures the reference is valid for the duration
-            //      of the async execution. 'Pin<Box<dyn Future<...>>>' is used to assist the Rust compiler with type
-            //      erasure and to ensure the future's internal state remains safe and stable across await boundaries.
-            //
-        F2: Fn(&T, Result<ZclEvent, ZclError>),
+        F2: Fn(&'static T, Result<ZclEvent, ZclError>),
         Self: Sized
     {
+        // Leak 'T' once, to make it 'static.
+        let this: &'static T = Box::leak(Box::new(this));
+
         let rx = CHANNEL.receiver();
 
         loop {
             let x = rx.receive().await;
             match x {
-                Payload::AppSignal(x) => on_app_signal(&this, x) .await,
-                Payload::ZclEvent(x) => on_zcl_event(&this, x)
+                Payload::AppSignal(x) => on_app_signal(this, x) .await,
+                Payload::ZclEvent(x) => on_zcl_event(this, x)
             }
         }
     }

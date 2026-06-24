@@ -35,6 +35,8 @@ embassy-sync     = { version = "0.8.0" }
 embassy-time    = { workspace = true, features = ["generic-queue-8"] }
     # generic-queue-X: presumably, "any 'generic-queue' implementation will work"
 
+futures-util = { version = "0.3.32" }
+
 [build-dependencies]
 ezb-node-config = { path = "../config", features = ["toml", "color_dimmable_light", "color_dimmer_switch"] }
 anyhow = { version = "1.0" }

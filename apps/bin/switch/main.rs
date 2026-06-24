@@ -6,39 +6,34 @@
 #![feature(never_type)]
 extern crate alloc;
 
+mod switch_router;
+use switch_router::LightSwitchRouter;
+
+mod button_task;
+use button_task::button_task;
+
 use anyhow::*;
 
 use embassy_executor::{
     Spawner,
 };
 
+use esp_idf_hal::{
+    gpio::{PinDriver, Pull},
+    peripherals::Peripherals,
+};
 use esp_idf_svc::{
     sys::{link_patches},
-    //hal,
 };
-
-use log::LevelFilter;
 
 use ezb_node::{
     Config,
-    Node,
 };
 
 use ezb_node_apps::{
     init_nvs,
     set_panic_hook,
 };
-
-use esp_idf_hal::{
-    gpio::{PinDriver, Pull},
-    peripherals::Peripherals,
-};
-
-mod switch_router;
-use switch_router::LightSwitchRouter;
-
-mod button_task;
-use button_task::button_task;
 
 /**
 * The entry point.
@@ -59,9 +54,9 @@ async fn main(spawner: Spawner) {
     let peripherals = Peripherals::take().unwrap();
     {
         // Set GPIO9 (BOOT btn) as input (pressed is Low)
-        let btn = PinDriver::input(peripherals.pins.gpio9, Pull::Up).unwrap();
+        let btn_pin = PinDriver::input(peripherals.pins.gpio9, Pull::Up).unwrap();
 
-        spawner.spawn(button_task(btn));
+        spawner.spawn( button_task(btn_pin).unwrap() );
     }
 
     // --- Zigbee ---

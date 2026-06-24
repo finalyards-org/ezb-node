@@ -5,8 +5,8 @@ use crate::{node::ZigbeeGuard, Node, ShortAddr};
 /**
 * Access to the network for 'Access...' structs.
 */
-#[derive(Debug, Copy, Clone)]
-pub(super) struct AccessorCtx {
+#[derive(Copy, Clone)]
+pub struct AccessorCtx {
     pub(super) node: &'static dyn Node,
     pub(super) src_ep: u8,     // needed for Zigbee protocol, e.g. where the responses shall be routed
 
@@ -27,7 +27,7 @@ impl AccessorCtx {
     */
     pub(super) fn guarded<F,T>(&self, f: F) -> T where F: Fn(&'static dyn Node) -> T {
         let _guard = ZigbeeGuard::acquire();
-        f(self.node);
+        f(self.node)
     }
 }
 

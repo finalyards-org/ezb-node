@@ -28,7 +28,7 @@ const TRANSITION_TIME: core::time::Duration = core::time::Duration::from_secs(1)
 /**
 * Access to a Zigbee node (of color-dimmable-light profile) that we've bounded with.
 */
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct AccessColorDimmableLight {
     ctx: AccessorCtx,
 }
@@ -38,6 +38,13 @@ impl AccessColorDimmableLight {
         Self { ctx }
     }
 
+    /**
+    * Send a request to set color x,y.
+    *
+    * @note The request is sent immediately to the Zigbee task. Confirmation of receiving can be listened to, on the
+    *       Zigbee stream. We can consider making a system that both sends, and picks the response on the stream,
+    *       as an async function.
+    */
     pub fn set_color_xy(&self, color_x: u16, color_y: u16) {
 
         let req = ezb_zcl_color_control_move_to_color_cmd_s {
@@ -75,6 +82,12 @@ impl AccessColorDimmableLight {
         }
     }
 
+    /**
+    * Send a request to set color level.
+    *
+    * @note The request is sent immediately to the Zigbee task. Confirmation may come on the Zigbee stream.
+    *       (see suggestion at comment of 'set_color_xy')
+    */
     pub fn set_level(&self, level: u8) {
         let req = ezb_zcl_level_move_to_level_with_on_off_cmd_t {
             cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {

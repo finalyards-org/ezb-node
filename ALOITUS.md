@@ -20,28 +20,34 @@ Sovelluskoodissa on käytössä Embassy. Tämä tarkoittaa, että myös esimerke
 
 Tämä tekee sovellusten kirjoittamisesta ja lukemisesta lineaarista.
 
-`api`-tasolla luodaan Zigbee-kirjastolle oma FreeRTOS-taskinsa (sovellus ei suoraan ole tästä tietoinen). Taskien välillä on `Channel`.
+`api`-tasolla luodaan Zigbee-kirjastolle oma FreeRTOS-taskinsa (sovellus ei suoraan ole tästä tietoinen). Taskien välillä on `Channel`. Sovellustaso saa nämä Zigbee-viestit asynchronisena streamina (`stream!`).
+
+Toteutuksessa Zigbee-rauta esitetään `&'static Node`:na, ja siihen lisättyinä, profiilikohtaisina trait:eina. Tämä `static`:n käyttö on ennen kaikkea tyylikysymys, sillä C-rajapinta käsittelee kaiken globaaleina funktioina. `Node` tuo koodiin kaivattua "ryhtiä" ja tekee rajapinnat luettavammiksi. Pidetään siitä kiinni.
+
+Sovelluksen ohjatessa etäpään laitetta, se tehdään profiilikohtaisilla `Access...`-traiteilla. Tästä on esimerkki ainakin `apps/bin/switch`-kansiossa.
 
 
 **Tavoite** 
 
 Saada vastaava koodi kuin C-puolen `color_dimmable_light` ja `color_dimmable_switch` -demot kääntymään ja toimimaan Rust-sovelluksina.
 
+
 **Tilanne**
 
-Siirryin äskettäin `async`-käyttöön protokollatason viiveissä. Tämän mahdollistavaa `api`-tason tekniikkaa ei ole vielä implementoitu.
+Protokollatason `async`-viiveiden vaatimat elinkaarihaasteet on ratkaistu, ja sovellukset kääntyvät onnistuneesti release-profiililla.
 
-Kun `apps/bin/light` kääntyy, edessä ovat:
+Edessä ovat:
+- Varsinainen ajokokeilu ensin C-vastaesimerkin (switch) kanssa.
+- Valon ja kytkimen toiminnallisuuden viimeistely (ei pelkkä lokitus).
+- Seuraavaksi listalla: PoE-virransyöttö ESP32-C6:lle ja LED-ohjaus (Embassy-taskit / PWM).
 
-- varsinainen ajokokeilu ensin C-vastaesimerkin (switch) kanssa
-- myös switch Rustilla
-- valon tekeminen toimivaksi (ei pelkkä lokitus)
+Akuutti focus: Ajokokeilut ja siirtyminen rautatason toteutuksiin.
 
-Akuutti focus: `async` sovellustason handlerissa.
-
-Ehdotus: pyydän sinulta apua pienissä ongelmissa, mitä tulee eteen. Saat esittää ehdotuksia: minulla on ymmärrys Rustin `async`:sta, mutta tämä voi silti olla haastava kohta rakennelmassa.
+Ehdotus: pyydän sinulta apua pienissä ongelmissa, mitä tulee eteen. Saat esittää ehdotuksia.
 
 <!-- #skip
+: minulla on ymmärrys Rustin `async`:sta, mutta tämä voi silti olla haastava kohta rakennelmassa.
+
 Tiedän, miten tämä rakennetaan joten kovin paljon aktiivisia ehdotuksia en tässä vaiheessa tarvitse; voit jättää ne pois vastauksista. Kiitos!
 -->
 

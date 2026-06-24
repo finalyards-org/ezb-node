@@ -41,6 +41,11 @@ switch-build:
 	cargo {{nightly}} build --release -vv --bin switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light \
 		--jobs 1
 
+[group('switch')]
+sr: switch-run
+switch-run:
+	cargo {{nightly}} run --release -vv --bin switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light
+
 # List the *last* 'sdkconfig'
 echo-sdkconfig-path:
 	@\

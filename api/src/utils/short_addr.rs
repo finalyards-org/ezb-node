@@ -1,9 +1,5 @@
 use core::fmt;
 
-use ezb_node_raw::{
-    ezb_extaddr_t,
-};
-
 /**
 * Wrapper for 16-bit addresses; C represents them as u16, and has some consts.
 */
@@ -17,5 +13,12 @@ impl ShortAddr {
 impl From<u16> for ShortAddr {
     fn from(v: u16) -> Self {
         Self(v)
+    }
+}
+
+impl fmt::UpperHex for ShortAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Delegate to inner 'u16'
+        fmt::UpperHex::fmt(&self.0, f)
     }
 }

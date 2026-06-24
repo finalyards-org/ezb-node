@@ -1,11 +1,17 @@
+
 use embassy_sync::channel::{
     DynamicReceiver
 };
 use embassy_time::{
     Duration
 };
+use futures_util::{
+    pin_mut,
+    StreamExt
+};
 
 use ezb_node::{
+    Accessor,
     AccessColorDimmableLight,
     AppSignal,
     BdbMode,
@@ -49,15 +55,15 @@ impl LightSwitchRouter {
     */
     pub async fn run(mut self) -> ! {
         <Self as Node>::run(self,
-  |this, sig| Box::pin(this.on_app_signal(sig)),
-  |this, ev| { unimplemented!() }
+            |this: &'static Self, sig| Box::pin(this.on_app_signal(sig)),
+            |this: &'static Self, ev| { unimplemented!() }
         ).await
     }
 
     /**
     * Run the received signal through our logic match.
     */
-    async fn on_app_signal(&self, sig: AppSignal) {
+    async fn on_app_signal(&'static self, sig: AppSignal) {
         use AppSignal::*;
 
         match sig {
@@ -94,15 +100,18 @@ impl LightSwitchRouter {
 
                 let match_stream = self.start_matching_color_dimmable_lights(self.src_ep);
 
-                while let Some(ev) = match_stream.recv().await {
+                pin_mut!(match_stream); // pins to stack
+
+                while let Some(ev) = match_stream.next().await {
                     match ev {
                         MatchEvent::Bound(light) => {
-                            let short_addr = light.get().short_addr;
-                            let ep_id = light.get().dst_ep_id;
-                            log::info!("Bound with color dimmable light device: 0x{:04X}:{}", short_addr, ep_id);
+                            log::info!("Bound with color dimmable light device: 0x{:04X}:{}",
+                                light.get().dst_addr,
+                                light.get().dst_ep
+                            );
 
                             // Use it
-                            light.set_level(128) .await;   // tbd. use in the same way as C example
+                            light.set_level(128);   // tbd. use in the same way as C example
 
                             // Keeps on searching....
                             // tbd. C sample only takes the first, and runs with it
