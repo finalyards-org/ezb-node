@@ -13,7 +13,9 @@
 mod zigbee_task;
 use zigbee_task::zigbee_spawn;
 
+#[cfg(feature = "_match_any")]
 mod access;
+#[cfg(feature = "_match_any")]
 pub use access::*;
 
 use embassy_sync::{
@@ -77,7 +79,7 @@ pub trait Node {
     //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
     //      activated by a call to '...'.
     //
-    fn init(cfg: &'static Config, auto_start: bool) -> Result<(), crate::Error> {
+    fn init(cfg: &'static Config, auto_start: bool) -> Result<(), crate::Error> where Self: Sized {
         let () = zigbee_spawn(cfg, auto_start)
             .map_err(|e| { Error::SpawnFailed(e) })?;
         Ok(())
@@ -104,6 +106,7 @@ pub trait Node {
             //      erasure and to ensure the future's internal state remains safe and stable across await boundaries.
             //
         F2: Fn(&T, Result<ZclEvent, ZclError>),
+        Self: Sized
     {
         let rx = CHANNEL.receiver();
 

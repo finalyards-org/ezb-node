@@ -136,7 +136,7 @@ impl esp_zigbee_platform_config_t {
 }
 
 // About the 'esp_zigbee_lib' (2.0) API design:
-//  - for 'ezb_eui64_s' (used e.g. for IEEE addresses), could it not be passed by-value, also in the C API?
+//  - for 'rust' (used e.g. for IEEE addresses), could it not be passed by-value, also in the C API?
 //  - the use of 'union' is low friction within C, but burdensome for Rust.
 //
 // For these reasons, we overwrite certain C side functions:
@@ -275,6 +275,9 @@ impl ezb_app_signal_type_e {
     pub fn parse(v: ezb_app_signal_type_t) -> Option<Self> {
         Self::from_repr(v as u32)
     }
+}
+impl ezb_err_e {
+    pub fn parse(v: core::ffi::c_int) -> Option<Self> { Self::from_repr(v) }
 }
 impl ezb_nwk_network_status_t { // is an enum, in 'bindings_0.rs'
     pub fn parse(v: u8) -> Option<Self> {

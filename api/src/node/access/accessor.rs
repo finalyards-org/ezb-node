@@ -1,4 +1,4 @@
-
+#![cfg(feature = "_match_any")]
 
 use crate::{node::ZigbeeGuard, Node, ShortAddr};
 
@@ -7,36 +7,30 @@ use crate::{node::ZigbeeGuard, Node, ShortAddr};
 */
 #[derive(Debug, Copy, Clone)]
 pub(super) struct AccessorCtx {
-    /// Endpoint id of the originating EP.
-    node: &'static dyn Node,
-    src_ip: u8,
-    dst_addr: ShortAddr,
-    dst_ep: u8,
+    pub(super) node: &'static dyn Node,
+    pub(super) src_ep: u8,     // needed for Zigbee protocol, e.g. where the responses shall be routed
+
+    // Allow application access to these - at least for debug logging.
+    pub dst_addr: ShortAddr,
+    pub dst_ep: u8,
 }
 
 impl AccessorCtx {
-    pub(super) fn new(node: &'static dyn Node, src_ip: u8, dst_addr: ShortAddr, dst_ep: u8) -> Self {
-        Self { node, src_ip, dst_addr, dst_ep }
+    pub(super) fn new(node: &'static dyn Node, src_ep: u8, dst_addr: ShortAddr, dst_ep: u8) -> Self {
+        Self { node, src_ep, dst_addr, dst_ep }
     }
 
     /**
-    * Do something on the 'ezb_zigbee_lib', with locking.
+    * Do something on the 'ezb_zigbee_lib' C API, with locking.
+    *
+    * @note Having this here (and not within a trait) since it would make a trait not "dyn compatible".
     */
-    #[cfg(false)]   //r
-    pub(super) fn guarded<F>(&self, f: F) where F: Fn(&'static dyn Node) {
+    pub(super) fn guarded<F,T>(&self, f: F) -> T where F: Fn(&'static dyn Node) -> T {
         let _guard = ZigbeeGuard::acquire();
         f(self.node);
     }
 }
 
-pub trait Accessor {
-    fn accessorXX(&self) -> &AccessorCtx;   //r
-
-    /**
-    * Do something on the 'ezb_zigbee_lib', with locking.
-    */
-    fn guarded<F>(&self, f: F) where F: Fn(&'static dyn Node) {
-        let _guard = ZigbeeGuard::acquire();
-        f(self.get().node);
-    }
+pub trait Accessor: Copy + Clone {
+    fn get(&self) -> &AccessorCtx;
 }

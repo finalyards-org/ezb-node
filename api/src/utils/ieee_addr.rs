@@ -19,8 +19,6 @@ pub struct IeeeAddr(u64);
 //         uint64_t u64;   /*!< Extended Address as 64-bit value */
 //     } EZB_PACKED_FIELD;
 // } EZB_PACKED_END;
-impl IeeeAddr {
-}
 
 impl From<[u8; 8]> for IeeeAddr {
     fn from(bytes: [u8; 8]) -> Self {
@@ -31,6 +29,12 @@ impl From<[u8; 8]> for IeeeAddr {
 impl From<ezb_extaddr_t> for IeeeAddr {
     fn from(v: ezb_extaddr_t) -> Self {
         Self(v.to_u64())
+    }
+}
+
+impl Into<ezb_extaddr_t> for IeeeAddr {
+    fn into(self) -> ezb_extaddr_t {
+        self.0 .into()
     }
 }
 

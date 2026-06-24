@@ -5,20 +5,15 @@ use ezb_node_raw::ezb_zcl_cluster_id_e;
 use futures_util::Stream;
 
 use super::{
-    AccessColorDimmableLight
+    AccessColorDimmableLight,
+    MatchEvent,
 };
 
 use crate::{
     Node,
-    ShortAddr,
 };
 
 use super::MatchingContext;
-
-pub enum MatchEvent {
-    Success(dyn AccessColorDimmableLight),
-    MatchError,
-}
 
 /**
 * Extension to node, allowing finding, binding and accessing nodes with a certain profile.
@@ -36,10 +31,10 @@ pub trait MatchColorDimmableLights: Node {
     /**
     * Start matching; pass matches over as profile-specific access types.
     */
-    fn start_matching_color_dimmable_lights(&self, src_ep: u8) -> impl Stream<Item = MatchEvent> {
-
+    fn start_matching_color_dimmable_lights(&'static self, src_ep: u8) -> impl Stream<Item = MatchEvent<AccessColorDimmableLight>>
+    where Self: Sized + 'static {
         let mc = MatchingContext::new_pinned(Self::IN_CLUSTERS, Self::OUT_CLUSTERS);
 
-        mc.start_matching(&self, src_ep)
+        MatchingContext::start_matching(mc, self, src_ep, AccessColorDimmableLight::new)
     }
 }

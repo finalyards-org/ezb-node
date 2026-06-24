@@ -29,7 +29,7 @@ strum = { version = "0.28", features = ["derive"] }
 embuild.workspace = true
 
 [features]
-default = ["esp32c6"]
+default = ["esp32c6", "_extra_safety"]
 coordinator = ["ezb-node-config/coordinator"]
 router = ["ezb-node-config/router"]
 #end_device_UNTESTED = [] #["ezb-node-config/end_device"]
@@ -43,11 +43,16 @@ ep_color_dimmable_light = ["ezb-node-config/color_dimmable_light"]
 ep_color_dimmer_switch = ["ezb-node-config/color_dimmer_switch"]
 
 # Device types on the other side (find, bind, access).
-match_color_dimmable_light = []
+_match_any = []
+match_color_dimmable_light = ["_match_any"]
 
 esp32c6 = [
     "ezb-node-raw/esp32c6",
 ]
+
+# Extra safety (debugging) feature:
+#   - Leaks some memory (binding structs), in order to warrant assumptions on C callback behaviour.
+_extra_safety = []
 
 [lints]
 workspace = true

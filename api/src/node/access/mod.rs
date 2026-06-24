@@ -1,3 +1,4 @@
+#![cfg(feature = "_match_any")]
 
 mod access_color_dimmable_light;
 #[cfg(feature = "match_color_dimmable_light")]

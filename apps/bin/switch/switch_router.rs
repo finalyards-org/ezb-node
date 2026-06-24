@@ -11,6 +11,7 @@ use ezb_node::{
     BdbMode,
     BdbStatus,
     Config,
+    MatchColorDimmableLights,
     MatchEvent,
     Node,
     ZclEvent,
@@ -21,8 +22,7 @@ const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub(crate) struct LightSwitchRouter
 where Self: Node {
-    // can have internally-mutable state here
-    //? ep_id: u8   // <-- tbd. Matching needs the asking endpoint, somehow
+    src_ep: u8  // needed for Zigbee
 }
 
 impl Node for LightSwitchRouter {}
@@ -35,7 +35,11 @@ impl LightSwitchRouter {
         // Note: This might disappear, see comment of 'Node::init()'.
 
         let () = <Self as Node>::init(c, AUTO_START)?;
-        Ok(Self {})
+
+        // #hack: How does this go: 'Config' has many endpoints; we need one for the Zigbee comms...
+        const SRC_EP: u8 = 1;
+
+        Ok(Self { src_ep: SRC_EP })
     }
 
     /**
@@ -88,22 +92,23 @@ impl LightSwitchRouter {
                     self.get_short_address()
                 );
 
-                const MY_EP_ID_HACK: u8 = 1;    // Config 'endpoint' key - there can be many and the matching needs the number. @ai #review tbd.
-                let match_stream = self.start_matching_color_dimmable_lights(MY_EP_ID_HACK);
+                let match_stream = self.start_matching_color_dimmable_lights(self.src_ep);
 
                 while let Some(ev) = match_stream.recv().await {
                     match ev {
-                        MatchEvent::Bound(light, short_addr, ep_id) => {
+                        MatchEvent::Bound(light) => {
+                            let short_addr = light.get().short_addr;
+                            let ep_id = light.get().dst_ep_id;
                             log::info!("Bound with color dimmable light device: 0x{:04X}:{}", short_addr, ep_id);
 
                             // Use it
                             light.set_level(128) .await;   // tbd. use in the same way as C example
+
+                            // Keeps on searching....
+                            // tbd. C sample only takes the first, and runs with it
+                            todo!()
                         },
-                        MatchEvent::Finished{ timeout } => {
-                            log::info!("Matching {}.", if timeout {"timed out"} else {"done"});
-                            break;
-                        },
-                        MatchEvent::Failed(err) => {
+                        MatchEvent::Error(err) => {
                             log::error!("Failed to bind color dimmable light device: {}", err);
                             break;
                         }

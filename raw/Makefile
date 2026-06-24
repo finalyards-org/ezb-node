@@ -151,6 +151,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --default-enum-style rust \
 	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
+	    --with-derive-custom "ezb_err_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_attr_type_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \

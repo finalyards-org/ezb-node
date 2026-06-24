@@ -1,10 +1,12 @@
+#![cfg(feature = "_match_any")]
+
 use core::ffi::c_void;
 use core::marker::PhantomPinned;
 use core::pin::Pin;
 
 use embassy_sync::{
     blocking_mutex::raw::ThreadModeRawMutex,
-    channel::{Channel, DynamicReceiver, DynamicSender},
+    channel::{Channel, DynamicReceiver, DynamicSender, TrySendError},
 };
 
 use async_stream::stream;
@@ -21,20 +23,16 @@ use ezb_node_raw::{
 };
 
 use super::{
+    Accessor,
     AccessorCtx,
     MatchEvent,
 };
 
-use crate::{
-    Node,
-    ShortAddr,
-    ZclError,
-    ZdpError,
-};
+use crate::{AccessColorDimmableLight, Node, ShortAddr, ZclError, ZdpError};
 
 const CHANNEL_CAPACITY: usize = 8;
 
-type ChannelT = Channel<ThreadModeRawMutex, MatchInnerEvent, CHANNEL_CAPACITY>;
+type ChannelT = Channel<ThreadModeRawMutex, Option<MatchInnerEvent>, CHANNEL_CAPACITY>;
 
 /**
 * Carries out a groupcast call on the Zigbee network, listing all devices (which are receiving on idle) that match
@@ -46,6 +44,8 @@ type ChannelT = Channel<ThreadModeRawMutex, MatchInnerEvent, CHANNEL_CAPACITY>;
 */
 pub(super) struct MatchingContext {
     // For safety, keep pinned until the end of the matching process.
+    //  .req.field.cluster_list -> _clusters
+    //  .req.user_ctx -> self
     req: ezb_zdo_match_desc_req_s,
 
     // pointed to by 'req.field.cluster_list'
@@ -118,7 +118,7 @@ impl MatchingContext {
             let poke = unsafe { me_pinned.as_mut().get_unchecked_mut() };
 
             poke.req.field.cluster_list = poke._clusters.as_mut_ptr();
-            poke.req.user_ctx = &poke.channel as *const _ as *mut c_void;
+            poke.req.user_ctx = &poke as *const _ as *mut c_void;
         }
 
         me_pinned
@@ -129,52 +129,38 @@ impl MatchingContext {
     *
     * @note: In application task.
     */
-    pub(super) fn start_matching<F>(&self, node: &dyn Node, src_ep: u8) -> impl Stream<Item = MatchEvent> {
+    pub(super) fn start_matching<T,Gen>(ctx: Pin<Box<Self>>, node: &'static dyn Node, src_ep: u8, make: Gen) -> impl Stream<Item = MatchEvent<T>>
+    where
+        T: Accessor,
+        Gen: Fn(AccessorCtx) -> T,
+    {
+        let rx: DynamicReceiver<Option<MatchInnerEvent>> = ctx.channel.dyn_receiver();
 
-        let rx: DynamicReceiver<MatchInnerEvent> = self.channel.dyn_receiver();
-
-        let acc_fact = |dst_addr: ShortAddr, dst_ep: u8| {
-            AccessorCtx::new(node, src_ep, dst_addr, dst_ep)    // picks 'node', 'src_ep' from the environment
+        let acc_fact = move |dst_addr: ShortAddr, dst_ep: u8| {
+            make(
+                AccessorCtx::new(node, src_ep, dst_addr, dst_ep)
+            )
         };
 
         stream! {
             // This code block gets executed, in a lazy manner, only once the application reads the stream.
 
-            loop {
-                let tmp = rx.receive() .await;
-                match tmp {
+            // 'None' is a marker that the channel will terminate
+            //
+            while let Some(ev) = rx.receive() .await {
+                match ev {
                     MatchInnerEvent::Bound(short_addr, eps) => {
-
                         for ep in eps {
                             let acc = acc_fact(short_addr, ep);
                             yield MatchEvent::Bound(acc);
                         }
                     },
-                    MatchInnerEvent::Error(ezb_err_e::_ERR_TIMEOUT) => {
-                        todo!()
-                    },
                     MatchInnerEvent::ZdpError(v) => {
-                        todo!()
-                    },
+                        yield MatchEvent::Error(v);
+                    }
                 }
             }
-
-            /***R
-            while let Ok(res) = rx.recv().await {
-
-                res match {
-                    Ok() =>
-
-
-                }
-
-                yield event;
-
-                if matches!(event, MatchResult::Finished | MatchResult::Failed(_)) {
-                    break;
-                }
-            }***/
-        };
+        }
     }
 }
 
@@ -187,19 +173,66 @@ extern "C" fn match_c_callback(
     response: *const ezb_zdo_match_desc_req_result_s,
     user_ctx: *mut c_void
 ) {
-    // Cast context back. We only need the writer.
-    let tx = {
-        let channel: &ChannelT = unsafe { &*(user_ctx as *const ChannelT) };
-        channel.dyn_sender()
-    };
+    // if this happens, the callback gets called even after '.error' != 0 payload.
+    assert!( !user_ctx.is_null(), "C callback: 'user_ctx'==NULL");
 
-    let Some(resp) = parse(response) else {
+    let Some(res) = parse(response) else {
         log::error!("Unable to parse match response (skipped).");
         return;
     };
 
-    if let Err(err) = tx.try_send(resp) {
-        log::error!("Unable to send 'MatchResult' (skipped!); please try increasing the 'CHANNEL_CAPACITY'.");
+    let ctx = & unsafe { &*(user_ctx as *const MatchingContext) };
+    let tx = ctx.channel.dyn_sender();
+
+    match res {
+        // If a local error (or timeout), terminate the whole binding process.
+        Err(e) => {
+            let ctx = &mut unsafe { &*(user_ctx as *mut MatchingContext) };
+
+            // Embassy channel has no '.close()' - so we use a sentinel to stop the consumption.
+            //
+            if let Err(err) = tx.try_send(None) {
+                match err {
+                    TrySendError::Full(_) => {
+                        log::error!("Channel full; cannot close!");
+                    },
+                    _ => {
+                        log::error!("Unexpected error (did not close the channel): {:?}", err);
+                    }
+                }
+            }
+
+            // Extra safety:
+            //  - we let the 'MatchingContext' remain on heap (leaking memory), with its
+            //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error' really
+            //      is the final call (from C library).
+            //
+            #[cfg(feature = "_extra_safety")]
+            {
+                log::debug!("Extra caution: writing '.user_ctx' to NULL");
+
+                let ptr = core::ptr::addr_of!(ctx.req.user_ctx) as *mut *mut c_void;
+                unsafe{ ptr.write( core::ptr::null_mut() ) };
+            }
+
+            // Release 'MatchingContext' from the heap.
+            #[cfg(not(feature = "_extra_safety"))]
+            let _drop = unsafe{ Box::from_raw(user_ctx as *mut MatchingContext) };
+
+            return;
+        },
+        Ok(ev) => {
+            if let Err(err) = tx.try_send(Some(ev)) {
+                match err {
+                    TrySendError::Full(_) => {
+                        log::error!("Channel full; capacity ({}) reached! (event lost)", ctx.channel.capacity());
+                    },
+                    _ => {
+                        log::error!("Unexpected error (binding event lost): {:?}", err);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -207,31 +240,39 @@ extern "C" fn match_c_callback(
 * The _inner_ delivery mechanism, from Zigbee task to application task.
 */
 pub(super) enum MatchInnerEvent {
+    /// Successful binding
+    ///
+    /// @note Same Zigbee message may carry multiple endpoints (rare, but may).
     Bound(ShortAddr, Vec<u8>),
 
-    /// Zigbee Device Profile errors; we did reach the other node
+    /// Zigbee Device Profile errors; response from another node.
     ZdpError(ZdpError),
-
-    /// Local (early) errors; did not reach outer nodes
-    Error(ezb_err_e)
-        // ezb_err_e::_ERR_NONE as u8,  // 0
-        // ezb_err_e::_ERR_FAIL as u8,  // -1 (0xff)
-        // ezb_err_e::_ERR_NO_MEM as u8,
-        // ezb_err_e::_ERR_INV_ARG as u8,
-        // ezb_err_e::_ERR_INV_STATE as u8,
-        // ezb_err_e::_ERR_INV_SIZE as u8,
-        // ezb_err_e::_ERR_NOT_FOUND as u8,
-        // ezb_err_e::_ERR_NOT_SUPPORTED as u8,
-        // ezb_err_e::_ERR_TIMEOUT as u8,
-        // ezb_err_e::_ERR_ABORT as u8,
-        // ezb_err_e::_ERR_BUSY as u8,
-        // ezb_err_e::_ERR_NOT_FINISHED as u8,
-        // ezb_err_e::_ERR_NOT_ALLOWED as u8,
-        // ezb_err_e::_ERR_PARSE as u8,
-        // ezb_err_e::_ERR_EMPTY_DATA as u8,
-        // ezb_err_e::_ERR_DROP as u8,
-        // ezb_err_e::_ERR_SECURITY as u8,
 }
+
+/***r #later; once their role (as stated below) is confirmed!
+/// Local errors; timeout
+/// With these (the claim is; to-be-confirmed): the binding request has not left the source node,
+/// or it's about timeout.
+///
+Error(ezb_err_e)
+    // ezb_err_e::_ERR_NONE as u8,  // 0
+    // ezb_err_e::_ERR_FAIL as u8,  // -1 (0xff)
+    // ezb_err_e::_ERR_NO_MEM as u8,
+    // ezb_err_e::_ERR_INV_ARG as u8,
+    // ezb_err_e::_ERR_INV_STATE as u8,
+    // ezb_err_e::_ERR_INV_SIZE as u8,
+    // ezb_err_e::_ERR_NOT_FOUND as u8,
+    // ezb_err_e::_ERR_NOT_SUPPORTED as u8,
+    // ezb_err_e::_ERR_TIMEOUT as u8,
+    // ezb_err_e::_ERR_ABORT as u8,
+    // ezb_err_e::_ERR_BUSY as u8,
+    // ezb_err_e::_ERR_NOT_FINISHED as u8,
+    // ezb_err_e::_ERR_NOT_ALLOWED as u8,
+    // ezb_err_e::_ERR_PARSE as u8,
+    // ezb_err_e::_ERR_EMPTY_DATA as u8,
+    // ezb_err_e::_ERR_DROP as u8,
+    // ezb_err_e::_ERR_SECURITY as u8,
+***/
 
 /**
 * Parse the match response from C structure.
@@ -256,17 +297,18 @@ pub(super) enum MatchInnerEvent {
 //     ///< Pointer to array of endpoint numbers (uint8_t) that match the criteria
 //     pub match_list: *mut u8,
 // }
-fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<MatchInnerEvent> {
+fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<Result<MatchInnerEvent,ezb_err_e>> {
     let resp = unsafe { p.as_ref() }?;
 
-    if resp.error != 0 {
-        Some( MatchInnerEvent::Error(resp.error) )
+    let res = if resp.error != 0 {
+        let e = ezb_err_e::parse(resp.error)?;
+        Err(e)
     } else {
         let rsp = unsafe { resp.rsp.as_ref() }?;
 
         let st = crate::ZdpError::parse(rsp.status)?;
         if let Some(e) = st {
-            Some( MatchInnerEvent::ZdpError(e) )
+            Ok( MatchInnerEvent::ZdpError(e) )
         } else {
             let ezb_zdp_match_desc_rsp_field_s {
                 nwk_addr_of_interest,
@@ -283,7 +325,8 @@ fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<MatchInnerEvent> {
                 })
             }?;
 
-            Some( MatchInnerEvent::Bound(short_addr, eps.to_vec()) )
+            Ok( MatchInnerEvent::Bound(short_addr, eps.to_vec()) )
         }
-    }
+    };
+    Some(res)
 }

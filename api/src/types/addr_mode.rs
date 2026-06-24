@@ -151,7 +151,7 @@ impl Into<ezb_address_s> for AddrMode {
             },
             Self::Extended(v) => Out {
                 addr_mode: ezb_addr_mode_e::EZB_ADDR_MODE_EXT as u8,
-                u: ezb_addr_u { extended_addr: ezb_eui64_s::from(v) }
+                u: ezb_addr_u { extended_addr: v.into() }
             },
         }
     }

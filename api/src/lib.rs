@@ -12,10 +12,8 @@ pub use config_views::*;
     // DeviceDescriptorView,
     // PlatformDeviceView,
 
-pub mod node;
-pub use node::{
-    Node,
-};
+mod node;
+pub use node::*;
 
 mod app_signal;
 pub use app_signal::*;
