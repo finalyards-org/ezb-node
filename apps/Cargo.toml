@@ -30,7 +30,6 @@ esp-idf-hal = { workspace = true }
 esp-idf-svc = { workspace = true, features = ["embassy-time-driver", "alloc", "binstart", "native", "critical-section"], default-features = false }
 
 embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
-embassy-futures = { version = "0.1.2" }
 embassy-sync     = { version = "0.8.0" }
 embassy-time    = { workspace = true, features = ["generic-queue-8"] }
     # generic-queue-X: presumably, "any 'generic-queue' implementation will work"

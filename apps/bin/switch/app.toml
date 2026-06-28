@@ -19,3 +19,6 @@ model_identifier = "Your model"
 
 [endpoint.1]
 device_type = "color_dimmer_switch"
+#accessors = [
+#    "color_dimmable_light"
+#]

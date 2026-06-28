@@ -102,7 +102,7 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
             let inner = || -> Result<!,EspError> {
                 zigbee_init(cc)?;
                 zigbee_setup_commissioning(channel_masks)?;
-                zigbee_create_endpoints(endpoint_cfg);
+                zigbee_create_endpoints(endpoint_cfg)?;
 
                 zigbee_run(auto_start)?
             };

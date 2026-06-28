@@ -1,4 +1,6 @@
 
+use std::sync::atomic::{AtomicU8, Ordering};
+
 use embassy_sync::channel::{
     DynamicReceiver
 };
@@ -24,11 +26,20 @@ use ezb_node::{
     ZclError,
 };
 
+use crate::button_task::{
+    receive as btn_receive,
+    ButtonEvent
+};
+
 const ONE_SEC: Duration = Duration::from_millis(1000);
+
+// #hack: How does this go: 'Config' has many endpoints; we need one for the Zigbee comms...
+const SRC_EP: u8 = 1;
 
 pub(crate) struct LightSwitchRouter
 where Self: Node {
-    src_ep: u8  // needed for Zigbee
+    src_ep: u8,  // #later this will not be needed once Accessors are based on endpoint
+    count: AtomicU8,      // internally mutable state for steering the remote light
 }
 
 impl Node for LightSwitchRouter {}
@@ -36,16 +47,13 @@ impl Node for LightSwitchRouter {}
 impl MatchColorDimmableLights for LightSwitchRouter {}
 
 impl LightSwitchRouter {
-    pub fn new(c: &'static Config) -> Result<Self, ezb_node::Error> {
+    pub fn new(cfg: &'static Config) -> Result<Self, ezb_node::Error> {
         const AUTO_START: bool = false;
         // Note: This might disappear, see comment of 'Node::init()'.
 
-        let () = <Self as Node>::init(c, AUTO_START)?;
+        let () = <Self as Node>::init(cfg, AUTO_START)?;
 
-        // #hack: How does this go: 'Config' has many endpoints; we need one for the Zigbee comms...
-        const SRC_EP: u8 = 1;
-
-        Ok(Self { src_ep: SRC_EP })
+        Ok(Self { src_ep: SRC_EP, count: AtomicU8::new(0) })
     }
 
     /**
@@ -99,28 +107,33 @@ impl LightSwitchRouter {
                 );
 
                 let match_stream = self.start_matching_color_dimmable_lights(self.src_ep);
-
                 pin_mut!(match_stream); // pins to stack
 
-                while let Some(ev) = match_stream.next().await {
-                    match ev {
-                        MatchEvent::Bound(light) => {
-                            log::info!("Bound with color dimmable light device: 0x{:04X}:{}",
-                                light.get().dst_addr,
-                                light.get().dst_ep
-                            );
-
-                            // Use it
-                            light.set_level(128);   // tbd. use in the same way as C example
-
-                            // Keeps on searching....
-                            // tbd. C sample only takes the first, and runs with it
-                            todo!()
+                let first_light = loop {
+                    match match_stream.next().await {
+                        Some(MatchEvent::Bound(light)) => {
+                            log::info!("Bound with color dimmable light device: 0x{:04X}:{}", light.get().dst_addr, light.get().dst_ep);
+                            break light;    // start using it!
                         },
-                        MatchEvent::Error(err) => {
-                            log::error!("Failed to bind color dimmable light device: {}", err);
-                            break;
+                        Some(MatchEvent::Error(err)) => {
+                            log::error!("Failed during color dimmable light search (from remote device): {}", err);
+                            // keep on searching
+                        },
+                        None => {
+                            log::error!("Unexpected end of binding stream!");   // what's this?
                         }
+                    }
+                };
+
+                // 'match_stream' drops; search phase is over.
+
+                log::info!("Listening to button presses...");
+                loop {
+                    match btn_receive().await {
+                        ButtonEvent::Pressed => {
+                            handle_button_press(&first_light, &self.count);
+                        },
+                        ButtonEvent::Depressed => {}
                     }
                 }
             },
@@ -149,5 +162,31 @@ impl LightSwitchRouter {
                 log::info!("Zigbee APP signal: {sig}");
             },
         }
+    }
+}
+
+/**
+* Steer the remove light, similar to the C example.
+*/
+// Note: state of 'LightSwitchRouter' needs to be internally mutable, because the structure is passed around as shared pointers.
+//
+fn handle_button_press(light: &AccessColorDimmableLight, count_ref: &AtomicU8) {
+    let count = count_ref.fetch_add(1, Ordering::Relaxed);  // increment, return the previous value
+
+    if count % 2 == 0 {
+        // Even -> steer the level
+        // (In the C code, levels raise 32 -> 64 -> 96 -> ...)
+        let next_level = ((count / 2) % 4 + 1) * 32;
+        log::info!("Move the level of HA dimmable light to {}", next_level);
+
+        light.set_level(next_level);
+    } else {
+        // Odd -> steer color
+        // (From C code):
+        let color_x = 0x0400 * ((count as u16 / 2) % 2 + 1);
+        let color_y = 0x0400 * ((count as u16 / 2) % 2 + 1);
+
+        log::info!("Move the color of HA dimmable light");
+        light.set_color_xy(color_x, color_y);
     }
 }

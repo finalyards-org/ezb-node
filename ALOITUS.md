@@ -37,7 +37,7 @@ Saada vastaava koodi kuin C-puolen `color_dimmable_light` ja `color_dimmable_swi
 Protokollatason `async`-viiveiden vaatimat elinkaarihaasteet on ratkaistu, ja sovellukset kääntyvät onnistuneesti release-profiililla.
 
 Edessä ovat:
-- Varsinainen ajokokeilu ensin C-vastaesimerkin (switch) kanssa.
+- Varsinainen ajokokeilu.
 - Valon ja kytkimen toiminnallisuuden viimeistely (ei pelkkä lokitus).
 - Seuraavaksi listalla: PoE-virransyöttö ESP32-C6:lle ja LED-ohjaus (Embassy-taskit / PWM).
 

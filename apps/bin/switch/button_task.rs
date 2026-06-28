@@ -1,9 +1,13 @@
 
+use std::sync::LazyLock;
+
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
-    channel::Channel,
+    channel::{
+        Channel,
+        DynamicReceiver
+    }
 };
-use embassy_sync::channel::DynamicReceiver;
 use embassy_time::{Duration, Timer};
 use esp_idf_hal::gpio::{PinDriver, Input};
 
@@ -13,12 +17,8 @@ pub enum ButtonEvent {
     Depressed,
 }
 
-// Using 'CriticalSectionRawMutexia' is practically a must. Grants 'Sync'.
+// Using 'CriticalSectionRawMutexia' is a must. It grants 'Sync'.
 static BUTTON_CHANNEL: Channel<CriticalSectionRawMutex, ButtonEvent, 4> = Channel::new();
-
-pub fn button_rx() -> DynamicReceiver<'static, ButtonEvent> {
-    BUTTON_CHANNEL.dyn_receiver()
-}
 
 /**
 * Listens to the BOOT button, reflecting its state to 'BUTTON_CHANNEL'
@@ -49,4 +49,10 @@ pub async fn button_task(mut btn: PinDriver<'static, Input>) {
         }
         tx.send(ButtonEvent::Depressed).await;
     }
+}
+
+/**
+*/
+pub async fn receive() -> ButtonEvent {
+    BUTTON_CHANNEL.receiver().receive() .await
 }
