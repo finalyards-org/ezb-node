@@ -36,11 +36,23 @@ _NVS_COMPONENTS_INCLUDE:=\
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
 # section that we need.
 #
+# NOTE:
+#		- Need to use the _double_ path (.../riscv32-esp-elf/riscv32-esp-elf), since e.g. single path's include in EMPTY
+#			(in ESP-IDF 6.0.2; in 5.5.4 it has stuff).
+#
 # Pick the particular piece
 # 	GNU make note: Cannot use a pattern ('%') twice, but it's very good to match with the tail.
 _RISCV_BIN_PATH := $(word 1,$(filter %/riscv32-esp-elf/bin,$(subst :, ,${DEP_ESP_IDF_EMBUILD_ENV_PATH})))
-_SYSROOT:=$(realpath ${_RISCV_BIN_PATH}/..)
-	# /home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf
+_TOOLCHAIN_ROOT := $(realpath ${_RISCV_BIN_PATH}/..)
+
+# Correct Sysroot for 'clang' (double last path section, contains e.g. 'include/sys/features.h')
+_SYSROOT := ${_TOOLCHAIN_ROOT}/riscv32-esp-elf
+	# /home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf
+
+# GCC 15 (used by ESP-IDF 6.0.2) demands its own, internal include path. Find it, based on the toolchain.
+_GCC_INTERNAL := $(word 1,$(wildcard ${_TOOLCHAIN_ROOT}/lib/gcc/riscv32-esp-elf/*))
+	#
+	# /home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/lib/gcc/riscv32-esp-elf/15.2.0
 
 # 'bindings_0.rs' *could* be created into the 'OUT_DIR' but in Multipass VM use, it's nice to see it in the IDE.
 #_BIND_RS:=${OUT_DIR}/bindings.rs
@@ -67,6 +79,15 @@ ifeq ($(wildcard $(DEP_ESP_IDF_ROOT)/managed_components),)
   $(error No 'managed_components' pulled by Rust build)
 endif
 
+# Check we got '_SYSROOT' roughly right
+ifeq ($(wildcard $(_SYSROOT)/include/sys/features.h),)
+  $(error Sysroot not detected correctly (or initialized): no '$(_SYSROOT)/include/sys/features.h')
+endif
+# ..same for Gcc 15
+ifeq ($(wildcard $(_GCC_INTERNAL)/include/stddef.h),)
+  $(error Gcc 15 folder not detected correctly (or initialized): '$(_GCC_INTERNAL)/include')
+endif
+
 # Check all paths within the var, separately.
 $(foreach p,$(_ESP_ZIGBEE_LIB_INCLUDE),$(if $(wildcard $(p)/*),,$(error No files within '$(p)')))
 
@@ -78,7 +99,10 @@ all:
 	@false
 
 # The targets that 'build.rs' normally builds (for debugging, in case make fails)
-manual: ${_BIND_RS}
+manual: ${_BIND_RS} ${_TMP}/wrap.c
+	@echo "\nManual build succeeded."
+
+manual2: ${_TMP}/libezb_wrap.a
 	@echo "\nManual build succeeded."
 
 #---
@@ -107,70 +131,16 @@ _BLOCKLIST_VARS:=$(strip EZB_ZCL_VALUE_NaN)
 #|)
 _OPAQUE_TYPES:=""
 
-# GNU Make note:
-#		- '&:' syntax (GNU Make 4.3+) states that _both_ targets are created on the same run.
-${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
-	| bindgen
-	bindgen $< \
-	    --allowlist-file wrap.h \
-			\
-	    --allowlist-function 'esp_zigbee_.+' \
-			--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
-			--allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
-			--allowlist-function 'ezb_aps_(?:secur|xxx)_.+' \
-			--allowlist-function 'ezb_bdb_.+' \
-	    --allowlist-function 'ezb_get_current_.+' \
-			--allowlist-function 'ezb_nwk_.+' \
-			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|level|ota_upgrade)_.+' \
-	    --allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
-			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch)' \
-			\
-	    --allowlist-type 'ezb_addr_mode_e' \
-	    --allowlist-type 'ezb_af_(?:device|endpoint|profile_id)_.+' \
-	    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
-	    --allowlist-type 'ezb_bdb_.+' \
-	    --allowlist-type 'ezb_err_.+' \
-	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
-	    --allowlist-type 'ezb_nwk_.+' \
-	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|set|status)_.+' \
-	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
-	    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
-	    \
-	    --allowlist-var 'ESP_ERR_.+' \
-	    --allowlist-var 'EZB_ERR_.+' \
-	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \
-	    --allowlist-var 'ESP_ZIGBEE_VER' \
-	    \
-			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
-			\
-			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
-			\
-			--bitfield-enum 'ezb_bdb_comm_mode_e' \
-	    --use-core \
-	    --generate-inline-functions \
-	    --default-enum-style rust \
-	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_err_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_zcl_attr_type_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_zcl_core_action_callback_id_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_zcl_status_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_zdp_status_e=strum::FromRepr,strum::Display" \
-	    \
-	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
-			--wrap-static-fns \
-	    --wrap-static-fns-path ${_TMP}/wrap.c \
-	    --wrap-static-fns-suffix _ext \
-		-- \
-		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
-		\
-	  -I. -I${_TMP} \
-	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
+# Note: The order of the includes was derived by trial-and-error. This might serve well: it means more coarse headers
+#			are at the top, their deeper dependencies down below. DO NOT TRY TO MAKE THESE ALPHABETICALLY ordered.
+_COMMON_PART:= \
+	  -I. \
 		-I $(dir ${_SDKCONFIG_H}) \
+	  -I ${_SYSROOT}/include \
+	  -I ${_GCC_INTERNAL}/include \
+		\
+	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
 	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
-		-I ${_SYSROOT}/riscv32-esp-elf/include \
 		-I ${_ESP_IDF_PATH}/components/esp_common/include \
 		-I ${_ESP_IDF_PATH}/components/hal/include \
 		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
@@ -188,10 +158,79 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 		-I ${_ESP_IDF_PATH}/components/esp_system/include \
 		-I ${_ESP_IDF_PATH}/components/ieee802154/include \
 		-I ${_ESP_IDF_PATH}/components/log/include \
-		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
-		\
-		-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
-	  > $@
+		-I ${_ESP_IDF_PATH}/components/esp_hal_gpio/include \
+		-I ${_ESP_IDF_PATH}/components/esp_hal_gpio/esp32c6/include \
+		-I ${_ESP_IDF_PATH}/components/esp_hal_uart/include \
+	  \
+		-I ${_ESP_IDF_PATH}/components/esp_libc/platform_include
+			# 'esp_libc' can remain last
+
+# GNU Make note:
+#		- '&:' syntax (GNU Make 4.3+) states that _both_ targets are created on the same run.
+#
+# 		Note: Seems unambiguous to use '$@' with dual targets. If only 'tmp/wrap.c' were mentioned as a target, '$@' would
+#			point to it, not '${_BIND_RS}'. Thus, made the output explicit. @ai: is there another way? #works
+#
+${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
+	| bindgen
+	bindgen $< \
+    --allowlist-file wrap.h \
+    \
+    --allowlist-function 'esp_zigbee_.+' \
+    --allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
+    --allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
+    --allowlist-function 'ezb_aps_(?:secur|xxx)_.+' \
+    --allowlist-function 'ezb_bdb_.+' \
+    --allowlist-function 'ezb_get_current_.+' \
+    --allowlist-function 'ezb_nwk_.+' \
+    --allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|level|ota_upgrade)_.+' \
+    --allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
+    --allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch)' \
+    \
+    --allowlist-type 'ezb_addr_mode_e' \
+    --allowlist-type 'ezb_af_(?:device|endpoint|profile_id)_.+' \
+    --allowlist-type 'ezb_app_(?:signal|xxx)_.+' \
+    --allowlist-type 'ezb_bdb_.+' \
+    --allowlist-type 'ezb_err_.+' \
+    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
+    --allowlist-type 'ezb_nwk_.+' \
+    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|set|status)_.+' \
+    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
+    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
+    \
+    --allowlist-var 'ESP_ERR_.+' \
+    --allowlist-var 'EZB_ERR_.+' \
+    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \
+    --allowlist-var 'ESP_ZIGBEE_VER' \
+    \
+    $(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \
+    \
+    $(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
+    \
+    --bitfield-enum 'ezb_bdb_comm_mode_e' \
+    --use-core \
+    --generate-inline-functions \
+    --default-enum-style rust \
+    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_err_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_zcl_attr_type_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_zcl_core_action_callback_id_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_zcl_status_e=strum::FromRepr,strum::Display" \
+    --with-derive-custom "ezb_zdp_status_e=strum::FromRepr,strum::Display" \
+    \
+    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
+    --wrap-static-fns \
+    --wrap-static-fns-path ${_TMP}/wrap.c \
+    --wrap-static-fns-suffix _ext \
+    -- \
+    	-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
+			-D _REENT_SMALL -D __DYNAMIC_REENT__ \
+    	$(_COMMON_PART) \
+    	-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
+    	> ${_BIND_RS}
 
 # Entries removed (keep for a while):
 #	    --allowlist-function 'nvs_flash_init(?:|_partition)' \
@@ -205,31 +244,13 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 ${_TMP}/wrap.o: ${_TMP}/wrap.c
 	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
 	  riscv32-esp-elf-gcc -c $< -o $@ -O2 \
-		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
-	  -I. -I${_TMP} \
-	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
-		-I $(dir ${_SDKCONFIG_H}) \
-	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
-		-I ${_SYSROOT}/riscv32-esp-elf/include \
-		-I ${_ESP_IDF_PATH}/components/esp_common/include \
-		-I ${_ESP_IDF_PATH}/components/hal/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/register \
-		-I ${_ESP_IDF_PATH}/components/esp_driver_uart/include \
-		-I ${_ESP_IDF_PATH}/components/esp_hw_support/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/include/freertos \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
-		-I ${_ESP_IDF_PATH}/components/heap/include \
-		-I ${_ESP_IDF_PATH}/components/esp_system/include \
-		-I ${_ESP_IDF_PATH}/components/ieee802154/include \
-		-I ${_ESP_IDF_PATH}/components/log/include \
-		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
+			$(_COMMON_PART)
 
+#tmp| # TEMPORARY!!! DEBUG
+#tmp| X:
+#tmp| 	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
+#tmp| 	  riscv32-esp-elf-gcc -c ${_TMP}/wrap.c -o ${_TMP}/wrap.o -O2 \
+#tmp| 			$(_COMMON_PART)
 
 ${_TMP}/libezb_wrap.a: ${_TMP}/wrap.o
 	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
@@ -270,7 +291,7 @@ _clean:
 	-rm ${_BIND_RS} ${_TMP}/wrap.[co] ${_TMP}/libezb_wrap.a
 
 echo:
-	@echo ${_SDKCONFIG}
+	@echo ${_SYSROOT}
 
 # Remove any targets created if a build fails.
 .DELETE_ON_ERROR:
