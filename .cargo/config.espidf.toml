@@ -58,10 +58,11 @@ rustflags = [
 # Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and 'api', we
 #       provide them here. You can make local overrides in either.
 #
+# ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
 [env]
 MCU = "esp32c6"
-ESP_IDF_VERSION = "5.5.4"
-#ESP_IDF_VERSION = "6.0.1"
+#ESP_IDF_VERSION = "5.5.4"
+ESP_IDF_VERSION = "6.0.2"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
