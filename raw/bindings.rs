@@ -2,8 +2,6 @@
 * Gathering the bindgen-generated binding like this allows us to attach
 * 'Default' (and/or other traits) to its types.
 */
-use alloc::vec;
-use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 
 // Silence:

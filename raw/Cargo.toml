@@ -19,9 +19,8 @@ remote_component = { name = "espressif/esp-zigbee-lib", version = "2.0.2" }
 [dependencies]
 log.workspace = true
 
-#esp-idf-sys = { workspace = true, default-features = false }
 esp-idf-sys = { workspace = true, default-features = false, features = ["native"] }
-    # "native": recommended by 'google.ai', to make sure linking external components succeeds. tbd. but is it needed here??
+    # "native": recommended by 'google.ai', to make sure linking external components succeeds. tbd. try without, #later
     #
     # Carries ESP-IDF headers, libraries, and pulls in 'esp-zigbee-lib' headers.
     # Needs to be under '[dependencies]' since it carries libraries that end up in the product.
