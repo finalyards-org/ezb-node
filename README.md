@@ -14,65 +14,63 @@ Wifi ([`esp-radio`](https://github.com/esp-rs/esp-hal/tree/main/esp-radio)) and 
 
 This repo aims at *forward looking* development. This means:
 
-- using latest underlying versions of libraries (yes, we know `esp-zigbee-lib` 2.0 is out)
-- strong interest in Zigbee 4.0
-- low interest in legacy
+- using latest underlying versions of libraries (`esp-zigbee-lib`; ESP-IDF 6.x)
+- active focus on Zigbee 3.0; interest in Zigbee 4.0
+- low or no interest in legacy
 
-Likely *only some ZCL profiles* will be supported. <!--tbd. list here-->
+Supported ZCL profiles:
+
+- [ ] Door open/close sensor
+
+<!-- tbd. make into a table, with ZCL specifications listed.
+
+status: working, WIP, wish
+-->
 
 ### Value
 
-With Rust, we can make a whole lot better APIs than with C. Less code. Better IDE support.
+With Rust, we can make a whole lot better APIs than with C. Less code. Better IDE support (narrow interfaces instead of everything being global).
 
 
 ## About ESP-IDF
 
-ESP-IDF is an ecosystem, based on the C language SDK of the same name. We need it because the `esp-zigbee-sdk` (currently best supported Zigbee library for the ESP32's) is made using it. What that means for a Rust project is:
+[ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/v6.0.2/esp32c6/get-started/index.html) is an ecosystem, based on the C language SDK of the same name. We need it because the `esp-zigbee-sdk` (currently best supported Zigbee library for the ESP32's) is made using it. What that means for a Rust project is:
 
 - The **application binary** is **tied to the ESP-IDF ecosystem**. The end application must decide (or at least, configure):
 	- ESP-IDF version to use
 	- other build environment configurations
-
-	>This is unfortunate, but unavoidable. Until the time there is a Rust Zigbee stack (the `esp-zigbee-sdk` uses ZBoss which closed source - the *whole* reason we need to jump rope with ESP-IDF in the first place). 
-
 - FreeRTOS running underneath; the Rust code runs as one of its tasks.
-- For peripherals, use `esp-idf-hal`, not `esp-hal`. The latter cannot be used, since it manages peripherals directly (not having/needing an RTOS).
+- For peripherals, use `esp-idf-hal`, not `esp-hal`. The latter cannot be used, since it manages peripherals directly (not via an RTOS).
 
-This should be doable. *Eventually* it would be neat to have a non-idf Zigbee Rust implementation. That would need a Rust native Zigbee stack to be created, e.g. on top of the `esp-radio` IEEE 802.15.4 low layers.
+This is elaborate but doable! *Eventually* it would be neat to have a non-idf Zigbee Rust implementation. That would need a Rust native Zigbee stack to be created, e.g. on top of the `esp-radio` IEEE 802.15.4 support.
 
 ### esp-idf-sys
 
-Pulls in the whole ESP-IDF SDK, as part of the Rust compilation. It takes time and disk space (some 4-5GB) but is *mostly* a one-time effort. It provides headers and libraries that `esp-zigbee-sdk` relies upon.
+Pulls in the whole ESP-IDF SDK, as part of the Rust compilation. It takes time and disk space (some 4..5GB) but is *mostly* a one-time effort. It provides headers and libraries that `esp-zigbee-sdk` relies upon.
 
 ### Which ESP-IDF to use?
 
-The author aims at maintaining this towards the *latest stable release*, until ESP-IDF would no longer be required.
+The author aims at maintaining this towards the *latest stable release*.
 
-ESP-IDF 6.0 was released during the development, but is not yet (Mar'26) supported by `esp-idf-sys` and `esp-zigbee-sdk`. Once it is, the change to ESP-IDF 6.0 would be taken.
+ESP-IDF 6.0 is released, but is not yet (<strike>Mar'26</strike> Aug'26) supported by `esp-idf-sys` and `esp-zigbee-sdk`. 
+
+- Track: <https://github.com/finalyards-org/ezb-node/issues/10>
+
+Once it is, the change to ESP-IDF 6.0 will be taken.
 
 |||
 |---|---|
-|6.0|released; not supported by `esp-idf-sys`, `esp-zigbee-sdk`, <u>yet</u>.|
-|5.5.3|default of `esp-idf-svc`<sub>[link](https://github.com/esp-rs/esp-idf-svc/blob/master/.cargo/config.toml#L10)</sub>; the version we use|
+|6.0.2|released|
+|6.0|released; not supported by `esp-idf-sys`, `esp-zigbee-sdk`|
+|5.5.5|released|
 |5.3.2|recommended by `esp-zigbee-sdk` (11-Mar-26); but it works with 5.5.3|
 
 ### `esp-idf-sys` is a community effort
 
 Yes. That is a concern, if we bet the whole project on it. But on the other side, let's just drive and see whether the road takes anywhere!!
 
-We won't need `esp-idf-svc`, for example.
 
-<!-- r??
-## Folder structure
-
-|||
-|---|---|
-|`examples`|You may start here - how to use the Rust API.|
-|`x`|The Rust API level|
-|`raw`|Bridging of `esp-zigbee-sdk` C API's to Rust|
--->
-
-## Two layers
+## Layers
 
 <!-- tbd.
 ![](.images/two-story-bus.png)
@@ -82,20 +80,32 @@ Prompt: "...
 
 ### Lower level
 
-`raw` aims to be a 1-to-1 mapping from Rust to the underlying C functions, structs and enums.
+`raw` is a 1-to-1 mapping from Rust to the underlying C functions, structs and enums.
 
 We *do not change abstractions* at this level, but we do introduce filtering: only elements needed by the higher API layer are exposed.
 
+We *can* add Rust traits and methods to C-originating structs. This still does not change the abstraction.
+
 ### API level
 
-`x` (or `_`) is the API layer. Here the emphasis is in *providing a Rust native experience*. Abstractions *are* provided. The aim is to *not leak C functions/structures through* - which would limit our future maneuverability for the project's API.
+`api` is the API layer. Here the emphasis is in *providing a Rust native experience*. Abstractions *are* provided. The aim is to *not leak C functions/structures through* - which would limit our future maneuverability for the project's API.
+
+### App level
+
+`apps` contains our example apps. This should provide a template for your own project to emulate.
+
+- `apps/bin/light`
+- `apps/bin/switch`
+
+
+<!-- tbd. an app for working with outside sensor; add when ready!
+-->
 
 
 ## Requirements
 
-- ESP32-C6 devkit
+- A devkit, e.g. [ESP32-C6-DevKitM-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/user_guide.html)
 - Rust installed
-	<!-- tbd. give instructions here that show the right toolchain etc.-->
 - 10 GB disk space
 
 - C compilers and `bindgen` CLI
@@ -111,15 +121,15 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 
 - ESP-IDF requirements:
 
-	["For Linux Users" (v5.5.3)](https://docs.espressif.com/projects/esp-idf/en/v5.5.3/esp32c6/get-started/linux-macos-setup.html#for-linux-users) (Espressif docs) lists 15 `apt` dependencies. 
+	>[Espressif docs](https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32c6/get-started/linux-macos-setup.html#for-linux-users) lists 15 `apt` dependencies. However, not all of these are really required. 
 	
-	However, not all of these are really required. The author has these installed:
+	The author installed:
 	
 	```
 	$ sudo apt install git python3 python3-venv cmake pkg-config
 	```
 
-- Note that ESP-IDF **may not be globally installed** - it would mess with the `esp-idf-sys`.
+- Note that ESP-IDF **must not be globally installed** - it would mess with the `esp-idf-sys`.
 
 - GNU `make`
 
@@ -135,7 +145,13 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 	$ cargo install --locked ldproxy
 	```
 
-- `espflash` (optional)
+- `just` and `jq` (optional; for easier demo launch)
+
+	```
+	$ sudo apt install just jq
+	```
+
+- `espflash` (optional; for flashing the demos)
 
 	```
 	$ cargo install --locked espflash
@@ -153,12 +169,6 @@ We *do not change abstractions* at this level, but we do introduce filtering: on
 
 	You'll need `espflash` to run the examples on ESP32-C6 devkits.
 
-<!--
-Developed with:
-- bindgen 0.72.1
-- ldproxy 0.3.4
-- espflash 4.4.0 (remotely)
--->
 
 ## Preparation
 
@@ -173,6 +183,7 @@ This is deemed good, because:
 However, since Cargo projects *usually* are confined to do output within their project folders (and `target`, which may have been moved), **it is great to be aware of this**..
 
 
+<!-- no need to recommend
 **Change to `out` (optional)**
 
 You can change the type to `out`. In such a case, the tools are downloaded to within your `target` folder - and cleaned with it.
@@ -184,44 +195,18 @@ ESP_IDF_TOOLS_INSTALL_DIR = "out"
 ```
 
 >Note: The build script (`build.rs`) is not necessarily up to using `out`. You might need to fix that.
-
-
-<!-- hide
-**Out - clears tooling with `cargo clean`**
-
-Places the ESP-IDF tooling in the Cargo output folder. This means `cargo clean` would remove not only build output, but the tooling as well. This can lead to extra delays and downloads, if you do `cargo clean` repeatedly.
-
-**Global - keeps tooling separate**
-
-This uses the `~/.espressif` folder, **outside of what normally gets written to** when doing a Cargo build. That may be surprising.
-
-If you wish to use `global` mode, you also need to:
-
-- install the `ldproxy` CLI (`cargo install ldproxy`)
-- have this section in `.cargo/config.toml`:
-
-	```
-	[target.'cfg(target_os = "espidf")']
-	linker = "ldproxy"
-	```
-
-**Default (neither defined)**
-
-This pulls the ESP-IDF tooling to `.embuild/espressif` **within your project folder**. 
-
-You can do this, but the author uses Multipass VM and pulling in 5GB of tooling to a shared folder slows things down. So he opts for either `out` or `global`, avoiding that problem.
-
-**All options work**
-
-It does not *really* matter, which option you choose. They all work.
 -->
 
 
-## Source code
+## Steps
 
-Study the source code:
+### Study the source code
 
-- `x`
+- `apps/bin/`
+
+	Sample applications. Note how `sdkconfig.defaults` - the file that defines ESP-IDF build configuration - is part of the application.
+
+- `api`
 
 	The API layer, providing a Rust interface to Zigbee.
 
@@ -229,29 +214,90 @@ Study the source code:
 
 	The 1-to-1 C/Rust interface to `esp_zigbee_sdk`, an ESP-IDF C library.
 
-Build some examples that we'll use in the next section (demo).
+- `config`
+
+	A non-embedded Rust library for turning TOML configuration into Rust. Further simplifies the applications, since declarative configuration is now out of the code. See `apps/bin/**/app.toml`.
+
+---
+
+Many of the subprojects have a soft link to `.cargo/config.espidf.toml`. This allows us to do development in different layers, while keeping changes to the said TOML only in one place. We cannot make a single `.cargo/config.toml` because `config` is not an ESP-IDF project.
+
+---
+
+
+### Build some (optional)
+
+You can also skip directly to the "demo" section (next). These are useful for understanding the build layers, and for debugging problems in a build.
+
+Note: Each layer has their own `README` with more specific information.
+
+
+**1. Raw**
 
 ```
-$ cargo apps:light:build
+$ cd raw
+$ cargo build --release --features esp32c6
 [...]
 ```
 
+**2. Api**
+
 ```
-$ cargo apps:switch:build
+$ cd ../api
+$ cargo build --release --features coordinator,ep_color_dimmer_switch
 [...]
 ```
 
->Note: To see the longer commands, check out `.cargo/config.toml`.
+**3. Apps**
+
+```
+$ cd ../apps
+```
+
+```
+$ just light-build
+[...]
+```
 
 If the builds succeeded, you are ready to run the created binaries on ESP32-C6 devkits.
 
-## Demos
+## Demo #1 - light and switch
 
-See [`docs/DEMO.md`](docs/DEMO.md) for instructions on how to run the demos:
+![](.images/demo1.png)
 
-- 1. Light bulb / switch demo with two ESP32-C6's
-	- 1a. with a commercial light bulb
-	- 1b. with a commercial switch
+The value of this demo is that it's 1-to-1 the same as the C side `examples/home_automation_devices` > `color_dimmable_light` and `color_dimmer_switch` pair. This allows us to compare the implementations, and if something is broken, debug also the C code.
+
+
+>See [`docs/DEMO1.md`](docs/DEMO1.md) for detailed instructions on how to run it.
+
+```
+$ cd apps
+$ just lr
+[...]
+```
+
+```
+$ cd apps
+$ just ls
+[...]
+```
+
+The Coordinator ESP32-C6 has opened a Zigbee network and the switch should find it, when booting. *Note that this creation and joining the network is resilient; turn off the power from either, and they should re-join once up, again.*
+
+>*tbd. SLED should indicate the status of the boards; document here once done!*
+
+- Push the BOOT button on the switch DevKit
+- The color of the light DevKit should change
+
+
+## Demo 2 - commercial door switch
+
+![](.images/demo2.png)
+
+In this demo, we use a commercial [Schneider Electric Wiser Window/Door sensor](https://www.se.com/sg/en/product/CCT591011_AS/window-door-sensor-wiser-white/) (ca. 33 eur; Verkkokauppa).
+
+
+*tbd.* <font size=+5 color=orange>TBD</font>
 
 
 <!-- #later; perhaps do it in `docs/`?
@@ -260,15 +306,13 @@ See [`docs/DEMO.md`](docs/DEMO.md) for instructions on how to run the demos:
 *tbd.*
 -->
 
-<!--
 ## Cleanup
 
-Additional to normal cleanup (`cargo clean`) - if you kept the `"global"` build setting (see above):
+Additional to normal cleanup (`cargo clean`) - you can safely remove the `~/.espressif` folder (6..9 GB, created by `esp-idf-sys`) if no longer needing it.
 
 ```
 $ rm -rf ~/.espressif
 ```
--->
 
 ## References
 

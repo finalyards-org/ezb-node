@@ -11,7 +11,7 @@ pub enum ClusterId {
     PowerConfig = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_POWER_CONFIG as _,
     //...
     Diagnostics = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_DIAGNOSTICS as _,
-    #[cfg(feature = "touchlink")]
+    #[cfg(false)]   // feature = "touchlink"
     TouchlinkCommissioning = ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_TOUCHLINK_COMMISSIONING,
 }
 

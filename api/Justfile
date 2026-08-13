@@ -1,13 +1,5 @@
 #!/usr/bin/env just --justfile
 
-#
-# Development helper targets. Optional.
-#
-# Usage:
-#   <<
-#     $ just {--list|{..target..}}
-#   <<
-#
 default:
     @just --list
 
@@ -15,8 +7,15 @@ default:
 # This is only for commentary purposes.
 nightly := ""
 
-b: build
+alias b:= build
+
 build:
 	cargo {{nightly}} build --release -vv \
 		--jobs 1 \
 		--features coordinator,router,_ep_all
+
+# It is possible to also make a coordinator without any endpoint profiles.
+build-bare:
+	cargo {{nightly}} build --release -vv \
+		--jobs 1 \
+		--features coordinator

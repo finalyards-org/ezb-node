@@ -1,6 +1,6 @@
-# Demo
+# Demo 1
 
-To run these, you'll need:
+You'll need:
 
 - two ESP32-C6 devkits
 
@@ -10,7 +10,7 @@ To run these, you'll need:
 
 <!--
 Author has:
-- espflash v4.3.0
+- espflash v4.4.0
 -->
 
 
@@ -55,7 +55,7 @@ $ espflash erase-flash --port /dev/ttyUSB1
 It is important also the non-volatile memory of the boards gets reset. Zigbee programs keep their network binding information stored over restarts.
 
 
-### Demo 1 - light and switch
+## Steps
 
 >In the below commands, we assign `/dev/ttyUSB0` to the light and `/dev/ttyUSB1` to the switch. Use names that you discovered, above.
 
@@ -123,11 +123,20 @@ The color and intensity of the LED should change.
 >This is the exact same demo as ESP-ZIGBEE-SDK has, but their's written in ESP-IDF and C. This is completely coded in Rust.
 
 
+<!-- 
+tbd. To be continued with:
+
+- using a commercial switch
+- using a commercial LED bulb
+
+---
+
 ### Demo 1a - commercial light (optional)
 
 Zigbee is a vendor neutral standard. Thus, you should be able to exchange the light - and switch - parts of the above demo with off-the-shelf, commercial products.
 
 <font color=orange size="+3"> WIP...</font> Come back, later.
+-->
 
 <!-- #later
 

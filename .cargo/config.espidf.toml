@@ -16,7 +16,7 @@
 target = "riscv32imac-esp-espidf"
 
 # Instructions on what kind of library to build for the target.
-#   - 'ldproxy' requires "std" even if our application were to use 'esp-idf-sys' only (which we.. don't ;).
+#   - 'ldproxy' requires "std" even if our application were to use 'esp-idf-sys' only (in 'no_std')
 #   - use of Embassy + FreeRTOS is dependent on 'embassy_time_driver', which... needs 'esp-idf-svc', and thus we are
 #     firmly in the "std" land.
 #   - panic type does not really matter: we catch it with a hook anyways to avoid a reset-loop
@@ -60,13 +60,13 @@ rustflags = [
 #
 [env]
 MCU = "esp32c6"
-ESP_IDF_VERSION = "5.5.4"
-#ESP_IDF_VERSION = "6.0.1"
+ESP_IDF_VERSION = "5.5.4"   # last compatible
+#ESP_IDF_VERSION = "5.5.5"
+#ESP_IDF_VERSION = "6.0.3"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
-    # "global":     '~/.espressif'
-    #               Also needs 'ldproxy' to be installed and configured (see above)
+    # "global":     '~/.espressif'; needs 'ldproxy'
 
 #---
 # ESP-IDF steering

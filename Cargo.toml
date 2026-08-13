@@ -10,15 +10,15 @@ resolver = "3"
     # virtual workspace TOML (that's us) needs this explicitly for parsing guidance (same as release 2024 in the members)
 
 [workspace.dependencies]
-embassy-time = { version = "0.5", features = ["log"] }
+embassy-time = { version = "0.5.1", features = ["log"] }
 
-embuild = { version = "0.33.1", features = ["espidf"] }
+embuild = { version = "0.33.3", features = ["espidf"] }
 
 # Take all 'esp-idf-{hal|sys|svc}' and 'embuild' from the workspace level: they are inter-related.
 #
-esp-idf-hal = { version = "0.46" }  # only used by 'apps'
-esp-idf-svc = { version = "0.52", default-features = false }
-esp-idf-sys = { version = "0.37", default-features = false }
+esp-idf-hal = { version = "0.46" }
+esp-idf-svc = { version = "0.52", default-features = false, features = ["native"] }
+esp-idf-sys = { version = "0.37", default-features = false, features = ["native"] }
 
 log = { version = "0.4" }
 
@@ -45,4 +45,7 @@ opt-level = "s"
 #|# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
 #|esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
 #|# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
-#|esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
+#|#esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
+
+# local override with some attempts
+#esp-idf-sys = { path = "/home/lima/esp-idf-sys.fork" }

@@ -71,7 +71,7 @@ pub struct CommonFields {
     pub model_identifier: Option<&'static str>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum Specific {
     #[cfg(feature = "color_dimmable_light")]
     ColorDimmableLight,

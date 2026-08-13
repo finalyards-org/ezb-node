@@ -4,15 +4,15 @@
 # Development helper targets. Optional.
 #
 # Requires:
-#	- jq	(sudo apt install jq)
-#
-# Usage:
-#   <<
-#     $ just {--list|{..target..}}
-#   <<
+#	- jq
 #
 default:
     @just --list
+
+alias lb := light-build
+alias lr := light-run
+alias sb := switch-build
+alias sr := switch-run
 
 # For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
 # This is only for commentary purposes.
@@ -21,7 +21,6 @@ nightly := ""
 target_dir := `cargo metadata --format-version 1 --no-deps | jq -r '.target_directory'`
 
 [group('light')]
-lb: light-build
 light-build:
 	cargo {{nightly}} build --release -vv --bin light --features esp32c6,ezb-node/ep_color_dimmable_light \
 		--jobs 1
@@ -31,18 +30,15 @@ lbx:
 	cargo {{nightly}} build --release -vv --bin light --features esp32c6,ezb-node/ep_color_dimmable_light
 
 [group('light')]
-lr: light-run
 light-run:
 	cargo {{nightly}} run --release -vv --bin light --features esp32c6,ezb-node/ep_color_dimmable_light
 
 [group('switch')]
-sb: switch-build
 switch-build:
 	cargo {{nightly}} build --release -vv --bin switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light \
 		--jobs 1
 
 [group('switch')]
-sr: switch-run
 switch-run:
 	cargo {{nightly}} run --release -vv --bin switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light
 
@@ -51,7 +47,7 @@ echo-sdkconfig-path:
 	@\
 	out=$(find {{target_dir}} -name sdkconfig -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
 	if [ -z "$out" ]; then \
-		echo >&2 "Error: No 'sdkconfig' found in {{target_dir}}"; \
+		printf >&2 "Error: No 'sdkconfig' found in {{target_dir}}\n"; \
 		false; \
 	fi; \
 	echo "$out"

@@ -1,4 +1,4 @@
-# `esp-zb-raw`
+# `esp-node-raw`
 
 C/Rust interfacing level of [`esp-zigbee-lib`](https://github.com/espressif/esp-zigbee-sdk) APIs.
 
@@ -26,8 +26,6 @@ Pros/cons of the current approach:
 ||Allows fine grained control of the `bindgen` stage.|
 |**Con**|
 ||Requires CLI tools (`bindgen`, `make`) to be installed for *any* build (also those deriving from us, `api` and `apps`).|
-
->We might consider the integrated `bindgen` approach, `#later`.
 
 
 ## Requirements
@@ -173,7 +171,10 @@ The `sdkconfig.defaults` file provides *defaults* to certain ESP-IDF *components
         [...]
 ```
 
+<!--
 5.5.4 is currently (Apr'26) the latest ESP-IDF compatible with `esp-zigbee-sdk`. We'll move on to whichever is the latest supported one.
+-->
+5.5.5 is currently (Aug'26) the latest ESP-IDF compatible with `esp-zigbee-sdk`.
 
 >Each ESP-IDF version installs their own tools, in our case to `~/.espressif`.
 

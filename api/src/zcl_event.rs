@@ -32,7 +32,7 @@ use crate::types::{
     ZclError,
 };
 
-#[cfg(feature = "touchlink")]
+#[cfg(false)]   // feature = "touchlink"
 use ezb_node_raw::{
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
     esp_zb_bdb_signal_touchlink_nwk_joined_router_t,

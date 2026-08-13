@@ -5,9 +5,7 @@
 #
 # WARN! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
 #     the build! Keep an eye on the build output!!
-#
-#       ^-- this is understandable in the way that the config(s) are intended to be worked on using 'menuconfig',
-#           not by manual edits.
+#       ^-- understandable in the way that the config(s) are intended to be worked on using 'menuconfig', not manual edits.
 
 # Rust needs more main task stack size compared to C
 #   - C 'esp_zigbee_sdk' examples use 4096

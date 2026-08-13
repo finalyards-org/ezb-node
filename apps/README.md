@@ -3,7 +3,7 @@
 Some runnable programs to showcase the `esp-zb`.
 
 - Uses Embassy
-- Uses `esp-idf-svc` and `esp-idf-hal` (to be..)
+- Uses `esp-idf-svc` and `esp-idf-hal`
 
 
 ## Steps
@@ -11,7 +11,8 @@ Some runnable programs to showcase the `esp-zb`.
 ### Build
 
 ```
-$ cargo build --release -vv --example light
+$ cargo build --release -vv --bin light \
+  --features esp32c6,ezb-node/ep_color_dimmable_light
 ```
 
 >You can also just the `just lb` helper, if you have `Justfiles` support.
@@ -26,7 +27,8 @@ And the "Light bulb" application.
 ### Run
 
 ```
-$ cargo run --release -vv --example light
+$ cargo run --release -vv --bin light \
+  --features esp32c6,ezb-node/ep_color_dimmable_light
 [...]
 ```
 
@@ -52,10 +54,16 @@ Once you press the `BOOT` button on the "Switch" device, the light of the "Light
 
 Have two ESP32-C6 ready and connected to your computer.
 
+```
+$ espflash board-info
+[...]
+# it should ask you which one to use, and show its info.
+```
+
 ### Flash the Light Bulb
 
 ```
-$ cargo run --release -vv --example light
+$ just lr
 [...]
 ```
 
@@ -66,7 +74,7 @@ Since there are two devices, `espflash` will ask you which one to flash. It does
 ### Flash the Switch
 
 ```
-$ cargo run --release -vv --example switch
+$ just sr
 [...]
 ```
 

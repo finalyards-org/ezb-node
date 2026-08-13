@@ -55,15 +55,12 @@ Your project carries a `sdkconfig.defaults` file. This, alongside built-in defau
 
 *Table 1. Stages of producing an `sdkconfig`.* 
 
-As you can see, it's a bit wobbly. What you mean by including `=n` in `sdkconfig.defaults` is not really "no", merely a "optioN", a *wish*:
+As you can see, it's a bit wobbly. What you mean by including `=n` in `sdkconfig.defaults` is not really "no", merely an "optioN", a *wish*:
 
 >If it's fine for all (components), I, the author of the project, would *prefer* this setting to be off.
 
-What happens on conflict?  The build does not stop. There's not even a warning. Your (option-like) `=n` gets turned into a `=y` in the final output. You have been warned (..or not).
+What happens on conflict?  The build does not stop. There's not even a warning. Your (option-like) `=n` gets turned into a `=y` in the final output. You have been warned.
 
-<!-- R (not quite true/badly said)
->Note: This mess is due to ESP-IDF using the `=n` as a convention. On the contrary, KConfig itself (in other context) prefers only mentioning the enables, and leaving "nones" out, as comments. This is how the output `sdkconfig` looks like.
--->
 
 ## Enter `menuconfig`
 
@@ -134,9 +131,9 @@ It should be fairly easy from here...
 
 ## Advanced
 
-### 🤔Hint: speed up `menuconfig` on Multipass VM's
+### 🤔Hint: speed up `menuconfig` on VM's
 
-If you are using Multipass VM, you can speed up the commands by **more than 10x** by:
+If you are using a VM, you can speed up the commands by **more than 10x** (Multipass; not measured on Lima VM) by:
 
 ```
 $ install -d /tmp/mc-build
