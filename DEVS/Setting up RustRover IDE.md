@@ -15,3 +15,8 @@ If you don't see `Properties`, make sure a plugin of the same name is installed.
 >Alternatively, you may choose to use `INI` file type.
 
 
+## Target
+
+In the lower right corner, change target to:
+
+```

@@ -60,9 +60,9 @@ rustflags = [
 #
 [env]
 MCU = "esp32c6"
-ESP_IDF_VERSION = "5.5.4"   # last compatible
-#ESP_IDF_VERSION = "5.5.5"
-#ESP_IDF_VERSION = "6.0.3"
+ESP_IDF_VERSION = "5.5.5"   # compatible with 'git' URLs + one patch /13-Aug-26
+#ESP_IDF_VERSION = "5.5.4"   # fully compatible
+#ESP_IDF_VERSION = "6.0.3"      # #later
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'

@@ -37,15 +37,16 @@ log = { version = "0.4" }
 opt-level = "s"
 
 # Needed for using with ESP-IDF 6.x (breaks stuff with 5.5.4):
-#|[patch.crates-io]
-#|# https://github.com/esp-rs/embuild/issues/105
-#|embuild = { git = "https://github.com/esp-rs/embuild" }
-#|# > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
-#|esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
-#|# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
-#|esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
-#|# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
-#|#esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
+[patch.crates-io]
+# https://github.com/esp-rs/embuild/issues/105
+embuild = { git = "https://github.com/esp-rs/embuild" }
+# > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
+esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
+# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
+esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
+# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
+#esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
 
-# local override with some attempts
-#esp-idf-sys = { path = "/home/lima/esp-idf-sys.fork" }
+# local patched overrides
+#esp-idf-sys = { path = "./esp-idf-sys.fork" }
+esp-idf-sys = { git = "https://github.com/finalyards/esp-idf-sys.fork.git" }
