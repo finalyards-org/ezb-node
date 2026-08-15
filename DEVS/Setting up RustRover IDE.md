@@ -15,8 +15,9 @@ If you don't see `Properties`, make sure a plugin of the same name is installed.
 >Alternatively, you may choose to use `INI` file type.
 
 
-## Target
+## Plugins
 
-In the lower right corner, change target to:
+- Makefile
+- Justfile (3rd party)
 
-```
+
