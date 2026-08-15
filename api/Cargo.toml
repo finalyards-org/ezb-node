@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-ezb-node-raw = { path = "../raw" }
-ezb-node-config = { path = "../config" }
+ezb-node-raw = { workspace = true }
+ezb-node-config = { workspace = true }
 
 log.workspace = true
 

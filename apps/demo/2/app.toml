@@ -1,0 +1,24 @@
+#
+# Setup for the Zigbee node.
+#
+[network]
+# Channels 11, 15, 20 or 25 are best for commercial devices.
+primary_channels = [11, 15, 20, 25]
+secondary_channels = "all"
+
+[platform]
+storage_partition_name = "zb_storage"
+
+[node]
+type = "coordinator"
+install_code_policy = false
+max_children = 5
+
+[endpoint.defaults]
+manufacturer_name = "Espressif"
+model_identifier = "ESP32-C6 gateway"
+
+[endpoint.1]
+# IAS = "Intrusion Alarm System"
+# CIE = "Control and Indicating Equipment"
+device_type = "ias_cie"

@@ -1,8 +1,8 @@
-# Zigbee on ESP32 with Rust
+# Zigbee on ESP32-C6 with Rust
 
 ## Motivation
 
-This repo aims to provide the possibility to create, in Rust, for ESP32 MCUs:
+This repo aims to provide the possibility to create, in Rust, for ESP32(-C6) MCU:
 
 - Zigbee controller
 - Zigbee router
@@ -94,8 +94,8 @@ We *can* add Rust traits and methods to C-originating structs. This still does n
 
 `apps` contains our example apps. This should provide a template for your own project to emulate.
 
-- `apps/bin/light`
-- `apps/bin/switch`
+- `apps/demo/light`
+- `apps/demo/switch`
 
 
 <!-- tbd. an app for working with outside sensor; add when ready!
@@ -202,7 +202,7 @@ ESP_IDF_TOOLS_INSTALL_DIR = "out"
 
 ### Study the source code
 
-- `apps/bin/`
+- `apps/demo/`
 
 	Sample applications. Note how `sdkconfig.defaults` - the file that defines ESP-IDF build configuration - is part of the application.
 
@@ -216,7 +216,7 @@ ESP_IDF_TOOLS_INSTALL_DIR = "out"
 
 - `config`
 
-	A non-embedded Rust library for turning TOML configuration into Rust. Further simplifies the applications, since declarative configuration is now out of the code. See `apps/bin/**/app.toml`.
+	A non-embedded Rust library for turning TOML configuration into Rust. Further simplifies the applications, since declarative configuration is now out of the code. See `apps/demo/**/app.toml`.
 
 ---
 
@@ -261,43 +261,11 @@ $ just light-build
 
 If the builds succeeded, you are ready to run the created binaries on ESP32-C6 devkits.
 
-## Demo #1 - light and switch
+## Run demos
 
-![](.images/demo1.png)
+Have a look at the `apps` folder and run some demos.
 
-The value of this demo is that it's 1-to-1 the same as the C side `examples/home_automation_devices` > `color_dimmable_light` and `color_dimmer_switch` pair. This allows us to compare the implementations, and if something is broken, debug also the C code.
-
-
->See [`docs/DEMO1.md`](docs/DEMO1.md) for detailed instructions on how to run it.
-
-```
-$ cd apps
-$ just lr
-[...]
-```
-
-```
-$ cd apps
-$ just ls
-[...]
-```
-
-The Coordinator ESP32-C6 has opened a Zigbee network and the switch should find it, when booting. *Note that this creation and joining the network is resilient; turn off the power from either, and they should re-join once up, again.*
-
->*tbd. SLED should indicate the status of the boards; document here once done!*
-
-- Push the BOOT button on the switch DevKit
-- The color of the light DevKit should change
-
-
-## Demo 2 - commercial door switch
-
-![](.images/demo2.png)
-
-In this demo, we use a commercial [Schneider Electric Wiser Window/Door sensor](https://www.se.com/sg/en/product/CCT591011_AS/window-door-sensor-wiser-white/) (ca. 33 eur; Verkkokauppa).
-
-
-*tbd.* <font size=+5 color=orange>TBD</font>
+Instructions are within [`apps/README.md`](./apps/README.md).
 
 
 <!-- #later; perhaps do it in `docs/`?
@@ -306,7 +274,9 @@ In this demo, we use a commercial [Schneider Electric Wiser Window/Door sensor](
 *tbd.*
 -->
 
-## Cleanup
+## Other
+
+### Cleanup
 
 Additional to normal cleanup (`cargo clean`) - you can safely remove the `~/.espressif` folder (6..9 GB, created by `esp-idf-sys`) if no longer needing it.
 
@@ -316,12 +286,17 @@ $ rm -rf ~/.espressif
 
 ## References
 
-- [ESP Zigbee SDK Programming Guide](https://docs.espressif.com/projects/esp-zigbee-sdk) (Espressif docs)
+- [Espressif Zigbee SDK 2.x](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html) (Espressif docs; ESP32-C6)
+
+	- "Zigbee Pro R23"
+	- "Zigbee Cluster Library (ZCL) v8"
 
 	- [API Reference](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32/api-reference/index.html) (Espressif docs)
 
+<!--
 - [Espressif IoT Development Framework](https://github.com/espressif/esp-idf) (GitHub)
 
 	The C API that `esp-zigbee-sdk` builds upon.
+-->
 
 - [Partition Tables](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32c6/api-guides/partition-tables.html) (ESP-IDF API Guides)

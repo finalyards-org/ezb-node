@@ -56,11 +56,16 @@ _router = ["ezb-node-config/router", "ezb-node/router"]
 workspace = true
 
 [[bin]]
-name = "light"
-path = "bin/light/main.rs"
+name = "1-light"
+path = "demo/1/light/main.rs"
 required-features = ["esp32c6", "ezb-node/ep_color_dimmable_light"]
 
 [[bin]]
-name = "switch"
-path = "bin/switch/main.rs"
+name = "1-switch"
+path = "demo/1/switch/main.rs"
 required-features = ["esp32c6", "ezb-node/ep_color_dimmer_switch", "ezb-node/match_color_dimmable_light"]
+
+[[bin]]
+name = "2-door"
+path = "demo/2/main.rs"
+required-features = ["esp32c6", "ezb-node/ep_abc", "ezb-node/match_def"]

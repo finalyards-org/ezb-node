@@ -18,8 +18,9 @@ fn main() {
     //  - Rust Rover:
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
     {
-        if env::var("__CFBundleIdentifier").is_ok() {
-            panic!();   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
+        if env::var("__CFBundleIdentifier").is_ok() ||
+            env::var("REMOTE_DEV_SERVER_IS_NATIVE_LAUNCHER").is_ok() {
+            panic!("IDE build cut short");   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
             //return;  // skip the rest
         }
     }
@@ -30,16 +31,6 @@ fn main() {
         eprintln!("🛑Must have at least one feature: {}", arr);
         std::process::exit(1);
     }
-
-    // It's possible to make a coordinator or router without any endpoints. We should not enforce this.
-    /*r
-    #[cfg(not(any(feature = "ep_color_dimmable_light", feature = "ep_color_dimmer_switch")))]
-    {
-        let arr = ["ep_color_dimmable_light", "ep_color_dimmer_switch"].join(", ");
-
-        eprintln!("🛑Please enable at least one endpoint type: {}", arr);
-        std::process::exit(1);
-    }*/
 
     // Needed for 'ldproxy' linking (of examples) to succeed.
     embuild::espidf::sysenv::output();
