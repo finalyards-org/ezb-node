@@ -19,8 +19,9 @@ fn main() -> Result<()> {
     //  - Rust Rover:
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
     {
-        if env::var("__CFBundleIdentifier").is_ok() {
-            panic!();   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
+        if env::var("__CFBundleIdentifier").is_ok() ||
+            env::var("REMOTE_DEV_SERVER_IS_NATIVE_LAUNCHER").is_ok() {
+            panic!("IDE build cut short");   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
             //return;  // skip the rest
         }
     }
@@ -34,78 +35,53 @@ fn main() -> Result<()> {
     // Needed for linking of executables to succeed.
     embuild::espidf::sysenv::output();
 
-    // Write some env.vars to the file system. This allows the developer to see where the last build
-    // wrote stuff (in particular the TOML-parsed '.in' snippets).
-    #[cfg(false)]
-    {
-        use std::fs;
-        const FN: &str = ".BUILD_ENV";
-
-        let mut bad = Vec::new();
-        let arr = [
-            "OUT_DIR",
-        ].map(|x| {
-            let val = env::var(x).unwrap_or_else(|_| {
-                bad.push(x); String::default()
-            });
-            format!("{x}={val}")
-        });
-
-        if !bad.is_empty() {
-            let suffix = if bad.len() > 1 { "s" } else { "" };
-            panic!("❗Missing env.var{suffix}: {}", bad.join(", "))
-        }
-
-        let text = format!("\
-#
-# Created by 'cargo build'.
-#
-{}", arr.join("\n"));
-
-        fs::write(FN, text)
-            .unwrap_or_else(|e| panic!("❗Unable to write {FN}: {e}"));
-    }
-
-    // Turn 'bin/{*}/app.toml' -> '{out_dir}/{*}_conf.rs'
+    // Turn 'demo/{**}/app.toml' -> '{out_dir}/{bin-name}_conf.rs'
     //
-    // For _all_ bin targets detected ('light', 'switch'), convert TOML to a program snippet that
-    // provides the configuration. Also mark such TOMLs as triggers for re-running 'build.rs'.
+    // Note: It's unnecessary to do this fully dynamically. If you add a new demo, just add it here.
     //
     // Note: This needs to be done for all such targets, each time, because of the 'build.rs' execution
-    //      model. It's not related to individual builds, but for providing dynamically built pre-compilation
-    //      dependencies for any builds.
+    //      model. The model is NOT RELATED TO INDIVIDUAL BUILDS, but for providing dynamically built
+    //      pre-compilation dependencies for any builds.
     //
     // Note2:
-    //      If you create a new 'bin' target, you MUST inform the Cargo system about it manually.
-    //      Either a 'cargo clean' (harsh!) or just 'touch build.rs'.
+    //      If you create a new 'bin' target, you MUST add it here. That edit of 'build.rs' then
+    //      also triggers a new run.
     //
     // Note3:
     //      "If two binary targets (light and switch) exist within the same Cargo crate, they share the OUT_DIR."
     {
+        let demos = [   // (path, bin-name)
+            ("1/light", "1-light"),
+            ("1/switch", "1-switch"),
+            ("2.door", "2-door")
+        ];
+
         let out_dir = env::var("OUT_DIR").unwrap();
 
-        let dir_entries = fs::read_dir("bin")?
-            .flatten()
-            .filter(|e| e.file_type().map(|ft| ft.is_dir()).unwrap_or(false));
+        for (sub_path, bin_name) in demos {
+            let toml_path = std::path::Path::new("demo")
+                .join(sub_path)
+                .join("app.toml");
 
-        for entry in dir_entries {
-            let toml_path = entry.path().join("app.toml");
-            if toml_path.exists() {
-                println!("cargo::rerun-if-changed={}", toml_path.to_string_lossy());
+            if !toml_path.exists() {
+                // If you get this, check the 'demos' above.
+                println!("cargo::warning=🛑Internal error, '{}' not found!", toml_path.display());
+                std::process::exit(1);
+            } else {
+                let toml_path_s = toml_path.to_string_lossy();
+                println!("cargo::rerun-if-changed={}", toml_path_s);
 
                 let content = fs::read_to_string(&toml_path)
-                    .with_context(|| format!("Not found: {}", toml_path.to_string_lossy()))?;
+                    .with_context(|| format!("Not found: {}", toml_path_s))?;
 
                 let snippet = convert_toml(&content)
                     .context("TOML parsing")?;
 
-                let bin_name = entry.file_name();   // e.g. "light"|"switch"
-
-                let fn_ = format!("{out_dir}/{}_conf.in", bin_name.to_string_lossy());
+                let fn_ = format!("{}/{}_conf.in", out_dir, bin_name);
                 fs::write(&fn_, snippet).with_context(
                     || format!("Unable to write {fn_}"),
                 )?;
-                println!("cargo::warning={}", format!("Created snippet: {fn_}"));
+                println!("cargo::warning=Created snippet: {fn_}");
             }
         }
     }
@@ -135,8 +111,6 @@ fn main() -> Result<()> {
     //      Only environment changes that *affect the 'build.rs' output* need be mentioned.
     //
     println!("cargo::rerun-if-changed=build.rs");
-
-    //r println!("cargo::rustc-check-cfg=cfg(esp_idf_version, values(\"5\"))");
 
     Ok(())
 }

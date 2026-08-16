@@ -2,8 +2,6 @@
 * Gathering the bindgen-generated binding like this allows us to attach
 * 'Default' (and/or other traits) to its types.
 */
-use alloc::vec;
-use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 
 // Silence:
@@ -327,7 +325,7 @@ enum ezb_af_profile_id_e {
 
     #[cfg(false)]   // SmartEnergy; not in focus
     EZB_AF_SE_PROFILE_ID  = 0x0109U, /*!< SE profile ID */
-    #[cfg(feature = "touchlink")]
+    #[cfg(false)]   // feature = "touchlink"
     EZB_AF_TL_PROFILE_ID  = a::ezb_af_profile_id_e::EZB_AF_TL_PROFILE_ID.0, /*!< Touchlink profile ID */
     #[cfg(false)]
     EZB_AF_GP_PROFILE_ID  = 0xA1E0U, /*!< GreenPower profile ID */

@@ -24,7 +24,7 @@ Tämä tekee sovellusten kirjoittamisesta ja lukemisesta lineaarista.
 
 Toteutuksessa Zigbee-rauta esitetään `&'static Node`:na, ja siihen lisättyinä, profiilikohtaisina trait:eina. Tämä `static`:n käyttö on ennen kaikkea tyylikysymys, sillä C-rajapinta käsittelee kaiken globaaleina funktioina. `Node` tuo koodiin kaivattua "ryhtiä" ja tekee rajapinnat luettavammiksi. Pidetään siitä kiinni.
 
-Sovelluksen ohjatessa etäpään laitetta, se tehdään profiilikohtaisilla `Access...`-traiteilla. Tästä on esimerkki ainakin `apps/bin/switch`-kansiossa.
+Sovelluksen ohjatessa etäpään laitetta, se tehdään profiilikohtaisilla `Access...`-traiteilla. Tästä on esimerkki ainakin `apps/demo/switch`-kansiossa.
 
 
 **Tavoite** 

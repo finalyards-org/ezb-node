@@ -1,11 +1,18 @@
 # needed for building 'riscv32imac-esp-espidf' core
 [toolchain]
-# Note: For some time (15-May-26), to keep the pinned version.
-#       Later versions (as of now) introduced a 'SIGKILL' conflict between Rust 'std' and ESP32 'newlib'.
-#           -> https://github.com/esp-rs/esp-idf-sys/issues/419#issuecomment-4497684271
-#
-#channel = "nightly-2026-05-01"
-channel = "nightly"
+
+# Building 'raw' on 'nightly' is broken (Apple silicon), 12-Aug-26:
+#   <<
+#     error[E0425]: cannot find value `AT_FDCWD` in crate `libc`
+#     --> /home/lima/.rustup/toolchains/nightly-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/fs/unix.rs:1896:38
+#     |
+#     1896 |                 libc::fchmodat(libc::AT_FDCWD, p.as_ptr(), perm.mode, 0)
+#     |                                      ^^^^^^^^ not found in `libc`
+#   <<
+channel = "nightly-2026-07-01"
+#channel = "nightly-2026-08-01" # fails
+#channel = "nightly"
+
 components = ["rust-src", "clippy"]
     # "rust-fmt"    # disabled, perhaps it was at times messing with 'use' formatting
 

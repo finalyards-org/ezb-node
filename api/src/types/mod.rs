@@ -52,12 +52,12 @@ pub use zdp_error::ZdpError;
 #[repr(u32)]    // as in 'ezb_bdb_comm_capability_e' (though actual value range is less)
 pub enum BdbMode {
     Initialization = ezb_bdb_comm_mode_e::EZB_BDB_MODE_INITIALIZATION.0, // 1
-    #[cfg(feature = "touchlink")]
+    #[cfg(false)]   // feature = "touchlink"
     TouchlinkInitiator = ezb_bdb_comm_mode_e::EZB_BDB_MODE_TOUCHLINK_INITIATOR.0,   // 2
     NetworkSteering   = ezb_bdb_comm_mode_e::EZB_BDB_MODE_NETWORK_STEERING.0,       // 4
     NetworkFormation  = ezb_bdb_comm_mode_e::EZB_BDB_MODE_NETWORK_FORMATION.0,      // 8
     FindingAndBinding = ezb_bdb_comm_mode_e::EZB_BDB_MODE_FINDING_N_BINDING.0,      // 16
-    #[cfg(feature = "touchlink")]
+    #[cfg(false)]   // feature = "touchlink"
     TouchlinkTarget   = ezb_bdb_comm_mode_e::EZB_BDB_MODE_TOUCHLINK_TARGET.0,       // 32
 }
 
@@ -72,13 +72,13 @@ bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct CommissioningModesMask: u8 {
         const INITIALIZATION = ezb_bdb_comm_mode_t::EZB_BDB_MODE_INITIALIZATION.0 as u8; // 1
-        #[cfg(feature = "touchlink")]
+        #[cfg(false)]   // feature = "touchlink"
         const TOUCHLINK_INITIATOR = ezb_bdb_comm_mode_t::EZB_BDB_MODE_TOUCHLINK_INITIATOR.0 as u8; // 2
         const NETWORK_STEERING = ezb_bdb_comm_mode_t::EZB_BDB_MODE_NETWORK_STEERING.0 as u8; // 4
         #[cfg(feature = "coordinator")]
         const NETWORK_FORMATION = ezb_bdb_comm_mode_t::EZB_BDB_MODE_NETWORK_FORMATION.0 as u8; // 8
         const FINDING_N_BINDING = ezb_bdb_comm_mode_t::EZB_BDB_MODE_FINDING_N_BINDING.0 as u8; // 16
-        #[cfg(feature = "touchlink")]
+        #[cfg(false)]   // feature = "touchlink"
         const TOUCHLINK_TARGET = ezb_bdb_comm_mode_t::EZB_BDB_MODE_TOUCHLINK_TARGET.0 as u8; // 32
 
         // Declare all bits as "known". Recommended for 'bitflags', when working with C library APIs.

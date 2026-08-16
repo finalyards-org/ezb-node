@@ -1,46 +1,11 @@
-# Examples
-
-Some runnable programs to showcase the `esp-zb`.
-
-- Uses Embassy
-- Uses `esp-idf-svc` and `esp-idf-hal`
-
-
-## Steps
-
-### Build
-
-```
-$ cargo build --release -vv --bin light \
-  --features esp32c6,ezb-node/ep_color_dimmable_light
-```
-
->You can also just the `just lb` helper, if you have `Justfiles` support.
-
-This builds also the dependencies:
-
-- `raw` binding to (C language) `esp-zigbee-lib` 2.0
-- `api` = Rust API to the above
-
-And the "Light bulb" application.
-
-### Run
-
-```
-$ cargo run --release -vv --bin light \
-  --features esp32c6,ezb-node/ep_color_dimmable_light
-[...]
-```
-
->or: `just lr`
-
-
-## Demo - Light Bulb
+# Demo 1 - Light Bulb
 
 In this demo, we flash two ESP32-C6 boards:
 
 - Light bulb
 - Switch
+
+>The value of this demo is that it's 1-to-1 the same as the C side `examples/home_automation_devices` > `color_dimmable_light` and `color_dimmer_switch` pair. This allows us to compare the implementations, and if something is broken, debug also the C code.
 
 Once you press the `BOOT` button on the "Switch" device, the light of the "Light bulb" device should change hue and brightness.
 
@@ -87,4 +52,3 @@ Press `BOOT` on the Switch device. Did the light on the "Light bulb" react?
 This proves Zigbee connection works. 
 
 >Hint. Once flashed, the boards do not need to be connected to a computer. You can charge them from any charger.
-

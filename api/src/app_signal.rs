@@ -27,7 +27,7 @@ use ezb_node_raw::{
     ezb_bdb_comm_status_e,
 };
 
-#[cfg(feature = "touchlink")]
+#[cfg(false)]   // feature = "touchlink"
 use crate::raw::{
     esp_zb_bdb_signal_touchlink_nwk_started_params_t,
     esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
@@ -286,7 +286,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    #[cfg(feature = "touchlink")]
+    #[cfg(false)]   // feature = "touchlink"
     BdbSignalTouchlinkInitiatorFinished,
 
     /**
@@ -302,7 +302,7 @@ pub enum AppSignal {
     */
     // Payload:
     //  - Refer to ezb_bdb_signal_simple_params_t
-    #[cfg(feature = "touchlink")]
+    #[cfg(false)]   // feature = "touchlink"
     BdbSignalTouchlinkTargetFinished,
 
     /**
@@ -562,11 +562,11 @@ impl AppSignal {
                     BdbStatus::from_repr(x.status).unwrap()
                 )
             },
-            #[cfg(feature = "touchlink")]
+            #[cfg(false)]   // feature = "touchlink"
             EZB_BDB_SIGNAL_TOUCHLINK_INITIATOR_FINISHED => { // 262
                 Self::BdbSignalTouchlinkInitiatorFinished
             },
-            #[cfg(feature = "touchlink")]
+            #[cfg(false)]   // feature = "touchlink"
             EZB_BDB_SIGNAL_TOUCHLINK_TARGET_FINISHED => { // 263
                 Self::BdbSignalTouchlinkTargetFinished
             },

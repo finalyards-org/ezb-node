@@ -34,6 +34,8 @@ use crate::{
 /**
 * A view to a 'Config' struct used in creating end points.
 *
+* Note: It is perfectly okay for a node not to have any endpoints.
+*
 * Covers TOML sections '[endpoint.default]', '[endpoint.{id}]'.
 */
 pub(crate) struct EndpointCreator(&'static BTreeMap<u8, EndpointConfig>);
@@ -61,7 +63,17 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: &EndpointConfig) -> Resu
 
     let EndpointConfig(common_fields, specific) = ab;
 
-    let ep_desc = match specific {
+    // Without '.clone()', this code would break a build when there are no endpoints enabled.
+    //
+    // The reason: by Rust rules, a reference to an enum "is always inhabited" (enum cannot be empty).
+    //      However, if we have no end points enabled, that's exactly what 'Specific' is - an empty
+    //      enum that can not be instantiated. The '.clone()' allows the code to build, though this
+    //      particular function will not get called.
+    //
+    // Note: To cfg-out the whole function is a possibility, but did not want to take that route.
+    //      It'd need tracking all endpoints; here it kind of happens naturally.
+
+    let ep_desc = match specific.clone() {
         #[cfg(feature = "ep_color_dimmable_light")]
         // ezb_zha_color_dimmable_light_config_t light_cfg = EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG();
         // ezb_af_ep_desc_t       ep_desc = ezb_zha_create_color_dimmable_light(ESP_ZIGBEE_HA_COLOR_DIMMABLE_LIGHT_EP_ID, &light_cfg);

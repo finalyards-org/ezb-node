@@ -17,11 +17,16 @@ use std::{
 */
 fn main() {
     // Detect when IDE is running us:
-    //  - Rust Rover:
+    //  - Rust Rover (host):
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
+    //  - Rust Rover (remote development):
+    //      - IDEA_RESTART_VIA_EXIT_CODE=88
+    //      - REMOTE_DEV_LAUNCHER_NAME_FOR_USAGE=remote-dev-server.sh
+    //      - REMOTE_DEV_SERVER_IS_NATIVE_LAUNCHER=1
     {
-        if env::var("__CFBundleIdentifier").is_ok() {
-            panic!();   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
+        if env::var("__CFBundleIdentifier").is_ok() ||
+            env::var("REMOTE_DEV_SERVER_IS_NATIVE_LAUNCHER").is_ok() {
+            panic!("IDE build cut short");   // try to avoid spending a _lot_ of time, building ESP-IDF on the IDE
             //return;  // skip the rest
         }
     }

@@ -1,0 +1,25 @@
+Copyright 2026 FinalYards Tmi
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	https://www.apache.org/licenses/LICENSE-2.0
+
+---
+
+AMENDMENT FOR INTERNAL AND PROPERTY OPERATIONS USE ONLY:
+
+As an express exception and modification to the Apache 2.0 License, the rights granted herein are strictly limited to internal use and property operations. You may use, modify, and deploy this software to manage, optimize, or support your own real estate portfolios and business operations.
+
+**You are strictly prohibited from offering the functionality of this software as a managed service**, Software-as-a-Service (SaaS), white-labeled product, or commercial service platform to third parties.
+
+For any service-based deployment or platform operations, this Apache License version is void, and you must obtain a separate written agreement under the BDFL Shared Source terms.
+
+---
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

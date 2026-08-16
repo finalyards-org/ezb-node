@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-ezb-node-raw = { path = "../raw" }
-ezb-node-config = { path = "../config" }
+ezb-node-raw = { workspace = true }
+ezb-node-config = { workspace = true }
 
 log.workspace = true
 
@@ -29,12 +29,10 @@ strum = { version = "0.28", features = ["derive"] }
 embuild.workspace = true
 
 [features]
-default = ["esp32c6", "_extra_safety"]
+default = ["esp32c6"]
 coordinator = ["ezb-node-config/coordinator"]
 router = ["ezb-node-config/router"]
 #end_device_UNTESTED = [] #["ezb-node-config/end_device"]
-
-touchlink = []
 
 # Device types
 _ep_all = ["ep_color_dimmable_light", "ep_color_dimmer_switch"]
