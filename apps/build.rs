@@ -51,9 +51,9 @@ fn main() -> Result<()> {
     //      "If two binary targets (light and switch) exist within the same Cargo crate, they share the OUT_DIR."
     {
         let demos = [   // (path, bin-name)
-            ("1/light", "1-light"),
-            ("1/switch", "1-switch"),
-            ("2.door", "2-door")
+            //("1/light", "1-light"),   // TEMP: momentarily disabled
+            //("1/switch", "1-switch"), // TEMP: -''-
+            ("2", "2-door")
         ];
 
         let out_dir = env::var("OUT_DIR").unwrap();

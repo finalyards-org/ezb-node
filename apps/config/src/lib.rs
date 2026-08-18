@@ -2,7 +2,6 @@
 #[cfg(not(feature = "toml"))]
 extern crate alloc;
 
-#[cfg(feature = "toml")]
 mod convert;
 #[cfg(feature = "toml")]
 pub use convert::*;

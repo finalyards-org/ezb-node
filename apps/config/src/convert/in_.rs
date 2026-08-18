@@ -1,13 +1,14 @@
 #![cfg(feature = "toml")]
 
 use serde::Deserialize;
+
 use std::{
     collections::BTreeMap,
     string::String,
     vec::Vec,
 };
 
-//use core::time::Duration;
+//use core::time::Duration; //  use humantime instead, if needed
 
 /**
 * Presents 1:1 relation from the TOML to Struct, for reading things in.
@@ -74,10 +75,50 @@ pub struct EndpointDefaults {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(tag = "device_type", rename_all = "snake_case")]
-pub enum EndpointInstance {
-    #[cfg(feature = "color_dimmable_light")]
-    ColorDimmableLight,
-    #[cfg(feature = "color_dimmer_switch")]
-    ColorDimmerSwitch,
+#[allow(non_camel_case_types)]
+pub struct EndpointInstance {
+    pub device_type: DeviceType,
+    /// In addition to the clusters brought in by the '.device_type', add some more. Optional.
+    #[serde(default)]   // optional field
+    pub additional_server_clusters: Vec<ServerCluster>,
+    /// Look for a remote end point with said server-side clusters, bind to it. Optional.
+    #[serde(default)]
+    #[allow(dead_code)] // tbd. for now, this isn't used
+    pub discover_remote_server_clusters: Vec<ServerCluster>,
+        // tbd. This is only for one remote end points (bindings are 1:1). Since one could theoretically
+        //      even bind to client clusters, could do this like:
+        //  discover { remote_server_clusters: Vec..., [remote_client_clusters] }
+        //  This makes it more explicit that the question is of: *one* entry that has *multiple*
+        //  cluster filters (not multiple entries to bind to, as first-takes-all).
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(non_camel_case_types)]
+pub enum DeviceType {
+    #[cfg(feature = "dt_color_dimmable_light")]
+    #[serde(rename = "color_dimmable_light", alias = "HA::color_dimmable_light")]
+    HA_ColorDimmableLight,
+
+    #[cfg(feature = "dt_color_dimmer_switch")]
+    #[serde(rename = "color_dimmer_switch", alias = "HA::color_dimmer_switch")]
+    HA_ColorDimmerSwitch,
+
+    #[cfg(feature = "dt_ias_cie")]
+    #[serde(rename = "ias_cie", alias = "HA::ias_cie")]
+    HA_IasCie,
+}
+
+// Note: Though device types are feature-driven, the 'additional_server_clusters' and
+//      'discover_remote_server_clusters' are always-on. For now.
+#[derive(Deserialize, Debug)]
+#[allow(non_camel_case_types)]
+pub enum ServerCluster {
+    #[serde(rename = "on_off", alias = "HA::on_off")]
+    HA_OnOff,
+    #[serde(rename = "level_control", alias = "HA::level_control")]
+    HA_LevelControl,
+    #[serde(rename = "power_config", alias = "HA::power_config")]
+    HA_PowerConfig,
+    #[serde(rename = "ias_zone", alias = "HA::ias_zone")]
+    HA_IasZone,
 }

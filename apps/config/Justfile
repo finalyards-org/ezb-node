@@ -6,18 +6,18 @@
 #     $ just {--list|{..target..}}
 #   <<
 #
+alias b := build
+
 default:
 	@just --list
 
-all_profiles := \
-	"color_dimmable_light,"+\
-	"color_dimmer_switch,"+\
+all_dts := \
+	"dt_color_dimmable_light,"+\
+	"dt_color_dimmer_switch,"+\
 	""
 
-b: build
 build:
-	cargo build --release --features toml,{{all_profiles}}
+	cargo build --release --features toml,{{all_dts}}
 
-t: test
-test:
-	cargo test --features toml
+#test:
+#	cargo test --features toml

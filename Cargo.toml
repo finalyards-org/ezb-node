@@ -12,7 +12,7 @@ resolver = "3"
 [workspace.dependencies]
 ezb-node = { path = "api" }
 ezb-node-raw = { path = "raw" }
-ezb-node-config = { path = "apps/config" }
+ezb-node-config = { path = "apps/config", default-features = false }
 
 embassy-time = { version = "0.5.1", features = ["log"] }
 
@@ -20,9 +20,12 @@ embuild = { version = "0.33.3", features = ["espidf"] }
 
 # Take all 'esp-idf-{hal|sys|svc}' and 'embuild' from the workspace level: they are inter-related.
 #
+# Note: sub-projects cannot use 'default-features =false', unless we use it here, as well.
+#       This means someone *wanting* defaults needs to declare 'default-features = true'. It's ok.
+#
 esp-idf-hal = { version = "0.46" }
-esp-idf-svc = { version = "0.52", default-features = false, features = ["native"] }
-esp-idf-sys = { version = "0.37", default-features = false, features = ["native"] }
+esp-idf-svc = { version = "0.52", default-features = false }
+esp-idf-sys = { version = "0.37", default-features = false }
 
 log = { version = "0.4" }
 
@@ -40,10 +43,8 @@ log = { version = "0.4" }
 [profile.release]
 opt-level = "s"
 
-# Needed for using with ESP-IDF 6.x (breaks stuff with 5.5.4):
+# Needed for using with ESP-IDF 5.5.5 (breaks stuff with 5.5.4):
 [patch.crates-io]
-# https://github.com/esp-rs/embuild/issues/105
-embuild = { git = "https://github.com/esp-rs/embuild" }
 # > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
 esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
 # > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0

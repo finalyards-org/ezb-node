@@ -13,6 +13,8 @@ alias lb := light-build
 alias lr := light-run
 alias sb := switch-build
 alias sr := switch-run
+alias db := door-build
+alias dr := door-run
 
 # For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
 # This is only for commentary purposes.
@@ -43,6 +45,16 @@ switch-build:
 [group('switch')]
 switch-run:
 	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light
+
+# 2-door
+[group('door')]
+door-build:
+	cargo {{nightly}} build --release -vv --bin 2-door --features esp32c6,ezb-node/_dt_all \
+		--jobs 1
+
+[group('door')]
+door-run:
+	cargo {{nightly}} run --release -vv --bin 2-door --features esp32c6,ezb-node/aaa
 
 # List the *last* 'sdkconfig'
 echo-sdkconfig-path:

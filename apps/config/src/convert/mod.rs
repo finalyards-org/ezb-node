@@ -1,60 +1,58 @@
 #![cfg(feature = "toml")]
 
 use std::string::String;
-use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use toml;
 
-use crate::{CommonFields, Config};
+use crate::{Endpoint};
 
 mod in_;
-use in_::*;
+use in_::{
+    RootConfig,
+    SecondaryChannels,
+    NodeSection,
+    EndpointDefaults,
+    DeviceType,
+    ServerCluster,
+};
 
 mod error;
 use error::ConfigError::{
     self,
     FeatureConflict,
-    //ContentError
 };
 
+// tbd. This is SO LONG!!! Find ways to split it into a few.
 /**
 * Convert TOML input string to Rust snippet that generates an 'esp_zb::Config' instance, when read in.
 */
-// tbd. make it return _our_ error (no panics); one of which is Toml wrapper.
 pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
     let c: RootConfig = toml::from_str(toml)?;  // may return a 'ParseError'
 
     //--- network
-    // tbd. Secondary channel masks from the TOML. Should we? What options to give?
     //
-    // [ChannelMask::new(1 << 13), ChannelMask::ALL];
-    //
-    let q_channel_masks = {
+    // ChannelMask::new(1 << 13)
+    let q_primary_channels = {
         if c.network.primary_channels.is_empty() {
             Err("'network.primary_channels' is empty: please provide at least one channel to scan.")?;
         }
 
-        let q_primary_channels = {
+        let q = {
             let qs = c.network.primary_channels.into_iter().map(|v| {
-                quote!{ 1 << #v }
+                quote! { 1 << #v }
             });
-            quote!{ #(#qs)|* }    // 1 << 11u8 | 1 << 12u8 | ...
+            quote! { #(#qs)|* }    // 1 << 11u8 | 1 << 12u8 | ...
         };
+        quote!{ ChannelMask::new( #q ) }
+    };
 
-        let secondary_channels = match c.network.secondary_channels {
-            SecondaryChannels::Preferred => {
-                quote!{ ChannelMask::PREFERRED }
-            },
-            SecondaryChannels::All => {
-                quote!{ ChannelMask::ALL }
-            },
-        };
-
-        quote! { [
-            ChannelMask::new( #q_primary_channels ),
-            #secondary_channels
-        ] }
+    // ChannelMask::ALL
+    let q_secondary_channels = {
+        match c.network.secondary_channels {
+            SecondaryChannels::Preferred => quote!{ ChannelMask::PREFERRED },
+            SecondaryChannels::All =>       quote!{ ChannelMask::ALL },
+        }
     };
 
     //--- platform
@@ -66,8 +64,8 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
     //--- node
 
-    // Note: We don't need to create '#[cfg]' barriers in the output; we assume that the features
-    //      given to us are the same the application carries.
+    // Note: We don't create '#[cfg]' barriers in the output; we assume that the application
+    //      enables enough features.
     //
     // NodeType::CoordinatorConfig{ install_code_policy: false, max_children: 10 }
     //
@@ -118,7 +116,7 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     //--- endpoint.{id}
     //--- endpoint.defaults
     // {
-    //    let ep_10 = (CommonFields{ ... }, Specific::ColorDimmableLight);
+    //    let ep_10 = Endpoint{ common_fields = CommonFields{ ... }, device_type = DeviceType::HAColorDimmableLight), additional_server_clusters = Vector::new() };
     //    BTreeMap::from([(10, ep_10)])
     // }
     let q_endpoints = {
@@ -126,7 +124,9 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         let mut q_arr_contents = quote!{};
 
         if c.endpoint.instances.is_empty() {
-            Err("Need at least one end point. Please define an '[endpoint.{id}]' section.")?;
+            return Err(
+                ConfigError::from("Need at least one end point. Please define '[endpoint.{id}]'.")
+            );
         }
 
         let EndpointDefaults {
@@ -138,7 +138,7 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         let manufacturer_name_def = manufacturer_name_def.as_ref();
         let model_identifier_def = model_identifier_def.as_ref();
 
-        c.endpoint.instances.iter().try_for_each(|(k,v)| -> Result<(),ConfigError> {
+        c.endpoint.instances.into_iter().try_for_each(|(k,v)| -> Result<(),ConfigError> {
             // Skip ".defaults", turn others to 'u8'
             let k = match k.as_str() {
                 "defaults" => { return Ok(()) }, // skip
@@ -146,16 +146,21 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                     let endpoint_id = id.parse::<u8>().map_err(|_| {
                         format!("Invalid endpoint ID (not 'u8'): {}", id)
                     })?;
-                    if !Config::is_valid_endpoint(endpoint_id) {
-                        Err(format!("Invalid endpoint ID (not in valid range 1..=240): {}", id))?;
+                    if !Endpoint::is_valid_id(endpoint_id) {
+                        // Rust note: no 'Display' on 'RangeInclusive'
+                        let (a,b) = (Endpoint::VALID_RANGE.start(), Endpoint::VALID_RANGE.end());
+                        return Err(
+                            ConfigError::from(format!("Invalid endpoint ID (not in range '{a}..={b}'): {id}"))
+                        );
                     }
                     endpoint_id
                 }
             };  // k ∈ 1..=240
 
+            // ep_10
             let ident = format_ident!("ep_{}", k);
 
-            let q_cf = {
+            let q_common_fields = {
                 // Note: Endpoints could override the common fields, but we haven't implemented (/needed) that.
                 //
                 let q_manufacturer_name = manufacturer_name_def
@@ -174,21 +179,45 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 }
             };
 
-            // tbd. when this grows, detach to a function
-            let q_specific = match v {
-                #[cfg(feature = "color_dimmable_light")]
-                EndpointInstance::ColorDimmableLight {} => quote! {
-                    Specific::ColorDimmableLight
+            let q_device_type = match v.device_type {
+                #[cfg(feature = "dt_color_dimmable_light")]
+                DeviceType::HA_ColorDimmableLight {} => quote! {
+                    Endpoint::HA_ColorDimmableLight
                 },
-                #[cfg(feature = "color_dimmer_switch")]
-                EndpointInstance::ColorDimmerSwitch {} => quote! {
-                    Specific::ColorDimmerSwitch
+                #[cfg(feature = "dt_color_dimmer_switch")]
+                DeviceType::HA_ColorDimmerSwitch {} => quote! {
+                    Endpoint::HA_ColorDimmerSwitch
+                },
+                #[cfg(feature = "dt_ias_cie")]
+                DeviceType::HA_IasCie {} => quote! {
+                    Endpoint::HA_IasCie
                 },
                 // exhaustive match
             };
 
-            q_lets.extend(quote!{ let #ident = EndpointConfig(#q_cf, #q_specific); });
-            q_arr_contents.extend(quote!{ (#k, #ident) });
+            let q_additional_server_clusters = {
+                let qs = v.additional_server_clusters.iter().map(|cluster| {
+                    match cluster {
+                        ServerCluster::HA_OnOff =>      quote! { ZclCluster::OnOff },
+                        ServerCluster::HA_LevelControl => quote! { ZclCluster::LevelControl },
+                        ServerCluster::HA_PowerConfig => quote! { ZclCluster::PowerConfig },
+                        ServerCluster::HA_IasZone =>    quote! { ZclCluster::IasZone },
+                    }
+                });
+                quote! { vec![ #(#qs),* ] }
+            };
+
+            //let q_discover = quote!{};  // tbd.
+
+            q_lets.extend(quote!{
+                let #ident = Endpoint{
+                    common_fields = #q_common_fields,
+                    device_type = #q_device_type,
+                    additional_server_clusters: #q_additional_server_clusters,
+                    // tbd. discover_remote_server_clusters
+                }
+            });
+            q_arr_contents.extend(quote!{ (#k, #ident), });
 
             Ok(())  // next
         })?;
@@ -205,13 +234,15 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         use alloc::collections::BTreeMap;
         use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
 
-        let channel_masks = #q_channel_masks;
+        let primary_channels = #q_primary_channels;
+        let secondary_channels = #q_secondary_channels;
         let storage_partition_name = #q_storage_partition_name;
         let node = #q_node;
         let endpoints = #q_endpoints;
 
         Config {
-            channel_masks,
+            primary_channels,
+            secondary_channels,
             storage_partition_name,
             node,
             endpoints

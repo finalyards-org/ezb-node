@@ -1,6 +1,6 @@
 [package]
 name = "ezb-node-apps"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 rust-version = "1.94"
 publish = false
@@ -10,11 +10,13 @@ publish = false
 # We are anyways pointing the flashing command ('espflash') directly at the partition table, so keeping this hidden,
 # to avoid confusion. 3-May-26
 #
-[package.metadata.espflash]
-partition_table = "partitions.csv"
+# tbd. LIKELY THERE HAS BEEN a reason it was uncommented. In any way, the filename is not only here but in
+#       '/config.espfid.toml' as well. tbd. do things work with this hidden?  Update the comments..
+#|[package.metadata.espflash]
+#|partition_table = "partitions.csv"
 
 [dependencies]
-ezb-node = { path = "../api", features = [] }   # "coordinator", "router"
+ezb-node = { workspace = true, features = [] }   # "coordinator", "router"
 
 anyhow = { version = "1.0"}
 
@@ -24,10 +26,11 @@ esp-idf-hal = { workspace = true }
 
 # 'esp-idf-svc' is *vital for Embassy integration*
 #   - 'embassy_time_driver' comes through there, which is essential in tying ESP-IDF and Embassy together.
-#   - 'alloc' is needed for logging
-#   + 'native' needed for linking (likely; tbd. confirm)
+#   - 'alloc' is needed for logging (comes via 'std', which is default)
+#   - 'binstart' via default
+#   - 'native' needed for linking
 #
-esp-idf-svc = { workspace = true, features = ["embassy-time-driver", "alloc", "binstart", "native", "critical-section"], default-features = false }
+esp-idf-svc = { workspace = true, default-features = true, features = ["embassy-time-driver", "native", "critical-section"] }
 
 embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
 embassy-sync     = { version = "0.8.0" }
@@ -37,7 +40,8 @@ embassy-time    = { workspace = true, features = ["generic-queue-8"] }
 futures-util = { version = "0.3.32" }
 
 [build-dependencies]
-ezb-node-config = { path = "../config", features = ["toml", "color_dimmable_light", "color_dimmer_switch"] }
+ezb-node-config = { workspace = true, default-features = true, features = ["dt_color_dimmable_light", "dt_color_dimmer_switch"] }
+    # Note: If your own application, omit the 'default-features = true'.
 anyhow = { version = "1.0" }
 embuild.workspace = true
 
@@ -58,14 +62,14 @@ workspace = true
 [[bin]]
 name = "1-light"
 path = "demo/1/light/main.rs"
-required-features = ["esp32c6", "ezb-node/ep_color_dimmable_light"]
+required-features = ["esp32c6", "ezb-node/dt_color_dimmable_light"]
 
 [[bin]]
 name = "1-switch"
 path = "demo/1/switch/main.rs"
-required-features = ["esp32c6", "ezb-node/ep_color_dimmer_switch", "ezb-node/match_color_dimmable_light"]
+required-features = ["esp32c6", "ezb-node/dt_color_dimmer_switch"]
 
 [[bin]]
 name = "2-door"
 path = "demo/2/main.rs"
-required-features = ["esp32c6", "ezb-node/ep_abc", "ezb-node/match_def"]
+required-features = ["esp32c6", "ezb-node/dt_ias_cie"]

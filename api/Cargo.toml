@@ -6,7 +6,7 @@ rust-version = "1.94"
 
 [dependencies]
 ezb-node-raw = { workspace = true }
-ezb-node-config = { workspace = true }
+ezb-node-config = { workspace = true, default-features = false }
 
 log.workspace = true
 
@@ -14,9 +14,9 @@ embassy-sync = { version = "0.8.0", features = ["std"] }    # "std": thread mode
 
 # 'esp-idf-svc' is vital for:
 #   - 'std' for RTOS threading (running Zigbee task separate from the application task)
-#   + 'native' (from workspace) needed for linking (likely; tbd. confirm)
+#   + 'native' (from workspace) needed for linking
 #
-esp-idf-svc = { workspace = true, features = ["std"], default-features = false }
+esp-idf-svc = { workspace = true, default-features = false, features = ["std", "native"] }
 
 bitflags = { version = "2.11.1" }
 

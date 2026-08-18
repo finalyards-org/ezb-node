@@ -24,22 +24,6 @@ impl ChannelMask {
     }
 }
 
-#[cfg(false)]
-impl<const N: usize> From<[u8;N]> for ChannelMask {
-    fn from(channels: [u8;N]) -> Self {
-        let mut mask: u32 = 0;
-
-        for ch in channels {
-            if is_valid_channel(ch) {
-                mask |= 1 << ch;
-            } else {
-                panic!("Invalid Zigbee channel (not within {:?}): {}", VALID_CHANNELS, ch);
-            }
-        }
-        Self(mask)
-    }
-}
-
 impl fmt::Debug for ChannelMask {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "ChannelMask(")?;
@@ -49,7 +33,8 @@ impl fmt::Debug for ChannelMask {
             let mut first = true;
             for ch in VALID_CHANNELS {
                 if (self.0 >> ch) & 1 == 1 {
-                    write!(f, "{}{ch}", if first {""} else {", "})?;
+                    if !first { write!(f, ", ")?; }
+                    write!(f, "{ch}")?;
                     first = false;
                 }
             }
