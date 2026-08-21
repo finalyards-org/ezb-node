@@ -3,7 +3,7 @@
 *   - "Color dimmable light" example of 'esp-zigbee-sdk' v.2.0
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmable_light
 */
-#![feature(never_type)]
+//#![feature(never_type)]
 extern crate alloc;
 
 use anyhow::*;
@@ -47,13 +47,11 @@ async fn main(_spawner: Spawner) {
     // Recommended logging, level steered by 'sdkconfig.defaults'. Guarantees C and Rust sides observe same logging.
     esp_idf_svc::log::EspIdfLogger::initialize_default();
 
-    //static CFG: &'static Config = include!(concat!(env!("OUT_DIR"), "/light_conf.in"));
-
     static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
         include!(concat!(env!("OUT_DIR"), "/light_conf.in"))
     });
 
-    let (_keep, lc) = (|| -> anyhow::Result<(_,LightCoordinator)> {    // Rust note: scope the '?' by an anonymous closure
+    let (_keep, lc) = (|| -> anyhow::Result<(_,LightCoordinator)> {    // scope the '?' by an anonymous closure
         let nvs_res = init_nvs(CFG.storage_partition_name)
             .context("Failed to initialize NVS")?;
 

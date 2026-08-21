@@ -20,10 +20,19 @@ This repo aims at *forward looking* development. This means:
 
 Supported ZCL profiles:
 
-- [ ] Door open/close sensor
+- [ ] Door/window sensor
+
+**Non-focus**
+
+The following Zigbee features are not in the focus of this project:
+
+- Groups
+- Green power (harvested energy end devices)
+- Touchlink
 
 <!-- tbd. make into a table, with ZCL specifications listed.
 
+support: intended | not planned
 status: working, WIP, wish
 -->
 

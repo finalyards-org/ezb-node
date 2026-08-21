@@ -1,6 +1,9 @@
 extern crate alloc;
 
-use alloc::collections::BTreeMap;
+use alloc::{
+    collections::BTreeMap,
+    vec::Vec
+};
 use core::ops::RangeInclusive;
 
 use crate::ChannelMask;

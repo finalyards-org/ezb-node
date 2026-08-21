@@ -1,6 +1,9 @@
 #![cfg(feature = "toml")]
 
+use core::ops::RangeInclusive;
+
 use std::string::String;
+
 use quote::{format_ident, quote};
 use toml;
 
@@ -147,10 +150,8 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                         format!("Invalid endpoint ID (not 'u8'): {}", id)
                     })?;
                     if !Endpoint::is_valid_id(endpoint_id) {
-                        // Rust note: no 'Display' on 'RangeInclusive'
-                        let (a,b) = (Endpoint::VALID_RANGE.start(), Endpoint::VALID_RANGE.end());
                         return Err(
-                            ConfigError::from(format!("Invalid endpoint ID (not in range '{a}..={b}'): {id}"))
+                            ConfigError::from(format!("Invalid endpoint ID (not in range '{}'): {id}", RangeInclusiveWrap(Endpoint::VALID_RANGE)))
                         );
                     }
                     endpoint_id
@@ -206,8 +207,6 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 });
                 quote! { vec![ #(#qs),* ] }
             };
-
-            //let q_discover = quote!{};  // tbd.
 
             q_lets.extend(quote!{
                 let #ident = Endpoint{
@@ -278,4 +277,16 @@ fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
         .join("\n");
 
     Ok(ret)
+}
+
+/// Wrapper for getting 'Display' for 'RangeInclusive'
+struct RangeInclusiveWrap(RangeInclusive<u8>);
+
+use std::fmt;
+impl fmt::Display for RangeInclusiveWrap {
+
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (a,b) = (self.0.start(), self.0.end());
+        write!(f, "{}..={}", a, b)
+    }
 }

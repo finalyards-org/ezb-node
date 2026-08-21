@@ -35,14 +35,15 @@ router = ["ezb-node-config/router"]
 #end_device_UNTESTED = [] #["ezb-node-config/end_device"]
 
 # Device types
-_ep_all = ["ep_color_dimmable_light", "ep_color_dimmer_switch"]
+_dt_all = ["dt_color_dimmable_light", "dt_color_dimmer_switch"]
 
-ep_color_dimmable_light = ["ezb-node-config/color_dimmable_light"]
-ep_color_dimmer_switch = ["ezb-node-config/color_dimmer_switch"]
+dt_color_dimmable_light = ["ezb-node-config/dt_color_dimmable_light"]
+dt_color_dimmer_switch = ["ezb-node-config/dt_color_dimmer_switch"]
 
 # Device types on the other side (find, bind, access).
-_match_any = []
-match_color_dimmable_light = ["_match_any"]
+_remote_any = []
+remote_dt_color_dimmable_light = ["_remote_any"]
+    # Note: Config doesn't currently have remoting feature flags. It provides everything, each time.
 
 esp32c6 = [
     "ezb-node-raw/esp32c6",

@@ -12,7 +12,7 @@ alias b:= build
 build:
 	cargo {{nightly}} build --release -vv \
 		--jobs 1 \
-		--features coordinator,router,_ep_all
+		--features coordinator,router,_dt_all
 
 # It is possible to also make a coordinator without any endpoint profiles.
 build-bare:

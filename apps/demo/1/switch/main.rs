@@ -3,7 +3,7 @@
 *   - "Color dimmer switch" example of 'esp-zigbee-sdk' v.2.0
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmer_switch
 */
-#![feature(never_type)]
+//#![feature(never_type)]
 extern crate alloc;
 
 mod switch_router;
@@ -65,7 +65,7 @@ async fn main(spawner: Spawner) {
         include!(concat!(env!("OUT_DIR"), "/switch_conf.in"))
     });
 
-    let (_keep, lc) = (|| -> anyhow::Result<(_,LightSwitchRouter)> {    // Rust note: scope the '?' by an anonymous closure
+    let (_keep, lc) = (|| -> anyhow::Result<(_,LightSwitchRouter)> {    // scope the '?' by an anonymous closure
         let nvs_res = init_nvs(CFG.storage_partition_name)
             .context("Failed to initialize NVS")?;
 

@@ -18,7 +18,6 @@ manufacturer_name = "Your name"
 model_identifier = "Your model"
 
 [endpoint.1]
-device_type = "color_dimmer_switch"
-#accessors = [
-#    "color_dimmable_light"
-#]
+device_type = "HA::color_dimmer_switch"
+discover_remote_server_clusters = ["HA::on_off", "HA::level_control"]
+

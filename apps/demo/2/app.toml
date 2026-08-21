@@ -1,9 +1,13 @@
 #
-# Setup for the Zigbee node.
+# Coordinator to listen to a Door/Window sensor.
+#
+# Provides:
+#   - "ias_cie" HA profile
+#       - "ias_zone" (server role)
+#   - "power_config" (server role)
 #
 [network]
-# Channels 11, 15, 20 or 25 are best for commercial devices.
-primary_channels = [11, 15, 20, 25]
+primary_channels = [11, 15, 20, 25]     # 11, 15, 20 or 25 are best for commercial devices (google.ai)
 secondary_channels = "all"
 
 [platform]
@@ -12,6 +16,7 @@ storage_partition_name = "zb_storage"
 [node]
 type = "coordinator"
 install_code_policy = false
+    # false: allow "well known key" joining
 max_children = 5
 
 [endpoint.defaults]
@@ -19,6 +24,11 @@ manufacturer_name = "Espressif"
 model_identifier = "ESP32-C6 gateway"
 
 [endpoint.1]
-# IAS = "Intrusion Alarm System"
-# CIE = "Control and Indicating Equipment"
-device_type = "ias_cie"
+device_type = "HA::ias_cie"
+    # HA = "Home Automation"
+    # IAS = "Intrusion Alarm System"
+    # CIE = "Control and Indicating Equipment"
+
+# Separate clusters not covered by the 'device_type'.
+#
+additional_server_clusters = ["HA::power_config"]

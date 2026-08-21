@@ -62,7 +62,9 @@ endif
 #  $(error Missing 'OUT_DIR' from '.BUILD_ENV')
 #endif
 
-# This happens if ESP-IDF does not pick up the definitions that we need 'esp-zigbee-lib'
+# This happens if ESP-IDF does not pick up the definitions that we need 'esp-zigbee-lib'.
+# Also if:
+#	- just did 'cargo clean'; rebuild first
 ifeq ($(wildcard $(DEP_ESP_IDF_ROOT)/managed_components),)
   $(error No 'managed_components' pulled by Rust build)
 endif
@@ -113,6 +115,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	| bindgen
 	bindgen $< \
 	    --allowlist-file wrap.h \
+		  --formatter rustfmt \
 			\
 	    --allowlist-function 'esp_zigbee_.+' \
 			--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
