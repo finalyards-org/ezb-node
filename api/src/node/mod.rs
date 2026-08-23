@@ -13,9 +13,8 @@
 mod zigbee_task;
 use zigbee_task::zigbee_spawn;
 
-#[cfg(feature = "_match_any")]
 mod access;
-#[cfg(feature = "_match_any")]
+#[cfg(feature = "_remote_any")]
 pub use access::*;
 
 use embassy_sync::{

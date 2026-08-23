@@ -6,7 +6,8 @@ primary_channels = [13]
 secondary_channels = "all"
 
 [platform]
-storage_partition_name = "zb_storage"
+#storage_partition_name = "zb_storage"
+storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4
 
 [node]
 type = "coordinator"
@@ -18,4 +19,4 @@ manufacturer_name = "Your name"
 model_identifier = "Your model"
 
 [endpoint.10]
-device_type = "dt_color_dimmable_light"
+device_type = "color_dimmable_light"

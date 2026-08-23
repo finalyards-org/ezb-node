@@ -81,15 +81,15 @@ pub struct EndpointInstance {
     /// In addition to the clusters brought in by the '.device_type', add some more. Optional.
     #[serde(default)]   // optional field
     pub additional_server_clusters: Vec<ServerCluster>,
-    /// Look for a remote end point with said server-side clusters, bind to it. Optional.
+    /// Look for a remote end point with said server-side clusters, bind to it.
+    ///
+    /// Note: An end point can only bind to one other endpoint (it's 1:1). The list defines the
+    ///     clusters required from such an end point.
+    ///
     #[serde(default)]
-    #[allow(dead_code)] // tbd. for now, this isn't used
-    pub discover_remote_server_clusters: Vec<ServerCluster>,
-        // tbd. This is only for one remote end points (bindings are 1:1). Since one could theoretically
-        //      even bind to client clusters, could do this like:
-        //  discover { remote_server_clusters: Vec..., [remote_client_clusters] }
-        //  This makes it more explicit that the question is of: *one* entry that has *multiple*
-        //  cluster filters (not multiple entries to bind to, as first-takes-all).
+    #[allow(dead_code)] // tbd. finish it. Perhaps grouped as 'discover.remote_server_clusters' (could include also a field for client clusters, of the same candidate)
+    pub discover_remote_server_clusters: Option<Vec<ServerCluster>>,
+        // tbd. check in construction that if given, must contain at least one cluster
 }
 
 #[derive(Deserialize, Debug)]
@@ -108,8 +108,8 @@ pub enum DeviceType {
     HA_IasCie,
 }
 
-// Note: Though device types are feature-driven, the 'additional_server_clusters' and
-//      'discover_remote_server_clusters' are always-on. For now.
+// Note: Though device types are feature-driven, the supported clusters are always-on. Would be
+//      too much hassle to selectively include them all?
 #[derive(Deserialize, Debug)]
 #[allow(non_camel_case_types)]
 pub enum ServerCluster {

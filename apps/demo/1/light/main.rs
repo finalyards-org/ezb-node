@@ -48,7 +48,7 @@ async fn main(_spawner: Spawner) {
     esp_idf_svc::log::EspIdfLogger::initialize_default();
 
     static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
-        include!(concat!(env!("OUT_DIR"), "/light_conf.in"))
+        include!(concat!(env!("OUT_DIR"), "/1-light_conf.in"))
     });
 
     let (_keep, lc) = (|| -> anyhow::Result<(_,LightCoordinator)> {    // scope the '?' by an anonymous closure

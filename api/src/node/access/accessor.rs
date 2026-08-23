@@ -1,4 +1,4 @@
-#![cfg(feature = "_match_any")]
+#![cfg(feature = "_remote_any")]
 
 use crate::{node::ZigbeeGuard, Node, ShortAddr};
 

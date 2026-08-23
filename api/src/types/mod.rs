@@ -5,10 +5,12 @@
 *   - We don't want to expose any of the 'raw' APIs to the applications. This means some
 *     wrapping/renaming.
 */
-//r use bitflags::bitflags;
 // tbd. This may be eligible for breaking into sub-modules, one per each type?
 
-use ezb_node_raw::{ezb_bdb_comm_mode_e, ezb_zcl_cluster_id_e};
+use ezb_node_raw::{
+    ezb_bdb_comm_mode_e,
+    ezb_zcl_cluster_id_e
+};
 
 mod addr_mode;
 pub use addr_mode::AddrMode;
@@ -86,19 +88,23 @@ bitflags! {
     }
 }
 
-// it really is a bitmask, but we don't likely need it as such
+// Just wrapping 'ezb_zcl_role_e' so it's not visible outside.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ClusterRole {
-    Server = ezb_node_raw::EZB_ZCL_CLUSTER_SERVER as u8, // 1
-    Client = ezb_node_raw::EZB_ZCL_CLUSTER_CLIENT as u8, // 2
+    Server,
+    Client
 }
 
+#[allow(non_upper_case_globals)]
 impl ClusterRole {
+    const CLUSTER_SERVER_u8: u8 = ezb_node_raw::ezb_zcl_role_e::CLUSTER_SERVER as u8;
+    const CLUSTER_CLIENT_u8: u8 = ezb_node_raw::ezb_zcl_role_e::CLUSTER_CLIENT as u8;
+
     pub(crate) fn parse(v: u8) -> Option<Self> {
-        match v as _ {
-            ezb_node_raw::EZB_ZCL_CLUSTER_SERVER => Some(ClusterRole::Server),
-            ezb_node_raw::EZB_ZCL_CLUSTER_CLIENT => Some(ClusterRole::Client),
+        match v {
+            Self::CLUSTER_SERVER_u8 => Some(ClusterRole::Server),
+            Self::CLUSTER_CLIENT_u8 => Some(ClusterRole::Client),
             _ => None
         }
     }

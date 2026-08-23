@@ -64,7 +64,7 @@ use crate::{
 };
 
 use crate::utils::PascalString;
-use ezb_node_config::{ChannelMask, CommonFields, EndpointConfig};
+use ezb_node_config::{ChannelMask, CommonFields, Endpoint};
 use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 
 const TASK_NAME: &str = "Zigbee_main";
@@ -101,7 +101,7 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
 
             let inner = || -> Result<!,EspError> {
                 zigbee_init(cc)?;
-                zigbee_setup_commissioning(channel_masks)?;
+                zigbee_setup_commissioning(&channel_masks)?;
                 zigbee_create_endpoints(endpoint_cfg)?;
 
                 zigbee_run(auto_start)?

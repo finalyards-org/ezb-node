@@ -62,7 +62,7 @@ async fn main(spawner: Spawner) {
     // --- Zigbee ---
     //
     static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
-        include!(concat!(env!("OUT_DIR"), "/switch_conf.in"))
+        include!(concat!(env!("OUT_DIR"), "/1-switch_conf.in"))
     });
 
     let (_keep, lc) = (|| -> anyhow::Result<(_,LightSwitchRouter)> {    // scope the '?' by an anonymous closure

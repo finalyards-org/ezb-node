@@ -21,6 +21,7 @@
 #include "ezbee/zha.h"
   // ezb_zha_color_dimmable_light_config_t
   // ezb_zha_color_dimmer_switch_config_t
+  // ezb_zha_device_id_t (and its enum values)
 
 #include "ezbee/zdo.h"
   // zdo_dev_srv_disc.h: service discovery
@@ -39,12 +40,26 @@
 //|2:   ((ezb_zha_color_dimmable_light_config_t)EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG())
 
 //|3: Generates 'extern "C"' - and we can do linking via '--wrap-static-fns'.
+#if 1   // retire these at some point; no longer used (2.0 API change implications; not trusting their device types)
 inline static ezb_zha_color_dimmable_light_config_t wrap_EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG(void) {
     return (ezb_zha_color_dimmable_light_config_t)EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG();
 }
+
+// NOTE: Both 'ezb_zha_color_dimmer_switch_config_t' and 'ezb_zha_configuration_tool_config_t' (and maybe some more?)
+//      are typedef's to the same 'ezb_zha_common_device_config_t'.
+//
+//      Also, it means their '..._CONFIG()' macros are aliases of 'EZB_ZHA_COMMON_DEVICE_CONFIG()'.
+//
+//      We do NOT need to know about this here. But once we assign '::default()' to these types, it won't work
+//      (multiple implementations).
+//
 inline static ezb_zha_color_dimmer_switch_config_t wrap_EZB_ZHA_COLOR_DIMMER_SWITCH_CONFIG(void) {
     return (ezb_zha_color_dimmer_switch_config_t)EZB_ZHA_COLOR_DIMMER_SWITCH_CONFIG();
 }
+//inline static ezb_zha_configuration_tool_config_t wrap_EZB_ZHA_CONFIGURATION_TOOL_CONFIG(void) {
+//    return (ezb_zha_configuration_tool_config_t)EZB_ZHA_CONFIGURATION_TOOL_CONFIG();
+//}
+#endif
 
 // Note: Some types have custom initialization macros (like "color dimmable light"), whereas others fall back to the
 //      common macro ("color dimmer switch" does). This is kept on the C side, completely.

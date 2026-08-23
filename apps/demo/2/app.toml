@@ -3,15 +3,15 @@
 #
 # Provides:
 #   - "ias_cie" HA profile
-#       - "ias_zone" (server role)
-#   - "power_config" (server role)
+#       - "ias_zone" (client role)
+#   - "power_config" (server role)  <-- tbd. which one is it, really?
 #
 [network]
 primary_channels = [11, 15, 20, 25]     # 11, 15, 20 or 25 are best for commercial devices (google.ai)
 secondary_channels = "all"
 
 [platform]
-storage_partition_name = "zb_storage"
+storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4 (could also be omitted from the config?)
 
 [node]
 type = "coordinator"
@@ -29,6 +29,6 @@ device_type = "HA::ias_cie"
     # IAS = "Intrusion Alarm System"
     # CIE = "Control and Indicating Equipment"
 
-# Separate clusters not covered by the 'device_type'.
-#
-additional_server_clusters = ["HA::power_config"]
+additional_server_clusters = [
+    "HA::power_config"      # remaining battery
+]

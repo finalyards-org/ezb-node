@@ -80,7 +80,7 @@ all:
 	@false
 
 # The targets that 'build.rs' normally builds (for debugging, in case make fails)
-manual: ${_BIND_RS}
+manual: $(_BIND_RS)
 	@echo "\nManual build succeeded."
 
 #---
@@ -115,18 +115,19 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	| bindgen
 	bindgen $< \
 	    --allowlist-file wrap.h \
-		  --formatter rustfmt \
+		--formatter rustfmt \
 			\
 	    --allowlist-function 'esp_zigbee_.+' \
-			--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
-			--allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
-			--allowlist-function 'ezb_aps_(?:secur|xxx)_.+' \
-			--allowlist-function 'ezb_bdb_.+' \
+		--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
+		--allowlist-function 'ezb_app_(?:signal|xxx)_.+' \
+		--allowlist-function 'ezb_aps_(?:secur|xxx)_.+' \
+		--allowlist-function 'ezb_bdb_.+' \
+		--allowlist-function 'ezb_ep_create_ha_default' \
 	    --allowlist-function 'ezb_get_current_.+' \
-			--allowlist-function 'ezb_nwk_.+' \
-			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|level|ota_upgrade)_.+' \
+		--allowlist-function 'ezb_nwk_.+' \
+		--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_zone|level|ota_upgrade)_.+' \
 	    --allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
-			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch)' \
+		--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch|configuration_tool)' \
 			\
 	    --allowlist-type 'ezb_addr_mode_e' \
 	    --allowlist-type 'ezb_af_(?:device|endpoint|profile_id)_.+' \
@@ -135,13 +136,15 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_err_.+' \
 	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    --allowlist-type 'ezb_nwk_.+' \
+	    --allowlist-type 'esp_zb_ha_standard_devices_t' \
 	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|set|status)_.+' \
+	    --allowlist-type 'ezb_zcl_(?:ias_zone_cluster|ias_zone_server)_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
 	    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
 	    \
 	    --allowlist-var 'ESP_ERR_.+' \
 	    --allowlist-var 'EZB_ERR_.+' \
-	    --allowlist-var 'EZB_ZCL_(?:CLUSTER|XXX)_.+' \
+	    --allowlist-var 'EZB_ZCL_CLUSTER_.+' \
 	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \
 			$(addprefix --blocklist-var ,$(_BLOCKLIST_VARS)) \

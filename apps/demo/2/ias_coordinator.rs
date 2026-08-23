@@ -17,14 +17,14 @@ use ezb_node::{
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
-pub(crate) struct MyCoordinator
+pub(crate) struct IasCoordinator
 where Self: Node {
     // Use interior mutability (e.g., 'Mutex') if shared state is needed, as the node (a singleton) is accessed via immutable references.
 }
 
-impl Node for MyCoordinator {}
+impl Node for IasCoordinator {}
 
-impl MyCoordinator {
+impl IasCoordinator {
     pub fn new(c: &'static Config) -> Result<Self, ezb_node::Error> {
         const AUTO_START: bool = false;
         // Note: This might disappear, see comment of 'Node::init()'.

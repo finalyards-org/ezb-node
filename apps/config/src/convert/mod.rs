@@ -183,15 +183,15 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
             let q_device_type = match v.device_type {
                 #[cfg(feature = "dt_color_dimmable_light")]
                 DeviceType::HA_ColorDimmableLight {} => quote! {
-                    Endpoint::HA_ColorDimmableLight
+                    DeviceType::ColorDimmableLight
                 },
                 #[cfg(feature = "dt_color_dimmer_switch")]
                 DeviceType::HA_ColorDimmerSwitch {} => quote! {
-                    Endpoint::HA_ColorDimmerSwitch
+                    DeviceType::ColorDimmerSwitch
                 },
                 #[cfg(feature = "dt_ias_cie")]
                 DeviceType::HA_IasCie {} => quote! {
-                    Endpoint::HA_IasCie
+                    DeviceType::IasCie
                 },
                 // exhaustive match
             };
@@ -209,12 +209,12 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
             };
 
             q_lets.extend(quote!{
-                let #ident = Endpoint{
-                    common_fields = #q_common_fields,
-                    device_type = #q_device_type,
+                let #ident = Endpoint {
+                    common_fields: #q_common_fields,
+                    device_type: #q_device_type,
                     additional_server_clusters: #q_additional_server_clusters,
                     // tbd. discover_remote_server_clusters
-                }
+                };
             });
             q_arr_contents.extend(quote!{ (#k, #ident), });
 
@@ -256,13 +256,18 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 */
 fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
 
+    // DEBUG: enable this if there are internal problems with code generation.
+    //panic!("CHECK: {:?}", q);
+
     // Note: 'prettyplease' is designed to handle full files. To handle an expression, we do some wrapping and unwrapping,
     //
     let q_file = quote! {
         fn dummy_wrapper() { #q }
     };
 
+    // If there's something wrong with the 'quote!' macros, 'syn::parse2' fails.
     let syntax_tree: syn::File = syn::parse2(q_file)?;
+
     let formatted = prettyplease::unparse(&syntax_tree);
 
     // Just the innards of the function (skip first and last line)

@@ -26,6 +26,8 @@ router = []
 
 # --- Device types
 
+_dt_all = ["dt_color_dimmable_light", "dt_color_dimmer_switch", "dt_ias_cie"]
+
 # implements SERVER side of (clusters):
 #   HA::on_off
 #   HA::level_control

@@ -1,4 +1,4 @@
-#![cfg(feature = "match_color_dimmable_light")]
+#![cfg(feature = "remote_dt_color_dimmable_light")]
 
 use ezb_node_raw::{
     ezb_zcl_cluster_cmd_ctrl_s,

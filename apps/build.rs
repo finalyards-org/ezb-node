@@ -51,8 +51,8 @@ fn main() -> Result<()> {
     //      "If two binary targets (light and switch) exist within the same Cargo crate, they share the OUT_DIR."
     {
         let demos = [   // (path, bin-name)
-            //("1/light", "1-light"),   // TEMP: momentarily disabled
-            //("1/switch", "1-switch"), // TEMP: -''-
+            ("1/light", "1-light"),
+            ("1/switch", "1-switch"),
             ("2", "2-door")
         ];
 
@@ -74,6 +74,14 @@ fn main() -> Result<()> {
                 let content = fs::read_to_string(&toml_path)
                     .with_context(|| format!("Not found: {}", toml_path_s))?;
 
+                // Note: If this happens, there's not really much debugging info. The output file
+                //      has not been created.
+                //  <<
+                //        Error: TOML parsing
+                //
+                //   Caused by:
+                //       Internal error (syntax error in generated code): expected `,`
+                //  <<
                 let snippet = convert_toml(&content)
                     .context("TOML parsing")?;
 

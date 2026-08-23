@@ -21,13 +21,14 @@ use ezb_node_apps::{
     set_panic_hook,
 };
 
-mod my_coordinator;
+mod ias_coordinator;
+use ias_coordinator::IasCoordinator;
 
 /**
 * The entry point.
 *
-* The main thread runs the application. Part/most of it happens within the 'MyController'
-* methods, which are called within the application (main) thread.
+* The main thread runs the application. Part/most of it happens within the 'MyController' methods,
+* which are called within the application (main) thread.
 */
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -40,14 +41,14 @@ async fn main(_spawner: Spawner) {
     esp_idf_svc::log::EspIdfLogger::initialize_default();
 
     static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
-        include!(concat!(env!("OUT_DIR"), "/light_conf.in"))
+        include!(concat!(env!("OUT_DIR"), "/2-door_conf.in"))
     });
 
-    let (_keep, lc) = (|| -> anyhow::Result<(_,MyCoordinator)> {    // scope the '?' by an anonymous closure
+    let (_keep, lc) = (|| -> anyhow::Result<(_,IasCoordinator)> {    // scope the '?' by an anonymous closure
         let nvs_res = init_nvs(CFG.storage_partition_name)
             .context("Failed to initialize NVS")?;
 
-        let tmp = LightCoordinator::new(&CFG)
+        let tmp = IasCoordinator::new(&CFG)
             .context("Failed to initialize the Zigbee node")?;
 
         Ok((nvs_res, tmp))

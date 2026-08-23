@@ -68,7 +68,6 @@ impl Default for ezb_zha_color_dimmable_light_config_t {
         // ATTEMPT 2: Did not generate output in 'tmp/bindings_0.rs'
 
         // ATTEMPT 3: "undefined reference to `wrap_EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG'"
-        //#[cfg(false)]
         unsafe {
             wrap_EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG()
         }
@@ -79,10 +78,24 @@ impl Default for ezb_zha_color_dimmable_light_config_t {
     }
 }
 
+// Note: This actually is for 'ezb_zha_common_device_config_t' (also aliased by others).
+//
 impl Default for ezb_zha_color_dimmer_switch_config_t {
     fn default() -> Self {
         unsafe {
             wrap_EZB_ZHA_COLOR_DIMMER_SWITCH_CONFIG()
+        }
+    }
+}
+
+// we use 'config_tool' until 'ias_cie' gets its own.
+// Note: We don't _need_ to implement this, since (because of aliases) "color dimmer switch" (above)
+//      already does it! Compiled, they are the same (esp-zigbee-sdk 2.0.4).
+#[cfg(false)]
+impl Default for ezb_zha_configuration_tool_config_t {
+    fn default() -> Self {
+        unsafe {
+            wrap_EZB_ZHA_CONFIGURATION_TOOL_CONFIG()
         }
     }
 }
@@ -380,4 +393,107 @@ pub enum ezb_err_e {
     EZB_ERR_EMPTY_DATA     = a::ezb_err_e::_ERR_EMPTY_DATA as u8,
     EZB_ERR_DROP           = a::ezb_err_e::_ERR_DROP as u8,
     EZB_ERR_SECURITY       = a::ezb_err_e::_ERR_SECURITY as u8,
+}
+
+/// Zigbee Home Automation (ZHA) device identifiers.
+// 'esp_zigbee_lib' (2.0.4) defines these as an anonymous 'enum' (constants) and a separate
+// 'ezb_zha_device_id_t' (u16).
+#[repr(u16)]
+#[allow(non_camel_case_types)]
+pub enum ezb_zha_device_id_e {
+    // Note: be welcome to enable more values. These are standard, so linking them to the C
+    //      codes is not a necessity.
+
+    /* Standard */
+    /* Generic Devices */
+    //ON_OFF_SWITCH_DEVICE_ID              = 0x0000,
+    //LEVEL_CONTROL_SWITCH_DEVICE_ID       = 0x0001,
+    //ON_OFF_OUTPUT_DEVICE_ID              = 0x0002,
+    //LEVEL_CONTROLLABLE_OUTPUT_DEVICE_ID  = 0x0003,
+    //SCENE_SELECTOR_DEVICE_ID             = 0x0004,
+    //CONFIGURATION_TOOL_DEVICE_ID         = 0x0005,
+    //REMOTE_CONTROL_DEVICE_ID             = 0x0006,
+    //COMBINED_INTERFACE_DEVICE_ID         = 0x0007,
+    //RANGE_EXTENDER_DEVICE_ID             = 0x0008,
+    //MAINS_POWER_OUTLET_DEVICE_ID         = 0x0009,
+    //DOOR_LOCK_DEVICE_ID                  = 0x000A,
+    //DOOR_LOCK_CONTROLLER_DEVICE_ID       = 0x000B,
+    //SIMPLE_SENSOR_DEVICE_ID              = 0x000C,
+    //CONSUMPTION_AWARENESS_DEVICE_ID      = 0x000D,
+    //HOME_GATEWAY_DEVICE_ID               = 0x0050,
+    //SMART_PLUG_DEVICE_ID                 = 0x0051,
+    //WHITE_GOODS_DEVICE_ID                = 0x0052,
+    //METER_INTERFACE_DEVICE_ID            = 0x0053,
+    /* Lighting Devices */
+    //ON_OFF_LIGHT_DEVICE_ID               = 0x0100,
+    //DIMMABLE_LIGHT_DEVICE_ID             = 0x0101,
+    COLOR_DIMMABLE_LIGHT_DEVICE_ID       = 0x0102,
+    //ON_OFF_LIGHT_SWITCH_DEVICE_ID        = 0x0103,
+    //DIMMER_SWITCH_DEVICE_ID              = 0x0104,
+    COLOR_DIMMER_SWITCH_DEVICE_ID        = 0x0105,
+    //LIGHT_SENSOR_DEVICE_ID               = 0x0106,
+    //OCCUPANCY_SENSOR_DEVICE_ID           = 0x0107,
+    /* Closures Devices */
+    //SHADE_DEVICE_ID                      = 0x0200,
+    //SHADE_CONTROLLER_DEVICE_ID           = 0x0201,
+    //WINDOW_COVERING_DEVICE_ID            = 0x0202,
+    //WINDOW_COVERING_CONTROLLER_DEVICE_ID = 0x0203,
+    /* HVAC Devices */
+    //HEATING_COOLING_UNIT_DEVICE_ID       = 0x0300,
+    //THERMOSTAT_DEVICE_ID                 = 0x0301,
+    //TEMPERATURE_SENSOR_DEVICE_ID         = 0x0302,
+    //PUMP_DEVICE_ID                       = 0x0303,
+    //PUMP_CONTROLLER_DEVICE_ID            = 0x0304,
+    //PRESSURE_SENSOR_DEVICE_ID            = 0x0305,
+    //FLOW_SENSOR_DEVICE_ID                = 0x0306,
+    //MINI_SPLIT_AC_DEVICE_ID              = 0x0307,
+    /* Intruder Alarm System Devices */
+    IAS_CONTROL_INDICATING_EQUIPMENT_ID  = 0x0400,
+    //IAS_ANCILLARY_CONTROL_EQUIPMENT_ID   = 0x0401,
+    //IAS_ZONE_ID                          = 0x0402,
+    //IAS_WARNING_DEVICE_ID                = 0x0403,
+    /* Custom */
+    //CUSTOM_GATEWAY_DEVICE_ID = 0xff00,
+}
+
+/// Zigbee ZCL role mask.
+// 'esp_zigbee_lib' (2.0.4) calls these "role mask" in function parameters, but they are #defined
+// as unrelated constants. Also, they need to be used as 'u8', to fit the function calls.
+//
+// Note to #esp_zigbee_sdk: they could be defined as 'enum ezb_zcl_role_e', like some other masks are.
+#[repr(u8)]
+#[allow(non_camel_case_types)]
+pub enum ezb_zcl_role_e {
+    CLUSTER_SERVER = a::EZB_ZCL_CLUSTER_SERVER as u8,   // 0x1
+    CLUSTER_CLIENT = a::EZB_ZCL_CLUSTER_CLIENT as u8,   // 0x2
+}
+
+// We might want to wrap each C-side function using these, instead of '.as_u8()' or 'as u8'
+#[cfg(false)]
+impl ezb_zcl_role_e {
+    pub fn as_u8(self) -> u8 {
+        self as u8
+    }
+}
+
+// We might want to wrap each C-side function using these.
+#[cfg(false)]
+impl ezb_zcl_cluster_id_e {
+    pub fn as_u16(self) -> u16 {
+        self as u16
+    }
+}
+
+/// @brief Get a cluster descriptor from an endpoint descriptor.
+///
+/// @param[in] ep_desc    The endpoint descriptor to get the cluster descriptor from.
+/// @param[in] cluster_id The identifier of the cluster to get the cluster descriptor for.
+/// @param[in] role       The role of the cluster to get the cluster descriptor for.
+/// @return The pointer to the cluster descriptor. See @ref ezb_zcl_cluster_desc_t, or EZB_INVALID_ZCL_CLUSTER_DESC if not found.
+pub unsafe fn ezb_af_endpoint_get_cluster_desc(ep_desc: ezb_af_ep_desc_t, cluster_id: ezb_zcl_cluster_id_e, role: ezb_zcl_role_e) -> ezb_zcl_cluster_desc_t {
+    a::ezb_af_endpoint_get_cluster_desc(
+        ep_desc,
+        cluster_id as u16,
+        role as u8
+    )
 }

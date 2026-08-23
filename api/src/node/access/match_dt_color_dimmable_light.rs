@@ -1,4 +1,4 @@
-#![cfg(feature = "match_color_dimmable_light")]
+#![cfg(feature = "remote_dt_color_dimmable_light")]
 
 use ezb_node_raw::ezb_zcl_cluster_id_e;
 
@@ -18,7 +18,6 @@ use super::MatchingContext;
 /**
 * Extension to node, allowing finding, binding and accessing nodes with a certain profile.
 */
-#[cfg(feature = "match_color_dimmable_light")]
 pub trait MatchColorDimmableLights: Node {
     // The clusters we demand from the other end
     const IN_CLUSTERS: &[ezb_zcl_cluster_id_e] = &[

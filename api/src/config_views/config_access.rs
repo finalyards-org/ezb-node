@@ -25,8 +25,8 @@ pub(crate) struct ConfigAccess(&'static Config);
 
 impl ConfigAccess {
 
-    pub(crate) fn expand(&self) -> (&'static esp_zigbee_config_t, &'static [ChannelMask;2]) {
-        let channel_masks = &self.0.channel_masks;
+    pub(crate) fn expand(&self) -> (&'static esp_zigbee_config_t, [ChannelMask;2]) {
+        let channels = [self.0.primary_channels, self.0.secondary_channels];
         let storage_partition_name = self.0.storage_partition_name.as_ref();
         let nt = self.0.node;
 
@@ -86,7 +86,7 @@ impl ConfigAccess {
         assert!(BAKED.get().is_none(), "Internal: initializing the node twice.");
 
         let cc = BAKED.get_or_init(|| cc);
-        (cc, channel_masks)
+        (cc, channels)
     }
 }
 

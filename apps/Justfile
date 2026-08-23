@@ -25,36 +25,37 @@ target_dir := `cargo metadata --format-version 1 --no-deps | jq -r '.target_dire
 # 1-light
 [group('light')]
 light-build:
-	cargo {{nightly}} build --release -vv --bin 1-light --features esp32c6,ezb-node/ep_color_dimmable_light \
+	cargo {{nightly}} build --release -vv --bin 1-light --features esp32c6,ezb-node/dt_color_dimmable_light \
 		--jobs 1
 
 [group('light')]
 lbx:
-	cargo {{nightly}} build --release -vv --bin 1-light --features esp32c6,ezb-node/ep_color_dimmable_light
+	cargo {{nightly}} build --release -vv --bin 1-light --features esp32c6,ezb-node/dt_color_dimmable_light
 
 [group('light')]
 light-run:
-	cargo {{nightly}} run --release -vv --bin 1-light --features esp32c6,ezb-node/ep_color_dimmable_light
+	cargo {{nightly}} run --release -vv --bin 1-light --features esp32c6,ezb-node/dt_color_dimmable_light
 
 # 1-switch
 [group('switch')]
 switch-build:
-	cargo {{nightly}} build --release -vv --bin 1-switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light \
+	cargo {{nightly}} build --release -vv --bin 1-switch --features esp32c6,ezb-node/dt_color_dimmer_switch,ezb-node/remote_ep_color_dimmable_light \
 		--jobs 1
 
 [group('switch')]
 switch-run:
-	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,ezb-node/ep_color_dimmer_switch,ezb-node/match_color_dimmable_light
+	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,ezb-node/dt_color_dimmer_switch,ezb-node/remote_ep_color_dimmable_light
 
 # 2-door
 [group('door')]
 door-build:
-	cargo {{nightly}} build --release -vv --bin 2-door --features esp32c6,ezb-node/_dt_all \
+	RUST_BACKTRACE=1 \
+	cargo {{nightly}} build --release -vv --bin 2-door --features esp32c6,ezb-node/dt_ias_cie \
 		--jobs 1
 
 [group('door')]
 door-run:
-	cargo {{nightly}} run --release -vv --bin 2-door --features esp32c6,ezb-node/aaa
+	cargo {{nightly}} run --release -vv --bin 2-door --features esp32c6,ezb-node/dt_ias_cie
 
 # List the *last* 'sdkconfig'
 echo-sdkconfig-path:

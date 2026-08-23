@@ -6,7 +6,8 @@ primary_channels = [13]
 secondary_channels = "all"
 
 [platform]
-storage_partition_name = "zb_storage"
+#storage_partition_name = "zb_storage"
+storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4
 
 [node]
 type = "router"
@@ -19,5 +20,6 @@ model_identifier = "Your model"
 
 [endpoint.1]
 device_type = "HA::color_dimmer_switch"
-discover_remote_server_clusters = ["HA::on_off", "HA::level_control"]
-
+discover = {
+    remote_server_clusters = ["HA::on_off", "HA::level_control"]
+}

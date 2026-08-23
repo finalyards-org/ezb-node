@@ -1,4 +1,4 @@
-#![cfg(feature = "_match_any")]
+#![cfg(feature = "_remote_any")]
 
 use core::ffi::c_void;
 use core::marker::PhantomPinned;

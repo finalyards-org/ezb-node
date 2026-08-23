@@ -81,8 +81,6 @@ pub use bindings::{
     ezb_zcl_core_action_handler_register,
     ezb_af_create_device_desc,
     ezb_af_device_desc_t,
-    EZB_ZCL_CLUSTER_SERVER,
-    EZB_ZCL_CLUSTER_CLIENT,
     //ezb_zcl_core_action_callback_id_t,    // DO NOT expose this (it's u32), use '..._e' instead
     ezb_zcl_core_action_callback_id_e,
     ezb_zcl_status_e,
@@ -147,4 +145,15 @@ pub use bindings::{
     ezb_zcl_level_move_to_level_cmd_payload_t,
     ezb_zcl_level_move_to_level_with_on_off_cmd_req,
     ezb_err_e,
+};
+
+// Moving from 'device type' to individual '(profile, device)' combos; 'ias_cie' profile
+pub use bindings::{
+    ezb_zha_device_id_e,
+    ezb_zha_configuration_tool_config_t,    // alias of ezb_zha_common_device_config_t
+    ezb_zha_create_configuration_tool,
+    ezb_zcl_ias_zone_create_cluster_desc,
+    ezb_zcl_ias_zone_cluster_client_init,
+    ezb_af_endpoint_add_cluster_desc,
+    ezb_zcl_role_e,
 };

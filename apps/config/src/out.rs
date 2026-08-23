@@ -75,6 +75,7 @@ pub struct CommonFields {
 /// They imply a set of ZCL clusters. List here|1|.
 ///
 /// |1|: https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32/introduction.html#home-automation-device-types
+///
 #[derive(Debug, Copy, Clone)]
 pub enum DeviceType {
     #[cfg(feature = "dt_color_dimmable_light")]
@@ -115,7 +116,7 @@ pub struct Endpoint {
     pub common_fields: CommonFields,
     pub device_type: DeviceType,
     pub additional_server_clusters: Vec<ZclServerCluster>,
-        //#later pub match_remote_server_clusters: Option<Vec<ZclServerCluster>>,
+    //#later pub discover_remote_server_clusters: Option<Vec<ZclServerCluster>>,
 }
 
 // Though 'id' is not part of the 'Endpoint' struct, we can help validate them.
