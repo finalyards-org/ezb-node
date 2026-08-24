@@ -11,6 +11,8 @@
 */
 
 mod zigbee_task;
+
+//r use std::time::Duration;
 use zigbee_task::zigbee_spawn;
 
 mod access;
@@ -28,9 +30,11 @@ use ezb_node_raw::{
     esp_zigbee_lock_acquire,
     esp_zigbee_lock_release,
     ezb_bdb_is_factory_new,
+    ezb_bdb_open_network,
     ezb_bdb_start_top_level_commissioning,
     ezb_nwk_get_current_channel,
     ezb_nwk_get_extended_panid,
+    ezb_nwk_get_extended_address,
     ezb_nwk_get_panid,
     ezb_nwk_get_short_address,
 };
@@ -136,7 +140,18 @@ pub trait Node {
         let v = unsafe {
             ezb_nwk_get_extended_panid()
         };
-        IeeeAddr::from(v)
+        IeeeAddr(v)
+    }
+
+    /**
+    * Get the extended (IEEE) address of the device.
+    */
+    fn get_extended_address(&self) -> IeeeAddr {
+        let _guard = ZigbeeGuard::acquire();
+        let v = unsafe {
+            ezb_nwk_get_extended_address()
+        };
+        IeeeAddr(v)
     }
 
     /**
@@ -190,6 +205,32 @@ pub trait Node {
         let _guard = ZigbeeGuard::acquire();
         unsafe {
             ezb_bdb_is_factory_new()
+        }
+    }
+
+    /**
+    * Open the network for joining.
+    *
+    * @param for_how_long After this time, permit expires.
+    *
+    * @note Since the call is synchronous (it only starts the join), error situations are not
+    *       well understood: the C side can err on "not memory" (panic might be justified?) and
+    *       "on failed" - which is _highly_ inappropriately vague (again, let's just panic!).
+    */
+    fn open_network(&self, for_how_long: embassy_time::Duration) -> () {
+        let secs: u8 = for_how_long.as_secs() as u8;
+
+        let _guard = ZigbeeGuard::acquire();
+        let err = unsafe {
+            ezb_bdb_open_network(secs)
+                // docs don't care to mention the unit (2.0.4), but examples use seconds. #3rdparty
+        };
+
+        // - EZB_ERR_NONE: on success
+        // - EZB_ERR_NO_MEM: not memory
+        // - EZB_ERR_FAILED: on failed
+        if err != 0 {
+            panic!("'ezb_bdb_open_network' failed with: {}", err);
         }
     }
 

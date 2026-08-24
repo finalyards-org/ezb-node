@@ -50,12 +50,12 @@ switch-run:
 [group('door')]
 door-build:
 	RUST_BACKTRACE=1 \
-	cargo {{nightly}} build --release -vv --bin 2-door --features esp32c6,ezb-node/dt_ias_cie \
+	cargo {{nightly}} build --release -vv --bin 2-door --features esp32c6,ezb-node/dt_ias_cie,ezb-node/remote_cl_power_config \
 		--jobs 1
 
 [group('door')]
 door-run:
-	cargo {{nightly}} run --release -vv --bin 2-door --features esp32c6,ezb-node/dt_ias_cie
+	cargo {{nightly}} run --release -vv --bin 2-door --features esp32c6,ezb-node/dt_ias_cie,ezb-node/remote_cl_power_config
 
 # List the *last* 'sdkconfig'
 echo-sdkconfig-path:

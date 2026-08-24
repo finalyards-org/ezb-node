@@ -1,39 +1,30 @@
 use core::fmt;
 
 use ezb_node_raw::{
-    ezb_extaddr_t,
+    ezb_eui64_s,
 };
 
 /**
-* Wrapper for 64-bit addresses; C represents them as packed memory blocks.
-*
-* This is used both for MAC addresses, and extended PAN IDs.
+* Used both for MAC addresses, and extended PAN IDs.
 */
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct IeeeAddr(u64);
+pub struct IeeeAddr(pub(crate) u64);
 
-//EZB_PACKED_BEGIN
-// struct ezb_eui64_s {
-//     union {
-//         uint8_t u8[8];  /*!< Extended Address as byte array */
-//         uint64_t u64;   /*!< Extended Address as 64-bit value */
-//     } EZB_PACKED_FIELD;
-// } EZB_PACKED_END;
-
+#[cfg(false)]   // disabled; dealing with 'u64' instead
 impl From<[u8; 8]> for IeeeAddr {
     fn from(bytes: [u8; 8]) -> Self {
         Self(u64::from_le_bytes(bytes))
     }
 }
 
-impl From<ezb_extaddr_t> for IeeeAddr {
-    fn from(v: ezb_extaddr_t) -> Self {
-        Self(v.to_u64())
+impl From<ezb_eui64_s> for IeeeAddr {
+    fn from(v: ezb_eui64_s) -> Self {
+        Self(v.into())
     }
 }
 
-impl Into<ezb_extaddr_t> for IeeeAddr {
-    fn into(self) -> ezb_extaddr_t {
+impl Into<ezb_eui64_s> for IeeeAddr {
+    fn into(self) -> ezb_eui64_s {
         self.0 .into()
     }
 }

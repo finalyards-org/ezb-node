@@ -45,4 +45,7 @@ dt_color_dimmer_switch = []
 dt_ias_cie = []
 
 # --- Additional ZCL profiles (all HA)
-cl_power_config = []  # HA::power_config (server); collects battery information
+#
+# CURRENTLY INACTIVE. Let's just bring in the code we need; see #later if we want to feature-gate them.
+#
+#cl_power_config = []  # HA::power_config (server); collects battery information

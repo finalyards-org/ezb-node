@@ -4,15 +4,10 @@ extern crate alloc;
 #[path = "../bindings.rs"]
 mod bindings;
 
+// Note: Pay attention that we don't expose 'esp_zb_' functions (1.x compatibility); only 'ezb_'.
+
 pub use bindings::{
     esp_zigbee_get_version_string,
-};
-
-// We selectively choose the elements that make it to the API layer.
-//
-// Could also filter in the 'bindgen' stage, but this turns out to be convenient, in practice.
-//
-pub use bindings::{
     esp_zigbee_platform_config_t,   // 1.x: esp_zb_platform_config_t,
     esp_zigbee_radio_mode_t,
 };
@@ -56,7 +51,7 @@ pub use bindings::{
     ezb_nwk_get_current_channel,
     esp_zigbee_device_config_t,
     ezb_nwk_get_extended_panid,
-    ezb_extpanid_t,
+    //ezb_extpanid_t,
     ezb_nwk_get_short_address,
     ezb_app_signal_t,
     ezb_nwk_device_type_t,
@@ -156,4 +151,7 @@ pub use bindings::{
     ezb_zcl_ias_zone_cluster_client_init,
     ezb_af_endpoint_add_cluster_desc,
     ezb_zcl_role_e,
+    ezb_bdb_open_network,
+    ezb_nwk_get_extended_address,
+    ezb_af_ep_config_t,
 };

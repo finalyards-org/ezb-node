@@ -74,4 +74,4 @@ required-features = ["esp32c6", "ezb-node/dt_color_dimmer_switch"]
 [[bin]]
 name = "2-door"
 path = "demo/2/main.rs"
-required-features = ["esp32c6", "ezb-node/dt_ias_cie"]
+required-features = ["esp32c6", "ezb-node/dt_ias_cie", "ezb-node/remote_cl_power_config"]

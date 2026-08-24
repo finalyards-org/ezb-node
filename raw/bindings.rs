@@ -1,7 +1,3 @@
-/*
-* Gathering the bindgen-generated binding like this allows us to attach
-* 'Default' (and/or other traits) to its types.
-*/
 use core::mem::MaybeUninit;
 
 // Silence:
@@ -88,19 +84,6 @@ impl Default for ezb_zha_color_dimmer_switch_config_t {
     }
 }
 
-// we use 'config_tool' until 'ias_cie' gets its own.
-// Note: We don't _need_ to implement this, since (because of aliases) "color dimmer switch" (above)
-//      already does it! Compiled, they are the same (esp-zigbee-sdk 2.0.4).
-#[cfg(false)]
-impl Default for ezb_zha_configuration_tool_config_t {
-    fn default() -> Self {
-        unsafe {
-            wrap_EZB_ZHA_CONFIGURATION_TOOL_CONFIG()
-        }
-    }
-}
-
-
 /*
 * Instead of exposing the union bindgen-generated names, it's better to provide generators for the
 * variants.
@@ -156,18 +139,23 @@ impl esp_zigbee_platform_config_t {
 /// @brief Get the IEEE (extended) address of the device.
 /// @anchor ezb_nwk_get_extended_panid
 ///
-/// @return Slice of 64-bit IEEE address, little-endian.
-// note: Returning the slice, and not 'u64', because: - it makes the little-endianess more explicit,
-//      - C API has the union "packed", meaning it can be 1-byte aligned. Though we provide the buffer
-//        here, it still carries that packed attribute with it. So ... slice is likely having less surprises!
-//
-pub unsafe fn ezb_nwk_get_extended_panid() -> [u8;8] {
+/// @return 64-bit IEEE address
+pub unsafe fn ezb_nwk_get_extended_panid() -> u64 {
     let mut buf: ezb_extpanid_t = empty();
     unsafe {
         a::ezb_nwk_get_extended_panid(&mut buf)
     };
+    buf.into()
+}
 
-    unsafe { buf.__bindgen_anon_1.u8_ }
+/// Get the IEEE (extended) address of the device.
+///
+pub unsafe fn ezb_nwk_get_extended_address() -> u64 {
+    let mut buf: ezb_extaddr_t = empty();
+    unsafe {
+        a::ezb_nwk_get_extended_address(&mut buf)
+    };
+    buf.into()
 }
 
 /// @brief Obtains the type of the application signal
@@ -187,24 +175,30 @@ pub unsafe fn ezb_app_signal_get_type(signal: *const ezb_app_signal_t) -> ezb_ap
 // (as in, potentially invoking Undefined Behaviour) to simply read the '._u64' field of the union. We counteract
 // this here, in the 'raw' layer, to avoid such concerns in the API.
 //
+#[cfg(false)]   //Q: can we do without?
 impl ezb_eui64_s {
     pub fn to_le_bytes(self) -> [u8; 8] {
         unsafe {
             self.__bindgen_anon_1.u8_
         }
     }
-    pub fn to_u64(self) -> u64 {
-        // NOTE: NOT ENCOURAGED. 'google.ai' says it's UB, even when the compiler knows the struct is "packed".
-        //|unsafe { self.__bindgen_anon_1.u64_ }
+}
 
+// 'ezb_eui64_s' has aliases: 'ezb_panid_t' and 'ezb_extaddr_t'. These apply on those as well.
+impl Into<u64> for ezb_eui64_s {
+    fn into(self) -> u64 {
         // Safe way to read a potentially unaligned 'u64'
         unsafe {
             let ptr = core::ptr::addr_of!(self.__bindgen_anon_1.u64_);
             ptr.read_unaligned()
         }
+
+        /* Alternative way:
+        unsafe {
+            u64::from_le_bytes(self.__bindgen_anon_1.u8_)
+        }*/
     }
 }
-
 impl From<u64> for ezb_eui64_s {
     fn from(v: u64) -> ezb_eui64_s {
         Self {
@@ -405,6 +399,7 @@ pub enum ezb_zha_device_id_e {
     //      codes is not a necessity.
 
     /* Standard */
+
     /* Generic Devices */
     //ON_OFF_SWITCH_DEVICE_ID              = 0x0000,
     //LEVEL_CONTROL_SWITCH_DEVICE_ID       = 0x0001,
@@ -424,6 +419,7 @@ pub enum ezb_zha_device_id_e {
     //SMART_PLUG_DEVICE_ID                 = 0x0051,
     //WHITE_GOODS_DEVICE_ID                = 0x0052,
     //METER_INTERFACE_DEVICE_ID            = 0x0053,
+
     /* Lighting Devices */
     //ON_OFF_LIGHT_DEVICE_ID               = 0x0100,
     //DIMMABLE_LIGHT_DEVICE_ID             = 0x0101,
@@ -433,11 +429,13 @@ pub enum ezb_zha_device_id_e {
     COLOR_DIMMER_SWITCH_DEVICE_ID        = 0x0105,
     //LIGHT_SENSOR_DEVICE_ID               = 0x0106,
     //OCCUPANCY_SENSOR_DEVICE_ID           = 0x0107,
+
     /* Closures Devices */
     //SHADE_DEVICE_ID                      = 0x0200,
     //SHADE_CONTROLLER_DEVICE_ID           = 0x0201,
     //WINDOW_COVERING_DEVICE_ID            = 0x0202,
     //WINDOW_COVERING_CONTROLLER_DEVICE_ID = 0x0203,
+
     /* HVAC Devices */
     //HEATING_COOLING_UNIT_DEVICE_ID       = 0x0300,
     //THERMOSTAT_DEVICE_ID                 = 0x0301,
@@ -447,11 +445,13 @@ pub enum ezb_zha_device_id_e {
     //PRESSURE_SENSOR_DEVICE_ID            = 0x0305,
     //FLOW_SENSOR_DEVICE_ID                = 0x0306,
     //MINI_SPLIT_AC_DEVICE_ID              = 0x0307,
+
     /* Intruder Alarm System Devices */
     IAS_CONTROL_INDICATING_EQUIPMENT_ID  = 0x0400,
     //IAS_ANCILLARY_CONTROL_EQUIPMENT_ID   = 0x0401,
     //IAS_ZONE_ID                          = 0x0402,
     //IAS_WARNING_DEVICE_ID                = 0x0403,
+
     /* Custom */
     //CUSTOM_GATEWAY_DEVICE_ID = 0xff00,
 }
@@ -491,9 +491,42 @@ impl ezb_zcl_cluster_id_e {
 /// @param[in] role       The role of the cluster to get the cluster descriptor for.
 /// @return The pointer to the cluster descriptor. See @ref ezb_zcl_cluster_desc_t, or EZB_INVALID_ZCL_CLUSTER_DESC if not found.
 pub unsafe fn ezb_af_endpoint_get_cluster_desc(ep_desc: ezb_af_ep_desc_t, cluster_id: ezb_zcl_cluster_id_e, role: ezb_zcl_role_e) -> ezb_zcl_cluster_desc_t {
-    a::ezb_af_endpoint_get_cluster_desc(
-        ep_desc,
-        cluster_id as u16,
-        role as u8
-    )
+    unsafe {
+        a::ezb_af_endpoint_get_cluster_desc(ep_desc, cluster_id as u16, role as u8)
+    }
+}
+
+/// Convert C level union (of a packed set of bytes, in Little Endian orientation) to a native,
+/// aligned 'u64'.
+///
+/// @note The type is aliased as both 'ezb_panid_t' and 'ezb_extaddr_t'. The conversion covers both.
+///
+#[cfg(false)]   // handled above, slightly different
+impl Into<u64> for ezb_eui64_s {
+    fn into(self) -> u64 {
+        unsafe {
+            u64::from_le_bytes(self.__bindgen_anon_1.u8_)
+        }
+    }
+}
+
+impl ezb_af_ep_config_t {
+    pub fn new(ep_id: u8, app_profile_id: ezb_af_profile_id_e, app_device_id: ezb_zha_device_id_e, app_version: u8) -> Self {
+
+        let mut o: Self = Self {
+            ep_id,
+            app_profile_id: app_profile_id as u16,
+            app_device_id: app_device_id as u16,
+            ..Default::default()
+        };
+        o.set_app_device_version(app_version);
+        o
+    }
+}
+
+impl Default for ezb_af_ep_config_t {
+    fn default() -> Self {
+        // C side provides no macro for this; let's just provide all zeros.
+        unsafe { core::mem::zeroed() }
+    }
 }

@@ -4,7 +4,7 @@ use ezb_node_raw::{
     ezb_address_s,
     ezb_grpaddr_s,
     ezb_addr_u,
-    ezb_eui64_s,
+    //ezb_eui64_s,
 };
 
 use crate::{

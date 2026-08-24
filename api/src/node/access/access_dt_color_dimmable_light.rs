@@ -21,7 +21,8 @@ use super::{
     AccessorCtx,
 };
 
-const TRANSITION_TIME: core::time::Duration = core::time::Duration::from_secs(1);
+use embassy_time::Duration;
+const TRANSITION_TIME: Duration = Duration::from_secs(1);
 
 // Note: If there are more and more of the accessors, make the pattern into a macro.
 

@@ -11,6 +11,7 @@ ezb-node-config = { workspace = true, default-features = false }
 log.workspace = true
 
 embassy-sync = { version = "0.8.0", features = ["std"] }    # "std": thread mode
+embassy-time = { workspace = true }
 
 # 'esp-idf-svc' is vital for:
 #   - 'std' for RTOS threading (running Zigbee task separate from the application task)
@@ -47,6 +48,7 @@ dt_ias_cie = ["ezb-node-config/dt_ias_cie"]
 #
 _remote_any = []
 remote_dt_color_dimmable_light = ["_remote_any"]
+remote_cl_power_config = ["_remote_any"]
 
 esp32c6 = [
     "ezb-node-raw/esp32c6",

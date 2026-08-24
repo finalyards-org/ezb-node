@@ -5,6 +5,7 @@ C/Rust interfacing level of [`esp-zigbee-lib`](https://github.com/espressif/esp-
 <!-- tbd. Excalidraw schematic
 -->
 
+
 ## Foreword
 
 You don't normally need to deal with this folder: the higher parts (`api`, `apps`) bring it in as a dependency.

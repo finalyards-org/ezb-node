@@ -28,7 +28,15 @@ use super::{
     MatchEvent,
 };
 
-use crate::{AccessColorDimmableLight, Node, ShortAddr, ZclError, ZdpError};
+use crate::{
+    Node,
+    ShortAddr,
+    ZclError,
+    ZdpError
+};
+
+#[cfg(feature = "remote_dt_color_dimmable_light")]
+use crate::AccessColorDimmableLight;
 
 const CHANNEL_CAPACITY: usize = 8;
 
@@ -164,24 +172,31 @@ impl MatchingContext {
                 }
             }
 
-            // Controlled drop of 'ctx'.
+            // Drop of 'ctx'.
             {
+                const EXTRA_SAFETY: bool = false;
+                #[cfg(feature = "_extra_safety")]
+                const EXTRA_SAFETY: bool = true;
+
                 // Extra safety:
                 //  - we let the 'MatchingContext' remain on heap (leaking memory), with its
-                //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error' really
-                //      is the final call (from C library).
+                //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error'
+                //      really is the final call (from C library).
                 //
-                #[cfg(feature = "_extra_safety")]
-                {
+                if EXTRA_SAFETY {
                     log::debug!("Extra caution: writing '.user_ctx' to NULL");
 
                     let ptr = core::ptr::addr_of!(ctx.req.user_ctx) as *mut *mut c_void;
                     unsafe{ ptr.write( core::ptr::null_mut() ) };
-                }
 
-                // Release 'MatchingContext' from the heap.
-                #[cfg(not(feature = "_extra_safety"))]
-                let _drop = unsafe{ Box::from_raw(ctx as *mut MatchingContext) };
+                    std::mem::forget(ctx);
+                } else {
+                    // Release 'MatchingContext' from the heap.
+
+                    // WHY is this line needed?  Have forgotten.    tbd. it does not build
+                    #[cfg(false)]
+                    let _drop = unsafe{ Box::from_raw(ctx as *mut MatchingContext) };
+                }
             }
         } // stream!
     }

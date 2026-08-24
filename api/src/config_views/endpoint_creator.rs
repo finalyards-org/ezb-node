@@ -27,6 +27,7 @@ use ezb_node_raw::{
     ezb_zha_color_dimmer_switch_config_t,
     ezb_zha_create_color_dimmer_switch,
     ezb_zcl_role_e,
+    ezb_af_ep_config_t,
 };
 
 use crate::{
@@ -166,6 +167,30 @@ fn create_color_dimmer_switch(ep_id: u8) -> ezb_af_ep_desc_t {
     unsafe { ezb_zha_create_color_dimmer_switch(ep_id, &cfg) }
 }
 
+// This variant is what 'esp-zigbee-sdk' PEOPLE suggest |1| - building from scratch.
+//  |1[ -> https://github.com/espressif/esp-zigbee-sdk/issues/897
+#[cfg(feature = "dt_ias_cie")]
+fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
+    use ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID;
+
+    let cfg = ezb_af_ep_config_t::new( ep_id,
+        EZB_AF_HA_PROFILE_ID,
+        EZB_ZHA_IAS_CONTROL_INDICATING_EQUIPMENT_ID,
+        0   // app device version
+    );
+
+    let ep_desc: ezb_af_ep_desc_t = ezb_af_create_endpoint_desc(&cfg);
+
+    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_ias_ace_create_cluster_desc(ias_ace_cfg, EZB_ZCL_CLUSTER_SERVER));
+    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_identify_create_cluster_desc(NULL, EZB_ZCL_CLUSTER_CLIENT));
+    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_ias_zone_create_cluster_desc(NULL, EZB_ZCL_CLUSTER_CLIENT));
+    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_ias_wd_create_cluster_desc(NULL, EZB_ZCL_CLUSTER_CLIENT));
+
+    return ep_desc;
+}
+
+// This variant is what GOOGLE.AI suggested - building on top of a harmless device type.
+#[cfg(false)]
 #[cfg(feature = "dt_ias_cie")]
 fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
     use ezb_node_raw::{

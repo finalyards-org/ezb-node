@@ -26,6 +26,9 @@
 #include "ezbee/zdo.h"
   // zdo_dev_srv_disc.h: service discovery
 
+#include "ezbee/zcl/cluster/ias_ace_desc.h"
+  // ezb_zcl_ias_ace_cluster_server_config_t
+
 // Device type specific defaults
 //
 // These are presented as macros in the C API. Moving them on turned out to be a challenge (but a solution was found
@@ -99,3 +102,69 @@ typedef enum {
     DROP           = EZB_ERR_DROP,
     SECURITY       = EZB_ERR_SECURITY,
 } ezb_err_e;
+
+// 'esp-zigbee-lib' (2.0.4) defines these as an anonymous enum, leading them to become unrelated constants
+// in 'bindgen'. We can give the enum a name (only using the values we need), leading to more bindable C code.
+//
+// Name is based on 'ezb_zha_device_id_t', which is the u16 alias for them in function parameters.
+//
+#if 0   //r: done elsewhere (bindings.rs)
+typedef enum {
+    /* Standard */
+
+    /* Generic Devices */
+    // EZB_ZHA_ON_OFF_SWITCH_DEVICE_ID              = 0x0000,
+    // EZB_ZHA_LEVEL_CONTROL_SWITCH_DEVICE_ID       = 0x0001,
+    // EZB_ZHA_ON_OFF_OUTPUT_DEVICE_ID              = 0x0002,
+    // EZB_ZHA_LEVEL_CONTROLLABLE_OUTPUT_DEVICE_ID  = 0x0003,
+    // EZB_ZHA_SCENE_SELECTOR_DEVICE_ID             = 0x0004,
+    // EZB_ZHA_CONFIGURATION_TOOL_DEVICE_ID         = 0x0005,
+    // EZB_ZHA_REMOTE_CONTROL_DEVICE_ID             = 0x0006,
+    // EZB_ZHA_COMBINED_INTERFACE_DEVICE_ID         = 0x0007,
+    // EZB_ZHA_RANGE_EXTENDER_DEVICE_ID             = 0x0008,
+    // EZB_ZHA_MAINS_POWER_OUTLET_DEVICE_ID         = 0x0009,
+    // EZB_ZHA_DOOR_LOCK_DEVICE_ID                  = 0x000A,
+    // EZB_ZHA_DOOR_LOCK_CONTROLLER_DEVICE_ID       = 0x000B,
+    // EZB_ZHA_SIMPLE_SENSOR_DEVICE_ID              = 0x000C,
+    // EZB_ZHA_CONSUMPTION_AWARENESS_DEVICE_ID      = 0x000D,
+    // EZB_ZHA_HOME_GATEWAY_DEVICE_ID               = 0x0050,
+    // EZB_ZHA_SMART_PLUG_DEVICE_ID                 = 0x0051,
+    // EZB_ZHA_WHITE_GOODS_DEVICE_ID                = 0x0052,
+    // EZB_ZHA_METER_INTERFACE_DEVICE_ID            = 0x0053,
+
+    /* Lighting Devices */
+    // EZB_ZHA_ON_OFF_LIGHT_DEVICE_ID               = 0x0100,
+    // EZB_ZHA_DIMMABLE_LIGHT_DEVICE_ID             = 0x0101,
+    // EZB_ZHA_COLOR_DIMMABLE_LIGHT_DEVICE_ID       = 0x0102,
+    // EZB_ZHA_ON_OFF_LIGHT_SWITCH_DEVICE_ID        = 0x0103,
+    // EZB_ZHA_DIMMER_SWITCH_DEVICE_ID              = 0x0104,
+    // EZB_ZHA_COLOR_DIMMER_SWITCH_DEVICE_ID        = 0x0105,
+    // EZB_ZHA_LIGHT_SENSOR_DEVICE_ID               = 0x0106,
+    // EZB_ZHA_OCCUPANCY_SENSOR_DEVICE_ID           = 0x0107,
+
+    /* Closures Devices */
+    //|EZB_ZHA_SHADE_DEVICE_ID                      = 0x0200,
+    //|EZB_ZHA_SHADE_CONTROLLER_DEVICE_ID           = 0x0201,
+    //|EZB_ZHA_WINDOW_COVERING_DEVICE_ID            = 0x0202,
+    //|EZB_ZHA_WINDOW_COVERING_CONTROLLER_DEVICE_ID = 0x0203,
+
+    /* HVAC Devices */
+    //|EZB_ZHA_HEATING_COOLING_UNIT_DEVICE_ID       = 0x0300,
+    //|EZB_ZHA_THERMOSTAT_DEVICE_ID                 = 0x0301,
+    //|EZB_ZHA_TEMPERATURE_SENSOR_DEVICE_ID         = 0x0302,
+    //|EZB_ZHA_PUMP_DEVICE_ID                       = 0x0303,
+    //|EZB_ZHA_PUMP_CONTROLLER_DEVICE_ID            = 0x0304,
+    //|EZB_ZHA_PRESSURE_SENSOR_DEVICE_ID            = 0x0305,
+    //|EZB_ZHA_FLOW_SENSOR_DEVICE_ID                = 0x0306,
+    //|EZB_ZHA_MINI_SPLIT_AC_DEVICE_ID              = 0x0307,
+
+    /* Intruder Alarm System */
+    IAS_CONTROL_INDICATING_EQUIPMENT_ID  = 0x0400 //EZB_ZHA_IAS_CONTROL_INDICATING_EQUIPMENT_ID,
+    //|EZB_ZHA_IAS_ANCILLARY_CONTROL_EQUIPMENT_ID   = 0x0401,
+    //|EZB_ZHA_IAS_ZONE_ID                          = 0x0402,
+    //|EZB_ZHA_IAS_WARNING_DEVICE_ID                = 0x0403,
+
+    /* Custom */
+    //|EZB_ZHA_CUSTOM_GATEWAY_DEVICE_ID = 0xff00,
+} ezb_zha_device_id_e;
+#endif

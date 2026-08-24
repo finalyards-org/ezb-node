@@ -1,49 +1,57 @@
-# Examples
+# Apps
 
-Some runnable programs to showcase the `ezb-node`.
+Runnable programs to showcase the `ezb-node`.
 
 ```
 ├── demo
 │   ├── 1
-│   │   ├── light
-│   │   └── switch
-│   └── 2.door
-│       ├── README.md
+│   │   ├── light/...
+│   │   └── switch/...
+│   └── 2
 │       ├── app.toml
-│       ├── light_coordinator.rs
-│       └── main.rs
+│       ├── main.rs
+│       └── ias_coordinator.rs
 ├── partitions.csv
 ├── sdkconfig.defaults
-└── src 		# common tools
+└── src/...
 ```
+
+>`src` has tools common to all demos. When you adapt this to your own application, check those out. Having them under `src` (as a lib) is simply a way to share them across the demo binaries.
+
 
 ## Requirements
 
 ||ESP32-C6 devkits|Zigbee devices|
 |---|---|---|
 |**Demo 1** - light and switch|2 pc|none|
-|**Demo 2** - door/window sensor|2 pc|1 window/door sensor|
+|**Demo 2** - door/window sensor|1 pc|Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html) |
+
+>For detailed information about each of the demos, see their respective READMEs.
 
 ### Setting up `espflash`
 
 To flash the applications on your devkit(s), you'll need the `espflash` tool.
 
->If you connect directly with a cable to the devkit, and have Python installed, you *may* be able to use `idf.py` for this. Do so if you are more comfortable with it than `espflash`. But DO NOT install the ESP-IDF toolchain manually. Instead, you'll find `idf.py` under
->`~/.espressif/esp-idf/v5.5.5/tools/idf.py`.
+<details><summary>Alternatives to `espflash`</summary>
+>The author prefers `espflash` because there's a proxying tool for it; he can keep the devkit and the development machine **physically separated**. ⚡️⚡️
 >
->The author prefers `espflash` because there's a proxying tool for it; he can keep the devkit and the development machine **physically separated**. (You'd like as well, especially if doing motor controls with 12V! ⚡️⚡️)
+>`idf.py` is the flashing tool you'd use with ESP-IDF normally. You may use it, but *do not install a separate version* on your system - that confuses `esp-idf-sys`. You can find one by:
 >
->`probe-rs` is a *third* tool used for flashing. It cannot be used with ESP-IDF applications for reasons that ... the author forgot.
+>```
+>$ find ~/.espressif/ -name idf.py
+/home/lima/.espressif/esp-idf/v5.5.5/tools/idf.py
+>```
+>
+>`probe-rs` is another tool used for flashing. It cannot be used with ESP-IDF applications for reasons that ... the author does not recall.
+</details>
 
-**So you proceed** to install `espflash`:
+To install `espflash`:
 
 ```
 $ cargo install espflash --locked
 ```
 
 .. **or use** the [`probe-rs-remote`](https://github.com/finalyards-org/probe-rs-remote) remoting solution, where the actual `espflash` runs on e.g. a Raspberry Pi. Now you can easily use a VM for the builds.
-
->`probe-rs-remote` can be used for proxying calls to either (or both) `probe-rs` and `espflash`.
 
 **It pings?**
 
@@ -85,16 +93,14 @@ Hope it looks that good!
 
 ## Build and run
 
-The steps are pretty similar to all demos (`1.light`, `1.switch`, `2`). 
+These steps are pretty similar across all the demos. 
 
-⚠️ Just be aware that **any information you have on the devkit will be erased** by the flashing. This includes prior Zigbee network pairings.
+⚠️ Be aware that **any information you have on the devkit will be erased** by the flashing. This includes prior Zigbee network pairings.
 
 🟢 Let's go!
 
 
 ### Build
-
->We use a `Justfile` to keep the commands short. You can open it to see the actual `cargo` commands used.
 
 ```
 $ just lb
@@ -107,7 +113,7 @@ This builds the application, and its dependencies:
 
 If you haven't already, it also downloads the whole ESP-IDF toolchain from the Internet. 
 
-It may take 5..6 GB of disk space.
+It takes ~6-8 GB of disk space.
 
 
 ### Run
@@ -117,13 +123,9 @@ $ just lr
 [...]
 ```
 
+For other demos, variate the commands (e.g. `db`, `dr` for demo 2). See inside the `Justfile` for details.
 
-## Demos
 
-Continue to the READMEs in the folders:
 
-- [1/README.md](1/README.md)
-- [2.door/README.md](2.door/README.md)
-
-- ...
-
+<!-- tbd. How to proceed from here?
+-->

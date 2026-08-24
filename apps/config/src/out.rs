@@ -93,8 +93,7 @@ pub enum ZclServerCluster {
     OnOff,            // implicit from device type (switch uses for discovery)
     LevelControl,     // implicit from device type (switch uses for discovery)
     IasZone,          // implicit from device type
-    #[cfg(feature = "cl_power_config")]
-    HA_PowerConfig,     // for collecting battery information
+    PowerConfig,     // for collecting battery information
 }
 
 ///
@@ -105,8 +104,7 @@ pub enum ZclClientCluster {
     //OnOff,            // implicit from device type
     //LevelControl,     // implicit from device type
     //IasZone,          // implicit from device type
-    #[cfg(feature = "cl_power_config_client")]
-    HA_PowerConfig,     // for providing battery information
+    PowerConfig,     // for providing battery information
 }
 
 /// Certain endpoint's configuration (except its id, which is carried as a map key).

@@ -1,9 +1,10 @@
 
 use core::{
     fmt,
-    time::Duration
+    //r time::Duration
 };
 
+use embassy_time::Duration;
 use strum;
 
 use ezb_node_raw::{

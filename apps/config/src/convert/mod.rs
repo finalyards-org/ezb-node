@@ -199,10 +199,10 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
             let q_additional_server_clusters = {
                 let qs = v.additional_server_clusters.iter().map(|cluster| {
                     match cluster {
-                        ServerCluster::HA_OnOff =>      quote! { ZclCluster::OnOff },
-                        ServerCluster::HA_LevelControl => quote! { ZclCluster::LevelControl },
-                        ServerCluster::HA_PowerConfig => quote! { ZclCluster::PowerConfig },
-                        ServerCluster::HA_IasZone =>    quote! { ZclCluster::IasZone },
+                        ServerCluster::HA_OnOff =>      quote! { ZclServerCluster::OnOff },
+                        ServerCluster::HA_LevelControl => quote! { ZclServerCluster::LevelControl },
+                        ServerCluster::HA_PowerConfig => quote! { ZclServerCluster::PowerConfig },
+                        ServerCluster::HA_IasZone =>    quote! { ZclServerCluster::IasZone },
                     }
                 });
                 quote! { vec![ #(#qs),* ] }
