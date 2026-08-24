@@ -28,6 +28,7 @@ use ezb_node_raw::{
     ezb_zha_create_color_dimmer_switch,
     ezb_zcl_role_e,
     ezb_af_ep_config_t,
+    ezb_af_create_endpoint_desc,
 };
 
 use crate::{
@@ -167,26 +168,47 @@ fn create_color_dimmer_switch(ep_id: u8) -> ezb_af_ep_desc_t {
     unsafe { ezb_zha_create_color_dimmer_switch(ep_id, &cfg) }
 }
 
-// This variant is what 'esp-zigbee-sdk' PEOPLE suggest |1| - building from scratch.
-//  |1[ -> https://github.com/espressif/esp-zigbee-sdk/issues/897
+// This variant is based on advice at: https://github.com/espressif/esp-zigbee-sdk/issues/897
 #[cfg(feature = "dt_ias_cie")]
 fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
-    use ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID;
+    use ezb_af_profile_id_e::HA_PROFILE_ID;
+    use ezb_zha_device_id_e::IAS_CONTROL_INDICATING_EQUIPMENT_ID;
+    use ezb_zcl_role_e::{CLUSTER_CLIENT, CLUSTER_SERVER};
+    use ezb_node_raw::{
+        ezb_zcl_ias_ace_create_cluster_desc,
+        ezb_zcl_identify_create_cluster_desc,
+        ezb_zcl_ias_zone_create_cluster_desc,
+        ezb_zcl_ias_wd_create_cluster_desc,
+        ezb_af_endpoint_add_cluster_desc,
+    };
 
     let cfg = ezb_af_ep_config_t::new( ep_id,
-        EZB_AF_HA_PROFILE_ID,
-        EZB_ZHA_IAS_CONTROL_INDICATING_EQUIPMENT_ID,
+        HA_PROFILE_ID,
+        IAS_CONTROL_INDICATING_EQUIPMENT_ID,
         0   // app device version
     );
 
-    let ep_desc: ezb_af_ep_desc_t = ezb_af_create_endpoint_desc(&cfg);
+    let desc: ezb_af_ep_desc_t = unsafe {
+        ezb_af_create_endpoint_desc(&cfg)
+    };
+    assert!( !desc.is_null(), "Creating a generic endpoint descriptor failed");    // bad config?
 
-    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_ias_ace_create_cluster_desc(ias_ace_cfg, EZB_ZCL_CLUSTER_SERVER));
-    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_identify_create_cluster_desc(NULL, EZB_ZCL_CLUSTER_CLIENT));
-    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_ias_zone_create_cluster_desc(NULL, EZB_ZCL_CLUSTER_CLIENT));
-    //ezb_af_endpoint_add_cluster_desc(ep_desc, ezb_zcl_ias_wd_create_cluster_desc(NULL, EZB_ZCL_CLUSTER_CLIENT));
+    const NULL: *const c_void = core::ptr::null();
 
-    return ep_desc;
+    let clusters: [ezb_zcl_cluster_desc_t;4] = [
+        unsafe { ezb_zcl_ias_ace_create_cluster_desc(NULL, CLUSTER_SERVER as u8) },
+        unsafe { ezb_zcl_identify_create_cluster_desc(NULL, CLUSTER_CLIENT as u8) },
+        unsafe { ezb_zcl_ias_zone_create_cluster_desc(NULL, CLUSTER_CLIENT as u8) },
+        unsafe { ezb_zcl_ias_wd_create_cluster_desc(NULL, CLUSTER_CLIENT as u8) },
+    ];
+    assert!( !clusters.iter().any(|c| c.is_null()), "Failed to create some cluster(s): IAS_CIE");
+
+    for cl in clusters {
+        let err = unsafe { ezb_af_endpoint_add_cluster_desc(desc, cl) };
+        assert!((err == 0), "Failed to add cluster: IAS_ACE");
+    }
+
+    desc
 }
 
 // This variant is what GOOGLE.AI suggested - building on top of a harmless device type.

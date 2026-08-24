@@ -71,7 +71,7 @@ impl MatchingContext {
     * Create a pinned matcher (lives in the heap; stationary, i.e. fields can be passed to C APIs).
     */
     pub(super) fn new_pinned(in_clusters: &[ezb_zcl_cluster_id_e], out_clusters: &[ezb_zcl_cluster_id_e]) -> Pin<Box<Self>> {
-        use ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID; // HA = Home Automation
+        use ezb_af_profile_id_e::HA_PROFILE_ID; // HA = Home Automation
 
         // Create a channel. The sending end is placed in the '.req.useer_ctx' so we can feed it from the C callback
         // (even if there were multiple matches going on).
@@ -100,7 +100,7 @@ impl MatchingContext {
                     dst_nwk_addr: ShortAddr::GROUPCAST.0,   // 0xFFFD
                     field: ezb_zdp_match_desc_req_field_s {
                         nwk_addr_of_interest: ShortAddr::GROUPCAST.0, // 0xFFFD
-                        profile_id: EZB_AF_HA_PROFILE_ID as u16,
+                        profile_id: HA_PROFILE_ID as u16,
                         num_in_clusters: in_clusters.len() as u8,
                         num_out_clusters: out_clusters.len() as u8,
                         cluster_list: core::ptr::null_mut(), // will be set

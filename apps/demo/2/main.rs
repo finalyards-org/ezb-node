@@ -9,7 +9,7 @@ use esp_idf_svc::{
     sys::{link_patches},
 };
 
-use log::LevelFilter;
+//use log::LevelFilter;
 
 use ezb_node::{
     Config,

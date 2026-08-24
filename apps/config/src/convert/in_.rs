@@ -8,7 +8,7 @@ use std::{
     vec::Vec,
 };
 
-//use core::time::Duration; //  use humantime instead, if needed
+// If Duration values are needed, use 'humantime' (see Cargo.toml).
 
 /**
 * Presents 1:1 relation from the TOML to Struct, for reading things in.

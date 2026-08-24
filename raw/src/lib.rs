@@ -154,4 +154,8 @@ pub use bindings::{
     ezb_bdb_open_network,
     ezb_nwk_get_extended_address,
     ezb_af_ep_config_t,
+    ezb_af_create_endpoint_desc,
+    ezb_zcl_ias_ace_create_cluster_desc,
+    ezb_zcl_identify_create_cluster_desc,
+    ezb_zcl_ias_wd_create_cluster_desc,
 };

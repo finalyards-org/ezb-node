@@ -315,29 +315,16 @@ impl ezb_zdp_status_e {
     }
 }
 
-// Likely, we don't need any other profiles than 'HA'
-/*** #keep for now
 /**
  * @brief Zigbee application profile ID
- *    -
  */
-// C code carries these in 'ezb_af_profile_id_t' (u16); bindgen repr is u32
+// These come from the standard so we can just define the ones we need (which is HA).
 #[repr(u16)]
-enum ezb_af_profile_id_e {
-    #[cfg(false)]   // not needed by applications
-    EZB_AF_ZDP_PROFILE_ID = a::ezb_af_profile_id_e::EZB_AF_ZDP_PROFILE_ID.0, /*!< Zigbee Device Profile (ZDP) ID. Used by Zigbee internal network management. */
-    // Covers all that's Zigbee 3.0
-    //  - defines the standard clusters
-    EZB_AF_HA_PROFILE_ID  = a::ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID.0, /*!< Home Automation (HA) profile ID */
-
-    #[cfg(false)]   // SmartEnergy; not in focus
-    EZB_AF_SE_PROFILE_ID  = 0x0109U, /*!< SE profile ID */
-    #[cfg(false)]   // feature = "touchlink"
-    EZB_AF_TL_PROFILE_ID  = a::ezb_af_profile_id_e::EZB_AF_TL_PROFILE_ID.0, /*!< Touchlink profile ID */
-    #[cfg(false)]
-    EZB_AF_GP_PROFILE_ID  = 0xA1E0U, /*!< GreenPower profile ID */
-};
-***/
+#[allow(non_camel_case_types)]
+pub enum ezb_af_profile_id_e {
+    HA_PROFILE_ID  = a::ezb_af_profile_id_e::EZB_AF_HA_PROFILE_ID as u16,   // 0x104
+    // None of: SmartEnergy, Touchlink, GreenPower
+}
 
 //---
 // 'ezb_addr_mode_e' (enum) is only used in 'ezb_addr_t' which combines the enum and value (as a union),
@@ -530,3 +517,4 @@ impl Default for ezb_af_ep_config_t {
         unsafe { core::mem::zeroed() }
     }
 }
+

@@ -125,7 +125,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--allowlist-function 'ezb_ep_create_ha_default' \
 	  	--allowlist-function 'ezb_get_current_.+' \
 			--allowlist-function 'ezb_nwk_.+' \
-			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_ace|ias_zone|level|ota_upgrade)_.+' \
+			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_ace|ias_wd|ias_zone|identify|level|ota_upgrade)_.+' \
 	  	--allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch|configuration_tool)' \
 			\
@@ -144,6 +144,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    \
 	    --allowlist-var 'ESP_ERR_.+' \
 	    --allowlist-var 'EZB_ERR_.+' \
+	    --allowlist-var 'EZB_INVALID_AF_EP_DESC' \
 	    --allowlist-var 'EZB_ZCL_CLUSTER_.+' \
 	    --allowlist-var 'ESP_ZIGBEE_VER' \
 	    \

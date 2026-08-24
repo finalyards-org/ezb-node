@@ -26,6 +26,9 @@
 #include "ezbee/zdo.h"
   // zdo_dev_srv_disc.h: service discovery
 
+#include "ezbee/af.h"
+  // EZB_INVALID_AF_EP_DESC
+
 #include "ezbee/zcl/cluster/ias_ace_desc.h"
   // ezb_zcl_ias_ace_cluster_server_config_t
 
@@ -167,4 +170,8 @@ typedef enum {
     /* Custom */
     //|EZB_ZHA_CUSTOM_GATEWAY_DEVICE_ID = 0xff00,
 } ezb_zha_device_id_e;
+#endif
+
+#ifndef EZB_INVALID_AF_EP_DESC
+# error "Something's wrong"
 #endif
