@@ -32,6 +32,9 @@
 #include "ezbee/zcl/cluster/ias_ace_desc.h"
   // ezb_zcl_ias_ace_cluster_server_config_t
 
+#include "nvs_flash.h"
+  // nvs_flash_init
+
 // Device type specific defaults
 //
 // These are presented as macros in the C API. Moving them on turned out to be a challenge (but a solution was found

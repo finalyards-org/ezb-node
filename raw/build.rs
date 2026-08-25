@@ -112,7 +112,7 @@ fn main() {
     {
         for s in [
             "-Tlinkall.x",
-            "-Tdefmt.x"     // required by 'defmt'
+            //"-Tdefmt.x"     // not using 'defmt'
         ] {
             println!("cargo::rustc-link-arg={}", s);
         }

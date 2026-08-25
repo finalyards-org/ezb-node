@@ -1,4 +1,3 @@
-//? #![feature(never_type)]
 extern crate alloc;
 
 use anyhow::*;
@@ -10,10 +9,11 @@ use esp_idf_svc::{
 };
 
 //use log::LevelFilter;
+use log::debug;
 
 use ezb_node::{
     Config,
-    Node,
+    //r Node,
 };
 
 use ezb_node_apps::{

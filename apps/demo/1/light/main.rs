@@ -3,7 +3,6 @@
 *   - "Color dimmable light" example of 'esp-zigbee-sdk' v.2.0
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmable_light
 */
-//#![feature(never_type)]
 extern crate alloc;
 
 use anyhow::*;
@@ -11,14 +10,12 @@ use anyhow::*;
 use embassy_executor::Spawner;
 
 use esp_idf_svc::{
-    sys::{link_patches},
+    sys::link_patches,
 };
-
-use log::LevelFilter;
 
 use ezb_node::{
     Config,
-    Node,
+    //Node,
 };
 
 use ezb_node_apps::{
@@ -39,6 +36,8 @@ mod light_coordinator;
 */
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
+    use std::sync::LazyLock;
+
     // 'esp-idf-sys' needs it. See https://github.com/esp-rs/esp-idf-template/issues/71
     link_patches();
 
@@ -47,7 +46,7 @@ async fn main(_spawner: Spawner) {
     // Recommended logging, level steered by 'sdkconfig.defaults'. Guarantees C and Rust sides observe same logging.
     esp_idf_svc::log::EspIdfLogger::initialize_default();
 
-    static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
+    static CFG: LazyLock<Config> = LazyLock::new(|| {
         include!(concat!(env!("OUT_DIR"), "/1-light_conf.in"))
     });
 

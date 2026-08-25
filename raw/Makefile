@@ -32,6 +32,7 @@ _ESP_ZIGBEE_LIB_INCLUDE:=\
 _NVS_COMPONENTS_INCLUDE:=\
   ${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/components/nvs_flash/include \
   ${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/components/esp_partition/include
+	  # 'esp_partition' is transitively needed by 'nvs_flash'
 
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
 # section that we need.
@@ -128,6 +129,7 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_ace|ias_wd|ias_zone|identify|level|ota_upgrade)_.+' \
 	  	--allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch|configuration_tool)' \
+	    --allowlist-function 'nvs_flash_init' \
 			\
 	    --allowlist-type 'ezb_addr_mode_e' \
 	    --allowlist-type 'ezb_af_(?:device|endpoint|profile_id)_.+' \
@@ -201,7 +203,6 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	  > $@
 
 # Entries removed (keep for a while):
-#	    --allowlist-function 'nvs_flash_init(?:|_partition)' \
 #	    --allowlist-type 'esp_zb_ha_standard_devices_t' \
 
 # Hints:

@@ -1,6 +1,6 @@
-use embassy_sync::channel::{
-    //r DynamicReceiver
-};
+//ruse embassy_sync::channel::{
+//r    DynamicReceiver
+//r};
 use embassy_time::{
     Duration
 };
@@ -27,7 +27,7 @@ impl IasCoordinator {
         const AUTO_START: bool = false;
         // Note: This might disappear, see comment of 'Node::init()'.
 
-        let () = <Self as Node>::init(c, AUTO_START)?;
+        let () = <Self as Node>::init(c, AUTO_START)?;  // BUG: CRASHES HERE
         Ok(Self {})
     }
 

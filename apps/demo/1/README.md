@@ -1,11 +1,11 @@
-# Demo 1 - Light Bulb
+# Demo 1 - Light and Switch
 
-In this demo, we flash two ESP32-C6 boards:
+In this demo, we use two ESP32-C6 boards:
 
-- Light bulb
-- Switch
+- Light; a Zigbee controller
+- Switch; binds to the light
 
->The value of this demo is that it's 1-to-1 the same as the C side `examples/home_automation_devices` > `color_dimmable_light` and `color_dimmer_switch` pair. This allows us to compare the implementations, and if something is broken, debug also the C code.
+>The demo is 1-to-1 the same as the C side `examples/home_automation_devices` > `color_dimmable_light` and `color_dimmer_switch` pair. This allows us to compare the implementations, execute them across (one node C, another Rust), and if something is broken, debug with the C code as a reference.
 
 Once you press the `BOOT` button on the "Switch" device, the light of the "Light bulb" device should change hue and brightness.
 
@@ -25,7 +25,7 @@ $ espflash board-info
 # it should ask you which one to use, and show its info.
 ```
 
-### Flash the Light Bulb
+### Flash the Light
 
 ```
 $ just lr
@@ -43,7 +43,7 @@ $ just sr
 [...]
 ```
 
-This time, pick the other device.
+This time, pick the other device. :)
 
 ### Button test
 
@@ -51,4 +51,5 @@ Press `BOOT` on the Switch device. Did the light on the "Light bulb" react?
 
 This proves Zigbee connection works. 
 
->Hint. Once flashed, the boards do not need to be connected to a computer. You can charge them from any charger.
+>Hint. Once flashed, the boards do not need to be connected to a computer. You can charge them from e.g. a power bank! 🔋
+

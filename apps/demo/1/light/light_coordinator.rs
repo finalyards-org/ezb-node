@@ -1,9 +1,6 @@
 use embassy_sync::channel::{
     DynamicReceiver
 };
-use embassy_time::{
-    Duration
-};
 
 use ezb_node::{
     AppSignal,
@@ -14,8 +11,6 @@ use ezb_node::{
     ZclEvent,
     ZclError,
 };
-
-const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub(crate) struct LightCoordinator
 where Self: Node {
@@ -144,10 +139,9 @@ impl LightCoordinator {
 
         match ev {
             SetAttrValue { .. } => {
-                unimplemented!();
+                todo!();
 
                 //set_attr_value(message);  // i.e. steer the light (color, intensity, on/off)
-                log::debug!("Setting light to: {}", "..something..");   // TEMP
             },
             DefaultResp { err, .. } => {
                 //ezb_zcl_cmd_default_rsp_message_t *default_rsp = (ezb_zcl_cmd_default_rsp_message_t *)message;

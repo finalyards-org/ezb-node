@@ -26,26 +26,27 @@ build-std = ["std", "panic_abort"]
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
-runner = "espflash flash --monitor --partition-table partitions.csv"
+runner = "espflash flash --monitor --partition-table partitions.csv --baud 912600 --no-verify"
     #
-    # Note: You can try to get faster flash speed by:
-    #   '--flash-freq 80mhz' (default is 40MHz); did not cause a speed-up with the author.
-    #   '--flash-mode qio' (default is DIO); did not work for the author.
+    # Note: Speed up the flashing by:
+    #   '--baud 2000000' (default is 115200); should work ☀️
+    #       For some reason, 'espflash' reporting is different (more verbose) wwith baud 2000000 than 912600.
+    #       Keeping 912600.
+    #   '--no-verify'
     #
-    #   Such settings (if they work for you) can be placed in '.config/espflash/espflash.toml'
+    #   Place such settings (if they work for you) in '~/.config/espflash/espflash.toml'. |1|
+    #
+    #       |1| https://github.com/esp-rs/espflash/blob/main/espflash/README.md#configuration-files
 
 rustflags = [
     # "Required to obtain backtraces [on RISC-V only], however it may negatively impact the performance of your application."
-    #
-    # "Please note that when targeting a RISC-V device, you need to force frame pointers (i.e. "-C", "force-frame-pointers",
-    # in your .cargo/config.toml); this is not required for Xtensa."
     #
     # Note: Interesting discussion in:
     #   - "`force-frame-pointers` flag isn't honored always unless std is recompiled as such"
     #       -> https://github.com/rust-lang/rust/issues/103711 (GitHub Issues; [closed])
     #
     # We... might not need this.
-    #"-C", "force-frame-pointers",
+    "-C", "force-frame-pointers",
 
     # "must be set for ESP-IDF 5.0 and above" |1|
     #

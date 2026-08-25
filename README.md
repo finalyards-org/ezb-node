@@ -18,15 +18,17 @@ This repo aims at *forward looking* development. This means:
 - active focus on Zigbee 3.0; interest in Zigbee 4.0
 - low or no interest in legacy
 
-Supported ZCL profiles:
+Supported devices:
 
 - [ ] Door/window sensor
+
 
 **Non-focus**
 
 The following Zigbee features are not in the focus of this project:
 
 - Groups
+- Scenes
 - Green power (harvested energy end devices)
 - Touchlink
 

@@ -82,7 +82,7 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
 
     // We should ever be called just once.
     if BEEN_THERE.swap(true, std::sync::atomic::Ordering::Relaxed) {
-        panic!("Calling 'zigbee_spawn' twice");
+        panic!("'zigbee_spawn' twice");
     }
 
     let ca: ConfigAccess = cfg.into();

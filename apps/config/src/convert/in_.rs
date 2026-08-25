@@ -38,6 +38,7 @@ pub enum SecondaryChannels {
 
 #[derive(Deserialize, Debug)]
 pub struct PlatformSection {
+    // tbd. THIS MIGHT NOT BE NEEDED any more?   Is the partition now always "nvs" (default).
     pub storage_partition_name: String,
 }
 

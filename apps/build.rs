@@ -120,5 +120,8 @@ fn main() -> Result<()> {
     //
     println!("cargo::rerun-if-changed=build.rs");
 
+    //r Is also in '../raw/build.rs'. Should we have it in both/either? tbd.
+    //r println!("cargo::rustc-link-arg={}", "-Tlinkall.x");
+
     Ok(())
 }

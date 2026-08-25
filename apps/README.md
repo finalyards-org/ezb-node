@@ -16,14 +16,14 @@ Runnable programs to showcase the `ezb-node`.
 └── src/...
 ```
 
->`src` has tools common to all demos. When you adapt this to your own application, check those out. Having them under `src` (as a lib) is simply a way to share them across the demo binaries.
+>Note: `src` has tools common to all the demos. It's there only so that we can share code among the apps.
 
 
 ## Requirements
 
 ||ESP32-C6 devkits|Zigbee devices|
 |---|---|---|
-|**Demo 1** - light and switch|2 pc|none|
+|**Demo 1** - light and switch|2 pc|*none*|
 |**Demo 2** - door/window sensor|1 pc|Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html) |
 
 >For detailed information about each of the demos, see their respective READMEs.

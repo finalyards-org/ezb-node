@@ -158,4 +158,5 @@ pub use bindings::{
     ezb_zcl_ias_ace_create_cluster_desc,
     ezb_zcl_identify_create_cluster_desc,
     ezb_zcl_ias_wd_create_cluster_desc,
+    nvs_flash_init,
 };

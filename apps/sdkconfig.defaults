@@ -116,6 +116,8 @@ CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_RSA=n
 
 # end of mbedTLS
 
+CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+
 # 6.0.2 compatibility
 #|CONFIG_LIBC_NEWLIB=y
 #|  # ESP-IDF 6.0 has 'Picolibc' by default, leading to '__FILE' compilation problems in 'raw' > 'make manual'.

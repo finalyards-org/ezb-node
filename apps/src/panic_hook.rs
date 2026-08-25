@@ -17,21 +17,22 @@ pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(panic_hook));
 }
 
-fn panic_hook(info: &PanicHookInfo) -> /* !*/ () {
+fn panic_hook(info: &PanicHookInfo) -> () /* !*/ {
     // ROM 'print' is slightly safer to use than 'log::error!'; both should work.
     {
         let mut buf = [0u8; 512];
         let mut w = BufWriter { buf: &mut buf, pos: 0 };
 
-        let _ = write!(w, "PANIC: {}\n\0", info);
+        let _ = write!(w, "🛑PANIC: {}\n\n\0", info);  // "panicked at {file:line:column}"
 
         unsafe {
             sys::esp_rom_printf(w.buf.as_ptr() as *const _);
         }
-    }
-    #[cfg(false)]
-    {
-        log::error!("*** PANIC ***\n{}", info);
+        // ESP-IDF function that prints mere memory addresses; espflash should convert those to
+        // 'file:line:column' references.
+        unsafe {
+            sys::esp_backtrace_print(100);
+        }
     }
 
     // Do not reboot

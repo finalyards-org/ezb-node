@@ -36,11 +36,14 @@ log = { version = "0.4" }
 #   <<
 [workspace.lints.rust]
 
-# We don't use
-#[profile.dev]
-#panic = "unwind"
+[profile.dev]
+debug = true
+opt-level = 0
 
 [profile.release]
+# intention: more info in case of stack dumps
+debug = true
+strip = false
 opt-level = "s"
 
 # Needed for using with ESP-IDF 5.5.5 (breaks stuff with 5.5.4):

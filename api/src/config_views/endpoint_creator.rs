@@ -47,6 +47,8 @@ pub(crate) struct EndpointCreator(&'static BTreeMap<u8, Endpoint>);
 impl EndpointCreator {
     pub(crate) fn create_all(self, dev: ezb_af_device_desc_t) -> Result<(), EspError> {
         for (&ep_id, entry) in self.0 {
+            log::debug!("Creating endpoint: {} {:?}", ep_id, entry);
+
             create_one(dev, ep_id, entry.clone())?;
         }
         Ok(())
