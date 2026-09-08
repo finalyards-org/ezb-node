@@ -16,7 +16,6 @@ use core::mem::MaybeUninit;
 //
 #[allow(unnecessary_transmutes)]
 #[allow(non_camel_case_types)]
-#[allow(non_camel_case_types)]
 #[allow(unused)]
     // Disable warnings of unused entries, and imports in 'tmp/bindings_0.rs'.
 

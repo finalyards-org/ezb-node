@@ -20,15 +20,6 @@ CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 # This is likely vital, for having 'esp-zigbee-lib' respond in a timely manner.
 CONFIG_FREERTOS_HZ=1000
 
-# NOTE! In ESP-IDF use of Kconfig files, DISABLED LINES ARE USUALLY COMMENTED OUT, NOT SET TO '=n'. This seems to be
-#   "so that C #ifdef can be used for seeing which features are in use" (video |here|).
-#
-#       |here| (around 4:20): "ESP32 - Kconfig with ESP-IDF Tutorial" -> https://www.youtube.com/watch?v=KsrDYfQ9geU
-#
-#   ^-- Correction: this likely matters only for the *output* in the 'sdkconfig' file, not our input. However, an "n"
-#       does not necessarily mean "no", since any transitive "y" flips it over.
-# tbd. consider moving this block away, perhaps to 'DEVS/' - it's not really adding clarity, since we do use '=n'.
-
 #---
 # Zigbee
 CONFIG_ZB_ENABLED=y
@@ -70,7 +61,7 @@ CONFIG_ZB_RADIO_NATIVE=y
 CONFIG_MBEDTLS_AES_C=y
 CONFIG_MBEDTLS_CCM_C=y
 
-# Disable unused
+# unused
 CONFIG_MBEDTLS_GCM_C=n
 CONFIG_MBEDTLS_CMAC_C=n
 CONFIG_MBEDTLS_SHA1_C=n
@@ -83,44 +74,33 @@ CONFIG_MBEDTLS_ECP_DP_BP256R1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_BP384R1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_BP512R1_ENABLED=n
 CONFIG_MBEDTLS_KEY_EXCHANGE_RSA=n
-CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_PSK=n
-  # ⇪ disable with ESP-IDF 6.0.2
+#CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_PSK=n
+  # ⇪ hide with ESP-IDF 6.0.2
 CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA=n
 
-## v5.x
-CONFIG_MBEDTLS_ECP_DP_SECP192R1_ENABLED=n
-CONFIG_MBEDTLS_ECP_DP_SECP224R1_ENABLED=n
-CONFIG_MBEDTLS_ECP_DP_SECP192K1_ENABLED=n
-CONFIG_MBEDTLS_ECP_DP_SECP224K1_ENABLED=n
-CONFIG_MBEDTLS_KEY_EXCHANGE_DHE_RSA=n
-CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_RSA=n
+## v6.1, v6.0.3
+CONFIG_MBEDTLS_AES_ONLY_128_BIT_KEY_LENGTH=y
+CONFIG_MBEDTLS_CTR_DRBG_C=y
+CONFIG_MBEDTLS_HMAC_DRBG_C=n
+CONFIG_MBEDTLS_X509_RSASSA_PSS_SUPPORT=n
+CONFIG_MBEDTLS_CIPHER_MODE_CBC=n
+CONFIG_MBEDTLS_CIPHER_MODE_CFB=n
+CONFIG_MBEDTLS_CIPHER_MODE_CTR=n
+CONFIG_MBEDTLS_CIPHER_MODE_OFB=n
+CONFIG_MBEDTLS_CIPHER_MODE_XTS=n
+CONFIG_MBEDTLS_RSA_C=y
+CONFIG_MBEDTLS_MD5_C=n
+CONFIG_MBEDTLS_SHA384_C=n
 
-## v6.0.1
-#|CONFIG_MBEDTLS_AES_ONLY_128_BIT_KEY_LENGTH=y
-#|CONFIG_MBEDTLS_CTR_DRBG_C=y
-#|CONFIG_MBEDTLS_HMAC_DRBG_C=n
-#|CONFIG_MBEDTLS_X509_RSASSA_PSS_SUPPORT=n
-#|CONFIG_MBEDTLS_CIPHER_MODE_CBC=n
-#|CONFIG_MBEDTLS_CIPHER_MODE_CFB=n
-#|CONFIG_MBEDTLS_CIPHER_MODE_CTR=n
-#|CONFIG_MBEDTLS_CIPHER_MODE_OFB=n
-#|CONFIG_MBEDTLS_CIPHER_MODE_XTS=n
-#|#CONFIG_MBEDTLS_RSA_C=n # enable with ESP-IDF 6.0.2
-#|CONFIG_MBEDTLS_RSA_C=y
-#|CONFIG_MBEDTLS_MD5_C=n
-#|CONFIG_MBEDTLS_SHA384_C=n
-#|
-#|# NOT part of 'esp-zigbee-sdk's (needed for ESP-IDF 6.0.2)
-#|CONFIG_MBEDTLS_ASYMMETRIC_CRYPTO_SUPPORT=y
-#|CONFIG_MBEDTLS_SHA256_C=y
+# NOT part of 'esp-zigbee-sdk's (needed for ESP-IDF 6.0.2)
+CONFIG_MBEDTLS_ASYMMETRIC_CRYPTO_SUPPORT=y
+CONFIG_MBEDTLS_SHA256_C=y
 
 # end of mbedTLS
 
-CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+# ESP-IDF 6.x has 'Picolibc' by default, leading to '__FILE' compilation problems in 'raw' > 'make manual'.
+CONFIG_LIBC_NEWLIB=y
+#CONFIG_LIBC_STDOUT_LINE_BUF=y
+#CONFIG_LIBC_NEWLIB_NANO_FORMAT=n # is so, by default
+CONFIG_ESP_CONSOLE_UART=y
 
-# 6.0.2 compatibility
-#|CONFIG_LIBC_NEWLIB=y
-#|  # ESP-IDF 6.0 has 'Picolibc' by default, leading to '__FILE' compilation problems in 'raw' > 'make manual'.
-#|#CONFIG_LIBC_STDOUT_LINE_BUF=y
-#|#CONFIG_LIBC_NEWLIB_NANO_FORMAT=n # is so, by default
-#|CONFIG_ESP_CONSOLE_UART=y

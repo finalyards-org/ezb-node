@@ -25,7 +25,11 @@ impl AccessorCtx {
     *
     * @note Having this here (and not within a trait) since it would make a trait not "dyn compatible".
     */
-    pub(super) fn guarded<F,T>(&self, f: F) -> T where F: Fn(&'static dyn Node) -> T {
+    pub(super) fn guarded<F,T>(&self, f: F) -> T
+    where
+        F: FnOnce(&'static dyn Node) -> T
+        //F: FnOnce(&dyn Node) -> T     // alternative; 'Node' valid just for the 'f' call
+    {
         let _guard = ZigbeeGuard::acquire();
         f(self.node)
     }

@@ -14,7 +14,7 @@ Wifi ([`esp-radio`](https://github.com/esp-rs/esp-hal/tree/main/esp-radio)) and 
 
 This repo aims at *forward looking* development. This means:
 
-- using latest underlying versions of libraries (`esp-zigbee-lib`; ESP-IDF 6.x)
+- using latest underlying versions of libraries (`esp-zigbee-lib`; ESP-IDF 6.x *once possible*)
 - active focus on Zigbee 3.0; interest in Zigbee 4.0
 - low or no interest in legacy
 
@@ -40,7 +40,7 @@ status: working, WIP, wish
 
 ### Value
 
-With Rust, we can make a whole lot better APIs than with C. Less code. Better IDE support (narrow interfaces instead of everything being global).
+With Rust, we can make a whole lot better APIs than with C. Less code. Better IDE support (narrow interfaces instead of everything being flat and global).
 
 
 ## About ESP-IDF
@@ -63,18 +63,14 @@ Pulls in the whole ESP-IDF SDK, as part of the Rust compilation. It takes time a
 
 The author aims at maintaining this towards the *latest stable release*.
 
-ESP-IDF 6.0 is released, but is not yet (<strike>Mar'26</strike> Aug'26) supported by `esp-idf-sys` and `esp-zigbee-sdk`. 
+>TL;DR In practise, we work with 5.5.x.
 
-- Track: <https://github.com/finalyards-org/ezb-node/issues/10>
+The hurdle keeping us away from ESP-IDF 6.x is in `esp-idf-hal`. As indicated [here](https://github.com/esp-rs/esp-idf-hal/issues/595), it gives errors on: `adc, i2s, twai, i2c, ledc, pcnt, rmt, gptimer`.
 
-Once it is, the change to ESP-IDF 6.0 will be taken.
-
-|||
-|---|---|
-|6.0.2|released|
-|6.0|released; not supported by `esp-idf-sys`, `esp-zigbee-sdk`|
-|5.5.5|released|
-|5.3.2|recommended by `esp-zigbee-sdk` (11-Mar-26); but it works with 5.5.3|
+||||
+|---|---|---|
+|6.1|latest (8-Sep-26)|`esp-idf-sys` ok; `esp-idf-hal` NOT; `esp-zigbee-sdk` likely not (cannot try)|
+|5.5.5||works with slightly modified git `esp-idf-sys`, git `esp-idf-hal`, stock `esp-zigbee-sdk`|
 
 ### `esp-idf-sys` is a community effort
 
@@ -99,7 +95,7 @@ We *can* add Rust traits and methods to C-originating structs. This still does n
 
 ### API level
 
-`api` is the API layer. Here the emphasis is in *providing a Rust native experience*. Abstractions *are* provided. The aim is to *not leak C functions/structures through* - which would limit our future maneuverability for the project's API.
+`api`. Here the emphasis is in *providing a Rust native experience*. Abstractions *are* provided. The aim is to *not leak C functions/structures through* - which would limit our future maneuverability for the project's API.
 
 ### App level
 
@@ -118,6 +114,20 @@ We *can* add Rust traits and methods to C-originating structs. This still does n
 - A devkit, e.g. [ESP32-C6-DevKitM-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/user_guide.html)
 - Rust installed
 - 10 GB disk space
+
+---
+
+>Recommendation: 
+>
+>Use Lima VM and [Edge VM](|5.5.5|released|
+) (GitHub) for a development environment already geared towards the Rust + ESP-IDF setup. Includes most of the tools listed below.  
+>
+>In addition (see below):
+>
+>- bindgen CLI
+>- `just` and `jq`
+
+---
 
 - C compilers and `bindgen` CLI
 
@@ -235,7 +245,6 @@ Many of the subprojects have a soft link to `.cargo/config.espidf.toml`. This al
 
 ---
 
-
 ### Build some (optional)
 
 You can also skip directly to the "demo" section (next). These are useful for understanding the build layers, and for debugging problems in a build.
@@ -255,8 +264,10 @@ $ cargo build --release --features esp32c6
 
 ```
 $ cd ../api
-$ cargo build --release --features coordinator,ep_color_dimmer_switch
-[...]
+```
+
+```
+$ just build
 ```
 
 **3. Apps**
@@ -266,8 +277,7 @@ $ cd ../apps
 ```
 
 ```
-$ just light-build
-[...]
+$ just door-build
 ```
 
 If the builds succeeded, you are ready to run the created binaries on ESP32-C6 devkits.
@@ -289,7 +299,9 @@ Instructions are within [`apps/README.md`](./apps/README.md).
 
 ### Cleanup
 
-Additional to normal cleanup (`cargo clean`) - you can safely remove the `~/.espressif` folder (6..9 GB, created by `esp-idf-sys`) if no longer needing it.
+Additional to normal `cargo clean`, there are tools in the `~/.espressif` folder (5..6 GB per each ESP-IDF version you've tried). 
+
+You can wipe the folder (it's a kind of cache for `esp-idf-sys`).
 
 ```
 $ rm -rf ~/.espressif

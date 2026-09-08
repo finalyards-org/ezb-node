@@ -1,21 +1,29 @@
-# needed for building 'riscv32imac-esp-espidf' core
 [toolchain]
+channel = "nightly-2026-07-29"  # ok!
+#channel = "nightly-2026-07-30"  # fails
+#channel = "nightly-2026-08-31"  # fails differently
+#channel = "nightly"
 
-# Building 'raw' on 'nightly' is broken (Apple silicon), 20-Aug-26 (12-Aug-26):
+components = ["rust-src", "rustfmt"]
+
+# Building 'std' on 'nightly' (1-Aug-26) is broken (aarch64):
 #   <<
 #     error[E0425]: cannot find value `AT_FDCWD` in crate `libc`
 #     --> /home/lima/.rustup/toolchains/nightly-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/fs/unix.rs:1896:38
-#     |
-#     1896 |                 libc::fchmodat(libc::AT_FDCWD, p.as_ptr(), perm.mode, 0)
-#     |                                      ^^^^^^^^ not found in `libc`
 #   <<
-channel = "nightly-2026-07-14"  # 1.99.0 nightly
-#channel = "nightly-2026-08-01" # fails
-#channel = "nightly"
+#
 
-components = ["rust-src", "clippy", "rustfmt"]
-    # rustfmt: needed for 'make manual' to provide nice-looking 'tmp/bindings_0.rs'
+# 31-Aug-2026 fails like this:
+# <<
+#   Compiling strum_macros v0.24.3
+#   error[E0599]: no method named `as_ptr` found for struct `DropGuard<Pin<&COpaque<pthread_attr_t>>, {closure@unix.rs:61:34}>` in the current scope
+#   --> /home/lima/.rustup/toolchains/nightly-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:70:57
+#   |
+#   70 |                     cmp::max(stack, min_stack_size(attr.as_ptr()))
+#   |                                                         ^^^^^^ method not found in `DropGuard<Pin<&COpaque<pthread_attr_t>>, {closure@unix.rs:61:34}>`
+# <<
 
+#---
 # Automatically installs the target, if you don't have it, yet.
 # However. ESP32 don't come with pre-built std libraries. In fact, this causes a warning in the build output.
 # Let's omit it.

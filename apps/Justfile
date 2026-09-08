@@ -39,12 +39,12 @@ light-run:
 # 1-switch
 [group('switch')]
 switch-build:
-	cargo {{nightly}} build --release -vv --bin 1-switch --features esp32c6,ezb-node/dt_color_dimmer_switch,ezb-node/remote_ep_color_dimmable_light \
+	cargo {{nightly}} build --release -vv --bin 1-switch --features esp32c6,ezb-node/dt_color_dimmer_switch,ezb-node/remote_dt_color_dimmable_light \
 		--jobs 1
 
 [group('switch')]
 switch-run:
-	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,ezb-node/dt_color_dimmer_switch,ezb-node/remote_ep_color_dimmable_light
+	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,ezb-node/dt_color_dimmer_switch,ezb-node/remote_dt_color_dimmable_light
 
 # 2-door
 [group('door')]

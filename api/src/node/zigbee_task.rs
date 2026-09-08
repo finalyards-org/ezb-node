@@ -16,6 +16,8 @@ use embassy_sync::{
     }
 };
 
+use esp_idf_svc::sys;
+
 use ezb_node_raw::{
     esp_zigbee_config_t,
     esp_zigbee_init,
@@ -88,7 +90,7 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
     let ca: ConfigAccess = cfg.into();
     let endpoint_cfg: EndpointCreator = cfg.into();
 
-    let _ = std::thread::Builder::new()
+    let res = std::thread::Builder::new()
         .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
         .stack_size(TASK_STACK_SIZE)
         .spawn(move || {
@@ -99,18 +101,16 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
                 // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
                 // Providing it a 'static', non-changing struct is safe.
 
-            let inner = || -> Result<!,EspError> {
-                zigbee_init(cc)?;
-                zigbee_setup_commissioning(&channel_masks)?;
-                zigbee_create_endpoints(endpoint_cfg)?;
+            // tbd. try calling these from outside of the 'spawn' - that way we get reasonable
+            //      chance of reacting to errors (here we don't).
+            //
+            local_zigbee_init(cc) .unwrap();
+            local_zigbee_setup_commissioning(channel_masks) .unwrap();
+            local_zigbee_create_endpoints(endpoint_cfg) .unwrap();;
 
-                zigbee_run(auto_start)?
-            };
-            inner().unwrap_or_else(|e| {
-                log::error!("Zigbee task failed: {:?}", e);
-                loop {}
-            })
-        })?;
+            local_zigbee_run(auto_start) .unwrap();
+            loop {}
+        });
 
     Ok(())  // right after the thread is successfully spawned (app can start waiting on the channel)
 }
@@ -120,7 +120,7 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
 */
 //ESP_ERROR_CHECK(esp_zigbee_init(&config));
 //
-fn zigbee_init(cc: &'static esp_zigbee_config_t) -> Result<(),EspError> {
+fn local_zigbee_init(cc: &'static esp_zigbee_config_t) -> Result<(),EspError> {
 
     // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
     //
@@ -137,7 +137,7 @@ fn zigbee_init(cc: &'static esp_zigbee_config_t) -> Result<(),EspError> {
 //ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
 //return ESP_OK;
 //
-fn zigbee_setup_commissioning(channel_masks: &[ChannelMask;2]) -> Result<(),EspError> {
+fn local_zigbee_setup_commissioning(channel_masks: [ChannelMask;2]) -> Result<(),EspError> {
 
     // In C examples, this is set to 'false'.
     //
@@ -182,7 +182,7 @@ fn zigbee_setup_commissioning(channel_masks: &[ChannelMask;2]) -> Result<(),EspE
 // ESP_ERROR_CHECK(ezb_af_device_desc_register(dev_desc));
 // ezb_zcl_core_action_handler_register(esp_zigbee_zcl_core_action_handler);
 //
-fn zigbee_create_endpoints(creator: EndpointCreator) -> Result<(), EspError> {
+fn local_zigbee_create_endpoints(creator: EndpointCreator) -> Result<(), EspError> {
 
     // Device where the endpoints will be added to.
     let dev_desc: ezb_af_device_desc_t = unsafe { ezb_af_create_device_desc() };
@@ -209,7 +209,8 @@ fn zigbee_create_endpoints(creator: EndpointCreator) -> Result<(), EspError> {
 //ESP_ERROR_CHECK(esp_zigbee_start(false));
 //esp_zigbee_launch_mainloop();
 //
-fn zigbee_run(auto_start: bool) -> Result<!,EspError> {
+// tbd. Could merge this whole function to the place where it's called.
+fn local_zigbee_run(auto_start: bool) -> Result<!,EspError> {
     let err = unsafe {
         esp_zigbee_start(auto_start)
     };
@@ -220,7 +221,7 @@ fn zigbee_run(auto_start: bool) -> Result<!,EspError> {
     };
     EspError::from(err).map_or(Ok(()), Err)?;
 
-    unreachable!();     // C code continues with the below; do we ever get here
+    unreachable!();     // C code continues with the below; do we ever get here?
 
     //esp_zigbee_deinit();
     //vTaskDelete(NULL);
@@ -281,4 +282,15 @@ extern "C" fn zcl_action_handler(action_id: ezb_zcl_core_action_callback_id_t /*
     }
 
     ()
+}
+
+/// Helper function (for debugging).
+///
+/// @return true if we are within an ISR; false if (more safely) in Zigbee task (Thread mode).
+#[cfg(false)]
+fn debug_is_it_isr() -> bool {
+    todo!()
+
+    // 'esp-idf-sys' does not seem to provide such, but if we FFI to C level 'xPortInIsrContext()'
+    // that gives the info.
 }

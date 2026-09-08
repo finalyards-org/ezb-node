@@ -21,45 +21,64 @@ include .BUILD_ENV
 	#		ESP_IDF_VERSION=5.5.4
 	#		MCU=esp32c6
 
-_ESP_IDF_PATH:=${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}
-_SDKCONFIG:=${DEP_ESP_IDF_ROOT}/sdkconfig
+_ESP_IDF_PATH:=$(DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH)
+_SDKCONFIG:=$(DEP_ESP_IDF_ROOT)/sdkconfig
 	# ^-- good for checking what config got generated [DEBUG]
-_SDKCONFIG_H:=${DEP_ESP_IDF_ROOT}/build/config/sdkconfig.h
+_SDKCONFIG_H:=$(DEP_ESP_IDF_ROOT)/build/config/sdkconfig.h
 _ESP_ZIGBEE_LIB_INCLUDE:=\
-	${DEP_ESP_IDF_ROOT}/managed_components/espressif__esp-zigbee-lib/include
+	$(DEP_ESP_IDF_ROOT)/managed_components/espressif__esp-zigbee-lib/include
 		# Note: for 'esp-zigbee-sdk' 1.x we needed more than one include path. Keep the setup, for now...
 
-_NVS_COMPONENTS_INCLUDE:=\
-  ${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/components/nvs_flash/include \
-  ${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH}/components/esp_partition/include
-	  # 'esp_partition' is transitively needed by 'nvs_flash'
+_NVS_INCLUDES:=\
+  	$(_ESP_IDF_PATH)/components/nvs_flash/include \
+  	$(_ESP_IDF_PATH)/components/esp_partition/include \
+  	$(_ESP_IDF_PATH)/components/esp_blockdev/include
+	  	# 'esp_partition' is transitively needed by 'nvs_flash'
+	  	# 'esp_blockdev' is, in turn, transitively needed by it.
+
+_NEWLIB_INCLUDE := $(if $(filter 5.%,$(ESP_IDF_VERSION)),\
+    $(_ESP_IDF_PATH)/components/newlib/platform_include,\
+    $(_ESP_IDF_PATH)/components/esp_libc/platform_include)
+
+_ESP_HAL_INCLUDES := $(if $(filter 5.%,$(ESP_IDF_VERSION)),\
+    $(_ESP_IDF_PATH)/components/hal/include, \
+    $(_ESP_IDF_PATH)/components/esp_hal_gpio/include \
+      $(_ESP_IDF_PATH)/components/esp_hal_uart/include \
+		)
+
+_ESP_HAL_SOC_INCLUDE := \
+    $(_ESP_IDF_PATH)/components/soc/$(MCU)/include
+
+_ESP_HAL_GPIO_INCLUDE := $(if $(filter 5.%,$(ESP_IDF_VERSION)),\
+    .,\
+    $(_ESP_IDF_PATH)/components/esp_hal_gpio/$(MCU)/include)
 
 # Only the 'DEP_ESP_IDF_EMBUILD_ENV_PATH' env.var. has the "/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/[...]"
 # section that we need.
 #
 # Pick the particular piece
 # 	GNU make note: Cannot use a pattern ('%') twice, but it's very good to match with the tail.
-_RISCV_BIN_PATH := $(word 1,$(filter %/riscv32-esp-elf/bin,$(subst :, ,${DEP_ESP_IDF_EMBUILD_ENV_PATH})))
-_SYSROOT:=$(realpath ${_RISCV_BIN_PATH}/..)
+_RISCV_BIN_PATH := $(word 1,$(filter %/riscv32-esp-elf/bin,$(subst :, ,$(DEP_ESP_IDF_EMBUILD_ENV_PATH))))
+_SYSROOT:=$(realpath $(_RISCV_BIN_PATH)/..)
 	# /home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf
 
 # 'bindings_0.rs' *could* be created into the 'OUT_DIR' but in Multipass VM use, it's nice to see it in the IDE.
-#_BIND_RS:=${OUT_DIR}/bindings.rs
+#_BIND_RS:=$(OUT_DIR)/bindings.rs
 _BIND_RS:=tmp/bindings_0.rs
 
 # EDITING NOTE:
 #		Keep indentations below _with spaces_ (no tabs)!
 #
-ifeq (${DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH},)
+ifeq ($(DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH),)
   $(error Missing 'DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH' from '.BUILD_ENV')
 endif
-ifeq (${DEP_ESP_IDF_ROOT},)
+ifeq ($(DEP_ESP_IDF_ROOT),)
   $(error Missing 'DEP_ESP_IDF_ROOT' from '.BUILD_ENV')
 endif
-ifeq (${DEP_ESP_IDF_EMBUILD_ENV_PATH},)
+ifeq ($(DEP_ESP_IDF_EMBUILD_ENV_PATH),)
   $(error Missing 'DEP_ESP_IDF_EMBUILD_ENV_PATH' from '.BUILD_ENV')
 endif
-#ifeq (${OUT_DIR},)
+#ifeq ($(OUT_DIR),)
 #  $(error Missing 'OUT_DIR' from '.BUILD_ENV')
 #endif
 
@@ -72,8 +91,6 @@ endif
 
 # Check all paths within the var, separately.
 $(foreach p,$(_ESP_ZIGBEE_LIB_INCLUDE),$(if $(wildcard $(p)/*),,$(error No files within '$(p)')))
-
-_TARGET:=${MCU}
 
 _TMP:=./tmp
 
@@ -112,11 +129,13 @@ _OPAQUE_TYPES:=""
 
 # GNU Make note:
 #		- '&:' syntax (GNU Make 4.3+) states that _both_ targets are created on the same run.
-${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
+$(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE)) $(_SDKCONFIG_H) Makefile \
 	| bindgen
 	bindgen $< \
 	  	--allowlist-file wrap.h \
 			--formatter rustfmt \
+	    --generate-inline-functions \
+	    --use-core \
 			\
 	  	--allowlist-function 'esp_zigbee_.+' \
 			--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
@@ -155,8 +174,6 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			$(addprefix --opaque-type ,$(_OPAQUE_TYPES)) \
 			\
 			--bitfield-enum 'ezb_bdb_comm_mode_e' \
-	    --use-core \
-	    --generate-inline-functions \
 	    --default-enum-style rust \
 	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
@@ -170,34 +187,35 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    \
 	    --no-copy "esp_zigbee(?:|_platform|_device)_config_s" \
 			--wrap-static-fns \
-	    --wrap-static-fns-path ${_TMP}/wrap.c \
+	    --wrap-static-fns-path $(_TMP)/wrap.c \
 	    --wrap-static-fns-suffix _ext \
 		-- \
-		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
+		-D __riscv -D __riscv_xlen=32 --sysroot $(_SYSROOT) \
 		\
-	  -I. -I${_TMP} \
-	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
-		-I $(dir ${_SDKCONFIG_H}) \
-	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
-		-I ${_SYSROOT}/riscv32-esp-elf/include \
-		-I ${_ESP_IDF_PATH}/components/esp_common/include \
-		-I ${_ESP_IDF_PATH}/components/hal/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/register \
-		-I ${_ESP_IDF_PATH}/components/esp_driver_uart/include \
-		-I ${_ESP_IDF_PATH}/components/esp_hw_support/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/include/freertos \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
-		-I ${_ESP_IDF_PATH}/components/heap/include \
-		-I ${_ESP_IDF_PATH}/components/esp_system/include \
-		-I ${_ESP_IDF_PATH}/components/ieee802154/include \
-		-I ${_ESP_IDF_PATH}/components/log/include \
-		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
+	  -I. -I$(_TMP) \
+	  -I. -I$(_NEWLIB_INCLUDE) \
+	  $(addprefix -I, $(_ESP_ZIGBEE_LIB_INCLUDE)) \
+		-I $(dir $(_SDKCONFIG_H)) \
+	  $(addprefix -I, $(_NVS_INCLUDES)) \
+		-I $(_SYSROOT)/riscv32-esp-elf/include \
+		-I $(_ESP_IDF_PATH)/components/esp_common/include \
+	  $(addprefix -I, $(_ESP_HAL_INCLUDES)) \
+		-I $(_ESP_HAL_SOC_INCLUDE) \
+		-I $(_ESP_HAL_GPIO_INCLUDE) \
+		-I $(_ESP_IDF_PATH)/components/soc/$(MCU)/register \
+		-I $(_ESP_IDF_PATH)/components/esp_driver_uart/include \
+		-I $(_ESP_IDF_PATH)/components/esp_hw_support/include \
+		-I $(_ESP_IDF_PATH)/components/freertos/FreeRTOS-Kernel/include \
+		-I $(_ESP_IDF_PATH)/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
+		-I $(_ESP_IDF_PATH)/components/freertos/config/include \
+		-I $(_ESP_IDF_PATH)/components/freertos/config/include/freertos \
+		-I $(_ESP_IDF_PATH)/components/freertos/config/riscv/include \
+		-I $(_ESP_IDF_PATH)/components/riscv/include \
+		-I $(_ESP_IDF_PATH)/components/esp_rom/include \
+		-I $(_ESP_IDF_PATH)/components/heap/include \
+		-I $(_ESP_IDF_PATH)/components/esp_system/include \
+		-I $(_ESP_IDF_PATH)/components/ieee802154/include \
+		-I $(_ESP_IDF_PATH)/components/log/include \
 		\
 		-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
 	  > $@
@@ -211,36 +229,37 @@ ${_BIND_RS} ${_TMP}/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 #			--raw-line 'use strum::FromRepr;' \
 #			--no-copy 'VL_(?:(Configuration)|(Platform))' \
 
-${_TMP}/wrap.o: ${_TMP}/wrap.c
+$(_TMP)/wrap.o: $(_TMP)/wrap.c
 	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
 	  riscv32-esp-elf-gcc -c $< -o $@ -O2 \
-		-D __riscv -D __riscv_xlen=32 --sysroot ${_SYSROOT} \
-	  -I. -I${_TMP} \
-	  $(addprefix -I, ${_ESP_ZIGBEE_LIB_INCLUDE}) \
-		-I $(dir ${_SDKCONFIG_H}) \
-	  $(addprefix -I, ${_NVS_COMPONENTS_INCLUDE}) \
-		-I ${_SYSROOT}/riscv32-esp-elf/include \
-		-I ${_ESP_IDF_PATH}/components/esp_common/include \
-		-I ${_ESP_IDF_PATH}/components/hal/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/include \
-		-I ${_ESP_IDF_PATH}/components/soc/${_TARGET}/register \
-		-I ${_ESP_IDF_PATH}/components/esp_driver_uart/include \
-		-I ${_ESP_IDF_PATH}/components/esp_hw_support/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/include \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/include/freertos \
-		-I ${_ESP_IDF_PATH}/components/freertos/config/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/riscv/include \
-		-I ${_ESP_IDF_PATH}/components/esp_rom/include \
-		-I ${_ESP_IDF_PATH}/components/heap/include \
-		-I ${_ESP_IDF_PATH}/components/esp_system/include \
-		-I ${_ESP_IDF_PATH}/components/ieee802154/include \
-		-I ${_ESP_IDF_PATH}/components/log/include \
-		-I ${_ESP_IDF_PATH}/components/newlib/platform_include \
+		-D __riscv -D __riscv_xlen=32 --sysroot $(_SYSROOT) \
+	  -I. -I$(_TMP) \
+	  -I. -I$(_NEWLIB_INCLUDE) \
+	  $(addprefix -I, $(_ESP_ZIGBEE_LIB_INCLUDE)) \
+		-I $(dir $(_SDKCONFIG_H)) \
+	  $(addprefix -I, $(_NVS_INCLUDES)) \
+		-I $(_SYSROOT)/riscv32-esp-elf/include \
+		-I $(_ESP_IDF_PATH)/components/esp_common/include \
+	  $(addprefix -I, $(_ESP_HAL_INCLUDES)) \
+		-I $(_ESP_HAL_SOC_INCLUDE) \
+		-I $(_ESP_HAL_GPIO_INCLUDE) \
+		-I $(_ESP_IDF_PATH)/components/soc/$(MCU)/register \
+		-I $(_ESP_IDF_PATH)/components/esp_driver_uart/include \
+		-I $(_ESP_IDF_PATH)/components/esp_hw_support/include \
+		-I $(_ESP_IDF_PATH)/components/freertos/FreeRTOS-Kernel/include \
+		-I $(_ESP_IDF_PATH)/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos \
+		-I $(_ESP_IDF_PATH)/components/freertos/config/include \
+		-I $(_ESP_IDF_PATH)/components/freertos/config/include/freertos \
+		-I $(_ESP_IDF_PATH)/components/freertos/config/riscv/include \
+		-I $(_ESP_IDF_PATH)/components/riscv/include \
+		-I $(_ESP_IDF_PATH)/components/esp_rom/include \
+		-I $(_ESP_IDF_PATH)/components/heap/include \
+		-I $(_ESP_IDF_PATH)/components/esp_system/include \
+		-I $(_ESP_IDF_PATH)/components/ieee802154/include \
+		-I $(_ESP_IDF_PATH)/components/log/include
 
 
-${_TMP}/libezb_wrap.a: ${_TMP}/wrap.o
+$(_TMP)/libezb_wrap.a: $(_TMP)/wrap.o
 	PATH="$(DEP_ESP_IDF_EMBUILD_ENV_PATH)" \
 	  riscv32-esp-elf-ar rcs $@ $<
 
@@ -253,7 +272,7 @@ ${_TMP}/libezb_wrap.a: ${_TMP}/wrap.o
 SAFE_SIZE:=200000
 	# normal is: <5000 lines, ~185k
 
-manual_test: ${_BIND_RS}
+manual_test: $(_BIND_RS)
 	#
 	grep -q ESP_ZIGBEE_VER $<
   #
@@ -262,7 +281,7 @@ manual_test: ${_BIND_RS}
 	@#
 	@FILE_SIZE=$$(stat -c%s $<); \
 	[ "$$FILE_SIZE" -lt $(SAFE_SIZE) ] || ( \
-		echo >&2 "ERROR: '${<}' size $$FILE_SIZE > ${SAFE_SIZE}"; false; \
+		echo >&2 "ERROR: '$(<)' size $$FILE_SIZE > $(SAFE_SIZE)"; false; \
 	)
 	wc -l $<
 	@echo ""
@@ -276,10 +295,10 @@ bindgen:
 
 #---
 _clean:
-	-rm ${_BIND_RS} ${_TMP}/wrap.[co] ${_TMP}/libezb_wrap.a
+	-rm $(_BIND_RS) $(_TMP)/wrap.[co] $(_TMP)/libezb_wrap.a
 
 echo:
-	@echo ${_SDKCONFIG}
+	@echo $(_SDKCONFIG)
 
 # Remove any targets created if a build fails.
 .DELETE_ON_ERROR:

@@ -26,12 +26,12 @@ build-std = ["std", "panic_abort"]
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
-runner = "espflash flash --monitor --partition-table partitions.csv --baud 912600 --no-verify"
+runner = "espflash flash --monitor --partition-table partitions.csv --baud 1152000 --no-verify"
     #
     # Note: Speed up the flashing by:
     #   '--baud 2000000' (default is 115200); should work ☀️
-    #       For some reason, 'espflash' reporting is different (more verbose) wwith baud 2000000 than 912600.
-    #       Keeping 912600.
+    #       For some reason, 'espflash' reporting is different (more verbose) wwith baud 2000000 than 921600.
+    #       Keeping 921600.
     #   '--no-verify'
     #
     #   Place such settings (if they work for you) in '~/.config/espflash/espflash.toml'. |1|
@@ -62,9 +62,9 @@ rustflags = [
 [env]
 MCU = "esp32c6"
 # ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
-#ESP_IDF_VERSION = "6.0.2"      # latest, see #10
+#ESP_IDF_VERSION = "6.1"     # NOT okay in esp-idf-hal
+#ESP_IDF_VERSION = "6.0.3"   # skipped
 ESP_IDF_VERSION = "5.5.5"   # compatible with 'git' URLs + one patch /13-Aug-26
-#ESP_IDF_VERSION = "5.5.4"   # fully compatible
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
@@ -123,8 +123,16 @@ ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
 #   - things work
 ESP_IDF_SDKCONFIG = { value = "../sdkconfig", relative = true }
 
-# Trick: Use '../' to work equally well in 'raw', 'api', 'apps'. !! Since the file contains things like stack size,
-# it is regarded belonging to the application's custody.
+# Since the file contains things like stack size, it is regarded belonging to the application's custody.
+# Trick: Use '../' to work equally well in 'raw', 'api', 'apps'.
+#
+# Note: You can provide multiple ("xxx;yyy") but _only_ the first one gets the 'relative=true' treatment. ('esp-idf-sys' main, Sep'26)
+#   <<
+#       esp_idf_sdkconfig_defaults: Some([
+#           "/home/lima/ezb-node/raw/../apps/sdkconfig.defaults",
+#           "../apps/sdkconfig.defaults.2",     <<-- no absolute path
+#       ]),
+#   <<
 #
 ESP_IDF_SDKCONFIG_DEFAULTS = { value = "../apps/sdkconfig.defaults", relative = true }
 
@@ -150,7 +158,8 @@ ESP_IDF_SDKCONFIG_DEFAULTS = { value = "../apps/sdkconfig.defaults", relative = 
 ESP_IDF_SYS_ROOT_CRATE = "ezb-node-raw"
 
 #---
-# Have this if you use Multipass VM, and a global 'target' folder.
+# Have this if you use a global 'target' folder (e.g. within a VM).
+# "Required for now due to embuild limitations." (esp-idf-template generated comment)
 CARGO_WORKSPACE_DIR = { value = "", relative = true }
     #
     # "[...] you have set 'CARGO_TARGET_DIR' and moved your target directory out of the crate root, then

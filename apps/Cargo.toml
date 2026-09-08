@@ -35,8 +35,8 @@ esp-idf-svc = { workspace = true, default-features = true, features = ["embassy-
 embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
 embassy-sync     = { version = "0.8.0" }
 embassy-time    = { workspace = true }
-#r? features = ["generic-queue-8"]
-#r? generic-queue-X: presumably, "any 'generic-queue' implementation will work"
+    # no need for feature "generic-queue-8" when both 'embassy-time' and 'embassy-executor' are being used.
+    #   source: comment in esp-idf-template generated bare bones Cargo.toml -- better reference welcome! #help
 
 futures-util = { version = "0.3.32" }
 

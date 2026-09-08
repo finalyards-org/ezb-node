@@ -12,6 +12,7 @@
 
 mod zigbee_task;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 //r use std::time::Duration;
 use zigbee_task::zigbee_spawn;
 
@@ -20,7 +21,7 @@ mod access;
 pub use access::*;
 
 use embassy_sync::{
-    blocking_mutex::raw::ThreadModeRawMutex,
+    blocking_mutex::raw::CriticalSectionRawMutex,
     channel::Channel
 };
 
@@ -50,10 +51,10 @@ use crate::{
 };
 
 // Channel:
-//  - fed by the Zigbee task; blocking
-//  - consumed by the application task; async
+//  - fed by the Zigbee task (or ISR, not sure); lock not needed within an ISR
+//  - consumed by the _application task_; async; lock for every call
 //
-pub(self) static CHANNEL: Channel<ThreadModeRawMutex, Payload, 10> = Channel::new();
+pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channel::new();
     // tx: in 'zigbee_task'
     // rx: us, passing to the application (application task)
 
@@ -250,15 +251,22 @@ pub trait Node {
 #[must_use = "Please store the guard in a variable, e.g. '_guard = ...'; otherwise it drops right away."]
 struct ZigbeeGuard;
 
+// Just a safety check to see if anyone tries to guard repeatedly.
+static GUARDED: AtomicBool = AtomicBool::new(false);
+
 impl ZigbeeGuard {
     /**
     * It's mandatory to acquire the lock before calling any Zigbee SDK APIs, except that the call site is in Zigbee
     * callbacks.
     */
     fn acquire() -> Self {
+        if GUARDED.swap(true, Ordering::Relaxed) {
+            panic!("Guard entered twice");  // could be a warning, but we don't need to be re-entrant.
+        }
+
         unsafe {
-            let got_it = esp_zigbee_lock_acquire(u32::MAX);
-            assert!(got_it);
+            let got_it = esp_zigbee_lock_acquire(99999);
+            assert!(got_it, "lock not acquired");
         };
         Self
     }
@@ -266,6 +274,10 @@ impl ZigbeeGuard {
 
 impl Drop for ZigbeeGuard {
     fn drop(&mut self) {
+        if GUARDED.swap(false, Ordering::Relaxed) == false {
+            panic!("Guard already dropped!");
+        }
+
         unsafe {
             esp_zigbee_lock_release();
         }

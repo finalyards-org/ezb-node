@@ -6,13 +6,15 @@ rust-version = "1.94"
 publish = false
 
 # The '[package.metadata.esp-idf-sys]' needs to be within the Cargo crate designated as 'ESP_IDF_SYS_ROOT_CRATE'.
+#   👉 Please reflect any changes also in '{project}/_mc/main/idf_component.yml'
 #
-#   Note: Please reflect any changes also in '{project}/_mc/main/idf_component.yml'
-#
-[package.metadata.esp-idf-sys]
-esp_idf_component_manager = "y"
-    # "on/y by default, but good practice to explicitly state"
+#r [package.metadata.esp-idf-sys]
+#r esp_idf_component_manager = "y"
+#r    # "on/y by default, but good practice to explicitly state"
 
+# Available versions (ESP Registry)
+#   -> https://components.espressif.com/components/espressif/esp-zigbee-lib/versions/2.0.4/readme
+#
 [[package.metadata.esp-idf-sys.extra_components]]
 remote_component = { name = "espressif/esp-zigbee-lib", version = "2.0.4" }
 

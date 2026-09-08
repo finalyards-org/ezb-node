@@ -228,3 +228,19 @@ Cure:
 - observe what the build configuration states about `sdkconfig.defaults`
 - fix the path
 
+
+
+## `n` means "maybe not this time"
+
+What seeing an `=n` means varies by the context.
+
+In `sdkconfig.defaults`:
+
+>"The application does not have a use for this feature. We suggest leaving it out."
+
+In `sdkconfig` (build output):
+
+>"This feature was not built in."
+
+The way to look at this is that `sdkconfig.defaults` are (hint is in the name!) defaults, wishes. They get merged with other "shopping lists", and e.g. a dependency you want to get in may bring features you marked as `=n`. You **CAN NOT BLOCK A FEATURE** from ending up built.
+

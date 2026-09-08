@@ -11,7 +11,8 @@ primary_channels = [11, 15, 20, 25]     # 11, 15, 20 or 25 are best for commerci
 secondary_channels = "all"
 
 [platform]
-storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4 (could also be omitted from the config?)
+storage_partition_name = "zb_storage"
+#storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4 (could also be omitted from the config?)
 
 [node]
 type = "coordinator"

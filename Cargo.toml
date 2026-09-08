@@ -36,17 +36,17 @@ log = { version = "0.4" }
 #   <<
 [workspace.lints.rust]
 
-[profile.dev]
-debug = true
-opt-level = 0
-
 [profile.release]
 # intention: more info in case of stack dumps
 debug = true
 strip = false
 opt-level = "s"
 
-# Needed for using with ESP-IDF 5.5.5 (breaks stuff with 5.5.4):
+# Take latest git versions.
+#   - 6.x needs these
+#   - 5.5.5 would not need these, but is compatible with them.
+#   - (5.5.4 was breaking with them (at some point); we don't use it)
+#
 [patch.crates-io]
 # > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
 esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
@@ -55,6 +55,16 @@ esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
 # > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
 #esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
 
-# local patched overrides
-#esp-idf-sys = { path = "./esp-idf-sys.fork" }
+# local patched overrides.
+#   - 'raw' builds without them
+#   - 'api' _needs_ the changes; both 5.5.5 and 6.1
+#esp-idf-sys = { path = "/home/lima/esp-idf-sys.fork" }
 esp-idf-sys = { git = "https://github.com/finalyards/esp-idf-sys.fork.git" }
+
+# NOTE:
+#   See https://github.com/esp-rs/esp-idf-hal/issues/595
+#
+# (EARLY WORK, BUT LEAVING HERE AS A DRAFT). ADC, I2S are not enough. See above.
+# Avoids the ADC, I2S etc. cases where changes in ESP-IDF (6.1) are not yet reeled in.
+#esp-idf-hal = { path = "/home/lima/esp-idf-hal.fork" }
+#esp-idf-hal = { git = "https://github.com/finalyards/esp-idf-hal.fork.git", branch = "..." }
