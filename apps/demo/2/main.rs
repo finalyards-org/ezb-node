@@ -1,5 +1,3 @@
-extern crate alloc;
-
 use anyhow::*;
 
 use embassy_executor::Spawner;

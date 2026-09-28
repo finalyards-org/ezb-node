@@ -1,0 +1,25 @@
+#
+# Development helper targets. Optional.
+#
+# Usage:
+#   <<
+#     $ just {--list|{..target..}}
+#   <<
+#
+alias b := build
+alias t := test
+
+default:
+	@just --list
+
+build:
+	cargo build --release --features toml,coordinator,_all_dts
+	cargo build --release --features toml,router,_all_dts
+	cargo build --release --features coordinator,_all_dts
+	cargo build --release --features router,_all_dts
+
+test:
+	cargo test --features toml,coordinator,_all_dts
+	cargo test --features toml,router,_all_dts
+	cargo test --features coordinator,_all_dts
+	cargo test --features router,_all_dts

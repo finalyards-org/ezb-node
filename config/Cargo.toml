@@ -5,20 +5,30 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-#humantime-serde = { version = "1.1.1", optional = true }
+humantime-serde = { version = "1.1", optional = true }
 quote = { version = "1.0", optional = true }
 prettyplease = { version = "0.3", optional = true }
 proc-macro2 = { version = "1.0", optional = true }
 serde = { version = "1.0", features = ["derive", "alloc"], default-features = false, optional = true }
 syn = { version = "3.0", features = ["full"], optional = true }
-toml = { version = "1.1.2", features = ["serde"], optional = true }
+toml = { version = "1.1.6", features = ["serde"], optional = true }
 
+# The library has two faces:
+#   - used from build.rs
+#       - enable feature 'toml'
+#       - generates a source module from the TOML
+#       - target: host
+#   - used from embedded application:
+#       - do NOT enable feature 'toml'
+#       - used by the snippet that got generated
+#       - target: embedded
+#
 [features]
 default = ["toml"]
 
-# Applications must enable 'toml', either directly or via the default.
+# Applications using this from 'build.rs' must enable 'toml'.
 # API layer works without it.
-toml = ["quote", "prettyplease", "proc-macro2", "serde", "syn", "dep:toml"]
+toml = ["humantime-serde", "quote", "prettyplease", "proc-macro2", "serde", "syn", "dep:toml"]
 
 coordinator = []
 router = []
@@ -26,7 +36,8 @@ router = []
 
 # --- Device types
 
-_dt_all = ["dt_color_dimmable_light", "dt_color_dimmer_switch", "dt_ias_cie"]
+# Use by: './Justfile'
+_all_dts = ["dt_color_dimmable_light", "dt_color_dimmer_switch", "dt_ias_cie"]
 
 # implements SERVER side of (clusters):
 #   HA::on_off
@@ -49,3 +60,6 @@ dt_ias_cie = []
 # CURRENTLY INACTIVE. Let's just bring in the code we need; see #later if we want to feature-gate them.
 #
 #cl_power_config = []  # HA::power_config (server); collects battery information
+
+[lints]
+workspace = true

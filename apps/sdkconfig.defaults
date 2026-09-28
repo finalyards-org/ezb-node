@@ -1,11 +1,13 @@
 #
 # sdkconfig.defaults
 #
-# Here are lines we have changed in the 'sdkconfig' file.
+# For an application that uses:
+#   - esp-zigbee-lib
 #
 # WARN! If you misspell a config (or use one you only dream existed), ESP-IDF build chain will **warn**, but not stop
 #     the build! Keep an eye on the build output!!
-#       ^-- understandable in the way that the config(s) are intended to be worked on using 'menuconfig', not manual edits.
+#
+#     // Understandable in the way that the configs are intended to be worked on using 'menuconfig', not manual edits.
 
 # Rust needs more main task stack size compared to C
 #   - C 'esp_zigbee_sdk' examples use 4096
@@ -22,11 +24,12 @@ CONFIG_FREERTOS_HZ=1000
 
 #---
 # Zigbee
-CONFIG_ZB_ENABLED=y
-CONFIG_ZB_ZCZR=y
-    # Controller/Router code included (can also do EndDevices with this)
-CONFIG_ZB_RADIO_NATIVE=y
+#|CONFIG_ZB_ENABLED=y
+#|CONFIG_ZB_ZCZR=y
+#|    # Controller/Router code included (can also do EndDevices with this)
+#|CONFIG_ZB_RADIO_NATIVE=y
 
+#??? should it be kept here?
 # Partition Table
 # based on 'esp-zigbee-sdk' > examples > home_automation_devices
 #
@@ -74,11 +77,10 @@ CONFIG_MBEDTLS_ECP_DP_BP256R1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_BP384R1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_BP512R1_ENABLED=n
 CONFIG_MBEDTLS_KEY_EXCHANGE_RSA=n
-#CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_PSK=n
-  # ⇪ hide with ESP-IDF 6.0.2
+CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_PSK=n
 CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA=n
 
-## v6.1, v6.0.3
+## v6.0.3
 CONFIG_MBEDTLS_AES_ONLY_128_BIT_KEY_LENGTH=y
 CONFIG_MBEDTLS_CTR_DRBG_C=y
 CONFIG_MBEDTLS_HMAC_DRBG_C=n
@@ -88,15 +90,16 @@ CONFIG_MBEDTLS_CIPHER_MODE_CFB=n
 CONFIG_MBEDTLS_CIPHER_MODE_CTR=n
 CONFIG_MBEDTLS_CIPHER_MODE_OFB=n
 CONFIG_MBEDTLS_CIPHER_MODE_XTS=n
+# "PSA_WANT_ALG_RSA_PSS needs CONFIG_MBEDTLS_RSA_C=y on ESP-IDF master" (from 'esp-zigbee-sdk')
 CONFIG_MBEDTLS_RSA_C=y
 CONFIG_MBEDTLS_MD5_C=n
 CONFIG_MBEDTLS_SHA384_C=n
 
 # NOT part of 'esp-zigbee-sdk's (needed for ESP-IDF 6.0.2)
-CONFIG_MBEDTLS_ASYMMETRIC_CRYPTO_SUPPORT=y
-CONFIG_MBEDTLS_SHA256_C=y
+#CONFIG_MBEDTLS_ASYMMETRIC_CRYPTO_SUPPORT=y
+#CONFIG_MBEDTLS_SHA256_C=y
 
-# end of mbedTLS
+# /mbedTLS
 
 # ESP-IDF 6.x has 'Picolibc' by default, leading to '__FILE' compilation problems in 'raw' > 'make manual'.
 CONFIG_LIBC_NEWLIB=y
@@ -104,3 +107,18 @@ CONFIG_LIBC_NEWLIB=y
 #CONFIG_LIBC_NEWLIB_NANO_FORMAT=n # is so, by default
 CONFIG_ESP_CONSOLE_UART=y
 
+# Avoids a register dump on panic.
+#
+# Not very pretty this one, either; can likely be worked upon.. (tbd. what's with the DWARF?)
+#   <<
+#       Backtrace: 0x00000000:0x40814430
+#       Backtrace ended abruptly: cannot find DWARF information for instruction at address 0x00000000
+#   <<
+#CONFIG_ESP_SYSTEM_USE_EH_FRAME=y
+# "not recommended to be used for production"
+
+# Another way for registry dump avoidance. NOTE: TRY WITH 'panic' deeper than from main.
+#CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+
+# Default is yes; we are not going to use Wifi.
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n

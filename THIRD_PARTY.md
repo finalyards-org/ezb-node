@@ -2,6 +2,47 @@
 
 *Things to eventually report to upstream projects.*
 
+
+## `esp-idf-sys` (0.37.2) renders relative paths wrong (not like it's documented)
+
+>"If such a path is relative, it will be relative to the workspace directory." <sub>[source](https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults)</sub>
+
+**‼️‼️THIS IS NOT TRUE !!!**
+
+In observed reality, these lines, when built under the 'apps' folder:
+
+```
+           ESP_IDF_SDKCONFIG = { value = "sdkconfig", relative = true }
+           ESP_IDF_SDKCONFIG_DEFAULTS = { value = "raw/sdkconfig.defaults", relative = true }
+```
+
+..cause such paths in the build output:
+
+```
+[esp-idf-sys 0.37.2]     esp_idf_sdkconfig: Some(
+[esp-idf-sys 0.37.2]         "/home/ubuntu/ezb-node/apps/sdkconfig",
+[esp-idf-sys 0.37.2]     ),
+[esp-idf-sys 0.37.2]     esp_idf_sdkconfig_defaults: Some(
+[esp-idf-sys 0.37.2]         [
+[esp-idf-sys 0.37.2]             "/home/ubuntu/ezb-node/apps/raw/sdkconfig.defaults",
+[esp-idf-sys 0.37.2]         ],
+[esp-idf-sys 0.37.2]     ),
+```
+
+The path was not relative to the workspace, but the working folder.
+
+**Work-around**
+
+Since all folders where builds happen in this repo are "one step down" (`raw`|`api`|`apps`), we start the path with `..` to climb back.
+
+
+## `esp-idf-sys` should *learn to give up*
+
+>Related to above (relative paths rendered wrong?). 
+
+IT WOULD HELP newcomers TREMENDOUSLY if `esp-idf-sys` terminated a build, if there's e.g. a non-existing path for either `sdkconfig` or `sdkconfig.defaults`. Why not?
+
+
 ## `ezb_bdb_comm_mode_e` derives wrong doc
 
 `esp_zigbee_lib` has this (separate docs for these two types) - `bdb.h`:
@@ -61,3 +102,5 @@ Within `zcl_type.h`, this line has two typos of the same word:
 ```
 
 While some fields are obviously shortened (`UNSUP`), this seems like something to fix.
+
+

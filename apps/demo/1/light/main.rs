@@ -3,8 +3,6 @@
 *   - "Color dimmable light" example of 'esp-zigbee-sdk' v.2.0
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmable_light
 */
-extern crate alloc;
-
 use anyhow::*;
 
 use embassy_executor::Spawner;

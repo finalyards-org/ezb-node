@@ -3,10 +3,14 @@
 #
 # This is a repo specific workaround for 'cargo' not allowing to stop the '.cargo/config.toml' cascade.
 #
+# EDITOR'S NOTE:
+#   We could actually just call it "config.toml". The 'config' project, when compiled for build tools, will
+#   anyways utilize the host target, not 'build.target' given here. But the existing solution is already there,
+#   and it's kind of "nice" (more explicit).
+#
 # The problem we fix:
-#   - insulating 'config' (which is not part of the larger workspace, and does not need esp-idf) from getting
-#     these changes, *while* keeping its folder in the same level as other (which are part of the workspace)
-#     sub-projects.
+#   - insulating 'config' (which does not need esp-idf) from getting these changes, while not needing to move it
+#     beyond the workspace level.
 #
 # How we fix it:
 #   - This file has another name ('config.espidf.toml'); we symbolically link to it from the ESP32-specific workspace
@@ -15,28 +19,26 @@
 [build]
 target = "riscv32imac-esp-espidf"
 
-# Instructions on what kind of library to build for the target.
-#   - 'ldproxy' requires "std" even if our application were to use 'esp-idf-sys' only (in 'no_std')
-#   - use of Embassy + FreeRTOS is dependent on 'embassy_time_driver', which... needs 'esp-idf-svc', and thus we are
-#     firmly in the "std" land.
-#   - panic type does not really matter: we catch it with a hook anyways to avoid a reset-loop
+# Instructions on what kind of standard library to build for the target.
+#   - We need 'std' because of many things:
+#       - Embassy + FreeRTOS collab is done via 'embassy_time_driver', which needs 'esp-idf-svc'.
+#       - 'ldproxy' requires "std" regardless our library choices ('esp-idf-sys' vs. 'esp-idf-svc').
+#       - 'esp-idf-svc' is "std" only, whereas 'esp-idf-sys' can be either 'std' or 'core+alloc'.
+#
+# ESP32-* do not get pre-build standard libraries; those are built.
+# Panic type does not matter: we catch it with a hook anyways to avoid a reset-loop.
 #
 [unstable]
 build-std = ["std", "panic_abort"]
 
 [target.riscv32imac-esp-espidf]
 linker = "ldproxy"
-runner = "espflash flash --monitor --partition-table partitions.csv --baud 1152000 --no-verify"
+runner = "espflash flash --monitor --partition-table partitions.csv"
     #
-    # Note: Speed up the flashing by:
-    #   '--baud 2000000' (default is 115200); should work ☀️
-    #       For some reason, 'espflash' reporting is different (more verbose) wwith baud 2000000 than 921600.
-    #       Keeping 921600.
-    #   '--no-verify'
-    #
-    #   Place such settings (if they work for you) in '~/.config/espflash/espflash.toml'. |1|
-    #
-    #       |1| https://github.com/esp-rs/espflash/blob/main/espflash/README.md#configuration-files
+    # Note: Speed up the flashing by creating a '$HOME/.config/espflash/espflash.toml' (default is a meager 115_200):
+    #       <<
+    #       baudrate = 1152000
+    #       <<
 
 rustflags = [
     # "Required to obtain backtraces [on RISC-V only], however it may negatively impact the performance of your application."
@@ -45,101 +47,59 @@ rustflags = [
     #   - "`force-frame-pointers` flag isn't honored always unless std is recompiled as such"
     #       -> https://github.com/rust-lang/rust/issues/103711 (GitHub Issues; [closed])
     #
-    # We... might not need this.
     "-C", "force-frame-pointers",
 
     # "must be set for ESP-IDF 5.0 and above" |1|
+    # |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#rust-configuration-flags
     #
     # Time was 32bit in ESP-IDF 4.x and will be 64bit from now on.
-    # |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#rust-configuration-flags
     #
     "--cfg", "espidf_time64",
 ]
 
-# Note: Build environment does not get inherited in Cargo. To have the same settings for both 'raw' and 'api', we
-#       provide them here. You can make local overrides in either.
+# Note: Build environment does not get inherited in Cargo; the topmost build target brings it.
+#       To have the same settings for all subprojects, we provide them here.
 #
 [env]
 MCU = "esp32c6"
+
 # ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
-#ESP_IDF_VERSION = "6.1"     # NOT okay in esp-idf-hal
-#ESP_IDF_VERSION = "6.0.3"   # skipped
-ESP_IDF_VERSION = "5.5.5"   # compatible with 'git' URLs + one patch /13-Aug-26
+# Versions supported by 'esp-idf-sys', -> https://github.com/esp-rs/esp-idf-svc/blob/6292a2f9a041c6f1370c66678f360c164aef93a3/.github/workflows/ci.yml#L30-L37
+#
+#ESP_IDF_VERSION = "6.1"     # NOT okay in esp-idf-hal (Sep'26); see #10
+ESP_IDF_VERSION = "6.0.3"
+#r ESP_IDF_VERSION = "5.5.5"   # no longer; my app needs 6.0 because of 'espressif/w5500'
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
     # "global":     '~/.espressif'; needs 'ldproxy'
 
-#---
-# ESP-IDF steering
-#
-# NOTE:
-#   'relative' path definitions are relative to the project workspace root |1| (not the working directory).
-#       |1|: https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp_idf_sdkconfig_defaults-esp_idf_sdkconfig_defaults
-#
-#       ‼️‼️THIS IS NOT TRUE !!!
-#
-#       In observed reality, these lines, when built under the 'apps' folder:
-#       <<
-#           ESP_IDF_SDKCONFIG = { value = "sdkconfig", relative = true }
-#           ESP_IDF_SDKCONFIG_DEFAULTS = { value = "raw/sdkconfig.defaults", relative = true }
-#       <<
-#       ..cause such paths in the build output:
-#       <<
-#           [esp-idf-sys 0.37.2]     esp_idf_sdkconfig: Some(
-#           [esp-idf-sys 0.37.2]         "/home/ubuntu/ezb-node/apps/sdkconfig",
-#           [esp-idf-sys 0.37.2]     ),
-#           [esp-idf-sys 0.37.2]     esp_idf_sdkconfig_defaults: Some(
-#           [esp-idf-sys 0.37.2]         [
-#           [esp-idf-sys 0.37.2]             "/home/ubuntu/ezb-node/apps/raw/sdkconfig.defaults",
-#           [esp-idf-sys 0.37.2]         ],
-#           [esp-idf-sys 0.37.2]     ),
-#       <<
-#
-#       FIX:
-#           Since *any* build folder (raw|api|apps) can refer to us, we take "one step up" (..) and then
-#           dive back in.
-#
-#       IT WOULD ALSO HELP TREMENDOUSLY if 'esp-idf-sys' terminated a build, if there's a non-existing
-#       path for either 'sdkconfig' or 'sdkconfig.defaults'. Why not?
-
-# Tells 'esp-idf-sys' where the "root" of the C/CMake project is (this project does not really need one, unless we
-# start shipping C objects).
-#
+# Tells 'esp-idf-sys' where the "root" of the C/CMake project is (we don't really have one).
 # Earlier comment:
 #   >IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
 #
 ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
+    # tbd. Try whether this matters. Rewrite the docs --^
 
 # ESP_IDF_SDKCONFIG
 #
-# This is a bit fuzzy. The default is said to be 'sdkconfig' (presumably in the folder where the build originated?)
-# but if we leave this out, the build configuration shows 'None', and things will work.
-#
 # No entry:
 #   - build works
-#   - 'sdkconfig' gets generated in:
-#       /home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-{..hash..}/out/sdkconfig
+#   - 'sdkconfig' gets generated in {out-dir}
 #   - things work
-ESP_IDF_SDKCONFIG = { value = "../sdkconfig", relative = true }
+#
+# Just DO NOT place 'sdkconfig' in the sub-project you work in. If you do, it will silently persist the state
+# and confuse/break builds!!!
+#
+#ESP_IDF_SDKCONFIG = { value = "../sdkconfig", relative = true }
 
 # Since the file contains things like stack size, it is regarded belonging to the application's custody.
 # Trick: Use '../' to work equally well in 'raw', 'api', 'apps'.
-#
-# Note: You can provide multiple ("xxx;yyy") but _only_ the first one gets the 'relative=true' treatment. ('esp-idf-sys' main, Sep'26)
-#   <<
-#       esp_idf_sdkconfig_defaults: Some([
-#           "/home/lima/ezb-node/raw/../apps/sdkconfig.defaults",
-#           "../apps/sdkconfig.defaults.2",     <<-- no absolute path
-#       ]),
-#   <<
 #
 ESP_IDF_SDKCONFIG_DEFAULTS = { value = "../apps/sdkconfig.defaults", relative = true }
 
 # The name of the crate that has '[[package.metadata.esp-idf-sys.extra_components]]' section, listing:
 #   - esp_zigbee_lib
-#
-# The content is the name of the crate, _not_ a folder name!
 #
 # NOTE! If this is out of sync, the 'raw' build will break but not in any decent, helpful manner!  You will see this
 #       warning somewhere in the output:
@@ -147,8 +107,7 @@ ESP_IDF_SDKCONFIG_DEFAULTS = { value = "../apps/sdkconfig.defaults", relative = 
 #               [esp-idf-sys 0.37.2] cargo:warning=the crate given by `ESP_IDF_SYS_ROOT_CRATE` does not exist in this workspace
 #           <<
 #
-#       The best way is to check the output JSON starting "Build configuration: BuildConfig {", every now and then.
-#       If things work, you did get this right! ⛱️☀️
+#       The best way is to check the output JSON starting "Build configuration: BuildConfig {" every now and then.
 #
 # Note 2: The _real_ error you'll get if this is wrong is:
 #       <<
@@ -160,11 +119,12 @@ ESP_IDF_SYS_ROOT_CRATE = "ezb-node-raw"
 #---
 # Have this if you use a global 'target' folder (e.g. within a VM).
 # "Required for now due to embuild limitations." (esp-idf-template generated comment)
+#
 CARGO_WORKSPACE_DIR = { value = "", relative = true }
     #
     # "[...] you have set 'CARGO_TARGET_DIR' and moved your target directory out of the crate root, then
     #   embuild is not able to locate the crate root. This will result in it among other things ignoring
-    #   your local sdkconfig.defaults. In this case you must declare: [...]
+    #   your local sdkconfig.defaults. In this case you must declare: [...]"
     #     -> https://github.com/esp-rs/esp-idf-sys/blob/master/BUILD-OPTIONS.md#esp-idf-configuration
 
 # Suppress some 'esp-idf-sys' warnings:
@@ -172,9 +132,11 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
 #       [esp-idf-sys 0.37.2] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
 #   <<
 BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
+    # tbd. does it still change output, with latest versions (ESP-IDF, esp-idf-sys)?
 
 #---
-# Trim down the set of components (~1050 -> ~930). OPTIONAL, but reduces the build time.
+# Trim down the set of components (~____ was:1050 -> ____ was:~930). OPTIONAL, but reduces the build time.
+    # ➡️ tbd. confirm the numbers with ESP-IDF 6.0
 #
 # List of 'esp-idf-sys' default components:
 #   <<
@@ -190,10 +152,10 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #       it's _also_ on the Rust whitelist.
 #   <<
 #
-ESP_IDF_COMPONENTS = """\
-  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
-  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
-"""
+#|ESP_IDF_COMPONENTS = """\
+#|  cxx;newlib;freertos;esp_hw_support;heap;log;soc;hal;esp_rom;esp_common;esp_system;riscv;main;driver;\
+#|  vfs;nvs_flash;wear_levelling;fatfs;spiffs;\
+#|"""
     # vfs, nvs_flash:
     #   - 'color_dimmable_light' C sample has them as 'PRIV_REQUIRES'; needed
     #

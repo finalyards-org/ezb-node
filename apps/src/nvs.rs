@@ -18,19 +18,18 @@ pub fn init_nvs(partition_name: &'static str) -> Result<(EspDefaultNvsPartition,
     //
     let a = EspDefaultNvsPartition::take()?;
 
-    // In 2.x, 'esp-zigbee-sdk' examples moved from a named partition to the default ("nvs").
-    // This means the partition would not be needed to be initialized, any more.
+    // In 'esp-zigbee-sdk' 2.x, examples moved from a named partition to the default ("nvs").
+    // Initiate the separate partition, if used.
     //
-    let b = if partition_name == "nvs" {
-        warn!("Still using a separate partition name: {}", partition_name);
+    let ob = if partition_name != "nvs" {
+        warn!("Using a dedicated partition for Zigbee persistence: {}", partition_name);
 
         // Initialize a named partition; should be like C 'nvs_flash_init_partition(name)'.
         let b = EspCustomNvsPartition::take(partition_name)?;
-
         Some(b)
     } else {
         None
     };
 
-    Ok((a,b))
+    Ok((a,ob))
 }

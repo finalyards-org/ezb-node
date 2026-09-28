@@ -18,4 +18,4 @@ targets:
 
 dependencies:
   espressif/esp-zigbee-lib: "2.*"
-  idf: ">=5.5"
+  idf: ">=6.0.3"

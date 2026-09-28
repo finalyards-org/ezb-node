@@ -32,12 +32,9 @@ fn main() -> Result<()> {
         panic!();
     }
 
-    // Needed for linking of executables to succeed.
-    embuild::espidf::sysenv::output();
+    ensure_no_sdkconfig();
 
     // Turn 'demo/{**}/app.toml' -> '{out_dir}/{bin-name}_conf.rs'
-    //
-    // Note: It's unnecessary to do this fully dynamically. If you add a new demo, just add it here.
     //
     // Note: This needs to be done for all such targets, each time, because of the 'build.rs' execution
     //      model. The model is NOT RELATED TO INDIVIDUAL BUILDS, but for providing dynamically built
@@ -86,32 +83,16 @@ fn main() -> Result<()> {
                     .context("TOML parsing")?;
 
                 let fn_ = format!("{}/{}_conf.in", out_dir, bin_name);
-                fs::write(&fn_, snippet).with_context(
-                    || format!("Unable to write {fn_}"),
-                )?;
+                fs::write(&fn_, snippet)
+                    .with_context(|| format!("Unable to write {fn_}"))?;
+
                 println!("cargo::warning=Created snippet: {fn_}");
             }
         }
     }
 
-    //R EXPERIMENT!!
-    #[cfg(false)]
-    {
-        //println!("cargo:rustc-link-arg=-lesp-zigbee");
-        //println!("cargo:rustc-link-arg=-lesp-zigbee-idf.native");
-        //println!("cargo:rustc-link-arg=-lesp-zigbee-core.zczr");    // ".release"?
-
-        /***r let lib_dir =
-            "/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-6fedde765f63b3e3/out/managed_components/espressif__esp-zigbee-lib/lib/esp32c6/";
-
-        println!("cargo::rustc-link-search=native={}", lib_dir);
-        ***/
-        //|println!("cargo::rustc-link-arg=-Wl,--start-group");
-        println!("cargo::rustc-link-lib=static=esp-zigbee");
-        //println!("cargo::rustc-link-lib=static=esp-zigbee-idf");
-        println!("cargo::rustc-link-lib=static=esp-zigbee-core.zczr");
-        //|println!("cargo::rustc-link-arg=-Wl,--end-group");
-    }
+    // Needed for linking of executables to succeed.
+    embuild::espidf::sysenv::output();
 
     // Run _this build script_ again, if these change:
     //
@@ -120,8 +101,18 @@ fn main() -> Result<()> {
     //
     println!("cargo::rerun-if-changed=build.rs");
 
-    //r Is also in '../raw/build.rs'. Should we have it in both/either? tbd.
-    //r println!("cargo::rustc-link-arg={}", "-Tlinkall.x");
-
     Ok(())
+}
+
+/**
+* Ensure there isn't a 'sdkconfig' file accidentially left at 'apps' level. It *could* get picked
+* up as the truth (instead of generating one below "out dir"), and confuse builds.
+*/
+fn ensure_no_sdkconfig() {
+    let fn_ = std::path::Path::new("sdkconfig");
+    if fn_.exists() {
+        panic!(
+            "❗️There's an 'sdkconfig' file. It is generally UNWELCOME. Please remove it and try again. 🙂"
+        );
+    }
 }

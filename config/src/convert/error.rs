@@ -8,9 +8,15 @@ use std::{
 
 #[derive(Debug)]
 pub enum ConfigError {
+    /// Error in the inner content of the TOML.
+    /// For example:
+    ///     - string content not in expected syntax
+    ///     - values out of expected range
     ContentError(Cow<'static, str>),    // msg in '.0'
+
+    /// Error if TOML contains a node type that's not supported by the features.
     FeatureConflict(&'static str),      // feature name in '.0'
-    //
+
     ParseError(toml::de::Error),
     InternalError(syn::Error),
 }
@@ -24,7 +30,6 @@ impl fmt::Display for ConfigError {
             ConfigError::FeatureConflict(feat) => {
                 write!(f, "'node.type' \"{}\" but that feature is not enabled.", feat)
             },
-            //
             ConfigError::ParseError(err) => write!(f, "TOML parsing: {err}"),
             ConfigError::InternalError(err) => {
                 write!(f, "Internal error (syntax error in generated code): {err}")

@@ -1,13 +1,11 @@
 #![cfg(feature = "toml")]
 
-use core::ops::RangeInclusive;
-
 use std::string::String;
 
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+//r use syn::parse::Parser;
 use toml;
-
-use crate::{Endpoint};
 
 mod in_;
 use in_::{
@@ -16,7 +14,7 @@ use in_::{
     NodeSection,
     EndpointDefaults,
     DeviceType,
-    ServerCluster,
+    Cluster,
 };
 
 mod error;
@@ -24,6 +22,13 @@ use error::ConfigError::{
     self,
     FeatureConflict,
 };
+
+#[cfg(feature = "coordinator")]
+const ROLE: &'static str = "coordinator";
+#[cfg(feature = "router")]
+const ROLE: &'static str = "router";
+//#[cfg(feature = "end_device")]
+//const ROLE: &'static str = "end device";
 
 // tbd. This is SO LONG!!! Find ways to split it into a few.
 /**
@@ -59,37 +64,81 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     };
 
     //--- platform
-    // "{string}"
+    // "None" | "Option({string})"
     let q_storage_partition_name = {
-        let s = c.platform.storage_partition_name;
-        quote! { #s }
+        let opt = c.platform.storage_partition_name;
+        quote! { #opt }
     };
 
     //--- node
 
-    // Note: We don't create '#[cfg]' barriers in the output; we assume that the application
-    //      enables enough features.
-    //
-    // NodeType::CoordinatorConfig{ install_code_policy: false, max_children: 10 }
+    // Feature notes:
+    //      - Both the 'build.rs' and the application _will_ use features for node type.
+    //      - by parsing all possible node types, we allow the user to get better error messages
+    //        (wrong-featured but otherwise valid TOML will always parse).
+    //      - We don't create '#[cfg]' barriers in the generated output (avoiding complexity), just
+    //          expect the user to bring in enough features.
     //
     let q_node = {
         match c.node {
-            NodeSection::Coordinator { install_code_policy, max_children} => {
-                if cfg!(not(feature = "coordinator")) {
-                    return Err(FeatureConflict("coordinator"));
-                } else {
+            NodeSection::Coordinator { allow_open_pairing, max_children, pre_configured_devices} => {
+                #[cfg(not(feature = "coordinator"))]
+                return Err(FeatureConflict("coordinator"));
+
+                #[cfg(feature = "coordinator")]
+                {
+                    let install_code_policy = !allow_open_pairing;
+
+                    // 'PreConfiguredDevice' still needs some parsing.
+                    //
+                    let q_pre_configured_devices: Vec<TokenStream> = pre_configured_devices .into_iter()
+                        .map(|o| {
+                            let (ieee_address_bytes, install_code_bytes): ([u8;8], [u8;18]) = o.parse()?;
+
+                            let ieee_address = proc_macro2::Literal::byte_string(&ieee_address_bytes);
+                            let install_code = proc_macro2::Literal::byte_string(&install_code_bytes);
+
+                            let ieee_address_comment = ieee_address_bytes .into_iter()
+                                .map(|b| format!("{:02X}", b))
+                                .collect ::<Vec<String>>()  // note: force iteration to finish; '.join()' doesn't work on iterators.
+                                .join(":");
+
+                            let install_code_comment = install_code_bytes
+                                .chunks(2)
+                                .map(|chunk| {
+                                    assert!(chunk.len() == 2);
+                                    format!("{:02X}{:02X}", chunk[0], chunk[1])
+                                })
+                                .collect ::<Vec<String>>()
+                                .join(" ");
+
+                            Ok(quote! {
+                                PreConfiguredDevice {{
+                                    #[doc = #ieee_address_comment]
+                                    ieee_address: *#ieee_address,
+                                    #[doc = #install_code_comment]
+                                    install_code: *#install_code,
+                                }}
+                            })
+                        }).collect ::<Result<_,ConfigError>>()?;
+
                     quote! {
                         NodeType::CoordinatorConfig {
                             install_code_policy: #install_code_policy,
                             max_children: #max_children,
+                            pre_configured_devices: #( #q_pre_configured_devices ),*,
                         }
                     }
                 }
             },
-            NodeSection::Router { install_code_policy, max_children} => {
-                if cfg!(not(feature = "router")) {
-                    return Err(FeatureConflict("router"));
-                } else {
+            #[cfg_attr(not(feature = "router"), allow(unused_variables))]
+            NodeSection::Router { allow_open_pairing, max_children} => {
+                #[cfg(not(feature = "router"))]
+                return Err(FeatureConflict("router"));
+
+                #[cfg(feature = "router")]
+                {
+                    let install_code_policy = !allow_open_pairing;
                     quote! {
                         NodeType::RouterConfig {
                             install_code_policy: #install_code_policy,
@@ -98,16 +147,13 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                     }
                 }
             },
-            #[cfg(false)]
-            NodeSection::EndDevice { install_code_policy } => {
-                #[cfg(not(feature = "end_device_UNTESTED"))]
-                panic!("'node.type' \"end_device\" but that feature is not enabled.");
-
+            NodeSection::EndDevice { allow_open_pairing: _, .. } => {
                 unimplemented!();
                 /*** just giving a taste; implement only if we *actually* do devices that are only EndDevice role.
+                let install_code_policy = !allow_open_pairing;
                 quote! {
                     NodeType::EndDeviceConfig {
-                        install_code_policy,
+                        install_code_policy: #install_code_policy,
                         ed_timeout: ezb_nwk_ed_timeout_e,
                         keep_alive: Duration,
                     }
@@ -126,38 +172,27 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         let mut q_lets = quote!{};
         let mut q_arr_contents = quote!{};
 
-        if c.endpoint.instances.is_empty() {
-            return Err(
-                ConfigError::from("Need at least one end point. Please define '[endpoint.{id}]'.")
-            );
-        }
+        let (defaults, instances) = c.endpoint.parse()?;
 
         let EndpointDefaults {
             manufacturer_name: manufacturer_name_def,
             model_identifier: model_identifier_def
-        } = &c.endpoint.defaults;
+        } = defaults;
+
+        // Coordinator and end device are meaningless without an end point.
+        //
+        #[cfg(not(feature = "router"))]
+        if instances.is_empty() {
+            return Err(ConfigError::from(
+                format!("Need at least one end point for {ROLE}. Please define '[endpoint.{{id}}]'.")
+            ));
+        }
 
         // '.as_ref()'s turn to 'Option<&String>' (important later)
         let manufacturer_name_def = manufacturer_name_def.as_ref();
         let model_identifier_def = model_identifier_def.as_ref();
 
-        c.endpoint.instances.into_iter().try_for_each(|(k,v)| -> Result<(),ConfigError> {
-            // Skip ".defaults", turn others to 'u8'
-            let k = match k.as_str() {
-                "defaults" => { return Ok(()) }, // skip
-                id => {
-                    let endpoint_id = id.parse::<u8>().map_err(|_| {
-                        format!("Invalid endpoint ID (not 'u8'): {}", id)
-                    })?;
-                    if !Endpoint::is_valid_id(endpoint_id) {
-                        return Err(
-                            ConfigError::from(format!("Invalid endpoint ID (not in range '{}'): {id}", RangeInclusiveWrap(Endpoint::VALID_RANGE)))
-                        );
-                    }
-                    endpoint_id
-                }
-            };  // k ∈ 1..=240
-
+        instances.into_iter().for_each(|(k,v)| { // k ∈ 1..=240
             // ep_10
             let ident = format_ident!("ep_{}", k);
 
@@ -196,13 +231,13 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 // exhaustive match
             };
 
-            let q_additional_server_clusters = {
-                let qs = v.additional_server_clusters.iter().map(|cluster| {
+            let q_additional_client_clusters = {
+                let qs = v.additional_client_clusters.iter().map(|cluster| {
                     match cluster {
-                        ServerCluster::HA_OnOff =>      quote! { ZclServerCluster::OnOff },
-                        ServerCluster::HA_LevelControl => quote! { ZclServerCluster::LevelControl },
-                        ServerCluster::HA_PowerConfig => quote! { ZclServerCluster::PowerConfig },
-                        ServerCluster::HA_IasZone =>    quote! { ZclServerCluster::IasZone },
+                        Cluster::HA_OnOff =>        quote! { Cluster::OnOff },
+                        Cluster::HA_LevelControl => quote! { Cluster::LevelControl },
+                        Cluster::HA_PowerConfig =>  quote! { Cluster::PowerConfig },
+                        Cluster::HA_IasZone =>      quote! { Cluster::IasZone },
                     }
                 });
                 quote! { vec![ #(#qs),* ] }
@@ -212,14 +247,12 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 let #ident = Endpoint {
                     common_fields: #q_common_fields,
                     device_type: #q_device_type,
-                    additional_server_clusters: #q_additional_server_clusters,
+                    additional_client_clusters: #q_additional_client_clusters,
                     // tbd. discover_remote_server_clusters
                 };
             });
             q_arr_contents.extend(quote!{ (#k, #ident), });
-
-            Ok(())  // next
-        })?;
+        });
 
         quote!{ {
             #q_lets
@@ -248,7 +281,8 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         }
     } };
 
-    pretty(q_all)
+    let s= pretty(q_all)?;
+    Ok(s)
 }
 
 /**
@@ -282,16 +316,4 @@ fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
         .join("\n");
 
     Ok(ret)
-}
-
-/// Wrapper for getting 'Display' for 'RangeInclusive'
-struct RangeInclusiveWrap(RangeInclusive<u8>);
-
-use std::fmt;
-impl fmt::Display for RangeInclusiveWrap {
-
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (a,b) = (self.0.start(), self.0.end());
-        write!(f, "{}..={}", a, b)
-    }
 }

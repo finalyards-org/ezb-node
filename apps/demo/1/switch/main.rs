@@ -4,7 +4,6 @@
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmer_switch
 */
 //#![feature(never_type)]
-extern crate alloc;
 
 mod switch_router;
 use switch_router::LightSwitchRouter;

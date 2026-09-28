@@ -1,8 +1,5 @@
 [toolchain]
-channel = "nightly-2026-07-29"  # ok!
-#channel = "nightly-2026-07-30"  # fails
-#channel = "nightly-2026-08-31"  # fails differently
-#channel = "nightly"
+channel = "nightly"
 
 components = ["rust-src", "rustfmt"]
 
@@ -24,7 +21,6 @@ components = ["rust-src", "rustfmt"]
 # <<
 
 #---
-# Automatically installs the target, if you don't have it, yet.
-# However. ESP32 don't come with pre-built std libraries. In fact, this causes a warning in the build output.
-# Let's omit it.
+# Would automatically install the target. However. ESP32's don't come with pre-built std libraries.
+# In fact, this causes a warning in the build output.
 #targets = [ "riscv32imac-esp-espidf" ]

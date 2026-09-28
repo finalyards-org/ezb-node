@@ -9,8 +9,8 @@ Runnable programs to showcase the `ezb-node`.
 │   │   └── switch/...
 │   └── 2
 │       ├── app.toml
-│       ├── main.rs
-│       └── ias_coordinator.rs
+│       ├── ias_coordinator.rs
+│       └── main.rs
 ├── partitions.csv
 ├── sdkconfig.defaults
 └── src/...
@@ -21,9 +21,9 @@ Runnable programs to showcase the `ezb-node`.
 
 ## Requirements
 
-||ESP32-C6 devkits|Zigbee devices|
+||ESP32&#8209;C6 devkits|Zigbee devices used|
 |---|---|---|
-|**Demo 1** - light and switch|2 pc|*none*|
+|**Demo 1** - light and switch|2 pc|none|
 |**Demo 2** - door/window sensor|1 pc|Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html) |
 
 >For detailed information about each of the demos, see their respective READMEs.
@@ -33,25 +33,18 @@ Runnable programs to showcase the `ezb-node`.
 To flash the applications on your devkit(s), you'll need the `espflash` tool.
 
 <details><summary>Alternatives to `espflash`</summary>
->The author prefers `espflash` because there's a proxying tool for it; he can keep the devkit and the development machine **physically separated**. ⚡️⚡️
+>The author prefers `espflash` because there's a remoting tool for it: he can keep the devkit and the development machine **physically separate**.
 >
 >`idf.py` is the flashing tool you'd use with ESP-IDF normally. You may use it, but *do not install a separate version* on your system - that confuses `esp-idf-sys`. You can find one by:
 >
 >```
 >$ find ~/.espressif/ -name idf.py
-/home/lima/.espressif/esp-idf/v5.5.5/tools/idf.py
+/home/lima/.espressif/esp-idf/v6.0.3/tools/idf.py
 >```
 >
->`probe-rs` is another tool used for flashing. It cannot be used with ESP-IDF applications for reasons that ... the author does not recall.
+>You might need to go through other hoops. See `_mc/README.md` for inspiration...
 </details>
 
-To install `espflash`:
-
-```
-$ cargo install espflash --locked
-```
-
-.. **or use** the [`probe-rs-remote`](https://github.com/finalyards-org/probe-rs-remote) remoting solution, where the actual `espflash` runs on e.g. a Raspberry Pi. Now you can easily use a VM for the builds.
 
 **It pings?**
 
@@ -88,7 +81,7 @@ Flash Encryption: Disabled
 SPI Boot Crypt Count (SPI_BOOT_CRYPT_CNT): 0x0
 ```
 
-Hope it looks that good!
+Once you see that, we can proceed to flashing and running.
 
 
 ## Build and run
@@ -97,7 +90,7 @@ These steps are pretty similar across all the demos.
 
 ⚠️ Be aware that **any information you have on the devkit will be erased** by the flashing. This includes prior Zigbee network pairings.
 
-🟢 Let's go!
+Let's go!
 
 
 ### Build
@@ -106,14 +99,9 @@ These steps are pretty similar across all the demos.
 $ just lb
 ```
 
-This builds the application, and its dependencies:
+This builds the application, and its dependencies.
 
-- `raw` binding to (C language) `esp-zigbee-lib` 2.0
-- `api` = Rust API to the above
-
-If you haven't already, it also downloads the whole ESP-IDF toolchain from the Internet. 
-
-It takes ~6-8 GB of disk space.
+>If you haven't already, it also downloads the whole ESP-IDF toolchain from the Internet.
 
 
 ### Run
@@ -123,9 +111,29 @@ $ just lr
 [...]
 ```
 
+This launches a certain demo.
+
 For other demos, variate the commands (e.g. `db`, `dr` for demo 2). See inside the `Justfile` for details.
 
+```
+$ just --list
+Available recipes:
+    default
 
+    [door]
+    door-build          # 2-door [alias: db]
+    door-run            # [alias: dr]
+
+    [light]
+    lbx
+    light-build         # 1-light [alias: lb]
+    light-run           # [alias: lr]
+
+    [switch]
+    switch-build        # 1-switch [alias: sb]
+    switch-run          # [alias: sr]
+```
 
 <!-- tbd. How to proceed from here?
 -->
+

@@ -11,7 +11,7 @@ publish = false
 # to avoid confusion. 3-May-26
 #
 # tbd. LIKELY THERE HAS BEEN a reason it was uncommented. In any way, the filename is not only here but in
-#       '/config.espfid.toml' as well. tbd. do things work with this hidden?  Update the comments..
+#       '/config.espidf.toml' as well. tbd. do things work with this hidden?  Update the comments..
 #|[package.metadata.espflash]
 #|partition_table = "partitions.csv"
 

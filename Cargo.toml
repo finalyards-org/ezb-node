@@ -3,7 +3,7 @@ members = [
     "raw",
     "api",
     "apps",
-    "apps/config",
+    "config",
 ]
 
 resolver = "3"
@@ -12,29 +12,30 @@ resolver = "3"
 [workspace.dependencies]
 ezb-node = { path = "api" }
 ezb-node-raw = { path = "raw" }
-ezb-node-config = { path = "apps/config", default-features = false }
+ezb-node-config = { path = "config", default-features = false }
 
 embassy-time = { version = "0.5.1", features = ["log"] }
 
-embuild = { version = "0.33.3", features = ["espidf"] }
+embuild = { version = "0.33", features = ["espidf"] }
 
-# Take all 'esp-idf-{hal|sys|svc}' and 'embuild' from the workspace level: they are inter-related.
+# Take all 'esp-idf-{hal|sys|svc}' (and 'embuild') from the workspace level: they are inter-related.
 #
 # Note: sub-projects cannot use 'default-features =false', unless we use it here, as well.
 #       This means someone *wanting* defaults needs to declare 'default-features = true'. It's ok.
 #
-esp-idf-hal = { version = "0.46" }
-esp-idf-svc = { version = "0.52", default-features = false }
-esp-idf-sys = { version = "0.37", default-features = false }
+esp-idf-hal = { version = "0.47", default-features = false }
+esp-idf-svc = { version = "0.53", default-features = false }
+esp-idf-sys = { version = "0.38", default-features = false }
 
 log = { version = "0.4" }
 
-# Referenced in '{api|apps}/Cargo.toml':
+# Referenced in subprojects by:
 #   <<
 #       [lints]
 #       workspace = true
 #   <<
 [workspace.lints.rust]
+rust_2018_idioms = "warn"   # sample
 
 [profile.release]
 # intention: more info in case of stack dumps
@@ -43,28 +44,8 @@ strip = false
 opt-level = "s"
 
 # Take latest git versions.
-#   - 6.x needs these
-#   - 5.5.5 would not need these, but is compatible with them.
-#   - (5.5.4 was breaking with them (at some point); we don't use it)
 #
-[patch.crates-io]
-# > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
-esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
-# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
-esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
-# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
-#esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
-
-# local patched overrides.
-#   - 'raw' builds without them
-#   - 'api' _needs_ the changes; both 5.5.5 and 6.1
-#esp-idf-sys = { path = "/home/lima/esp-idf-sys.fork" }
-esp-idf-sys = { git = "https://github.com/finalyards/esp-idf-sys.fork.git" }
-
-# NOTE:
-#   See https://github.com/esp-rs/esp-idf-hal/issues/595
-#
-# (EARLY WORK, BUT LEAVING HERE AS A DRAFT). ADC, I2S are not enough. See above.
-# Avoids the ADC, I2S etc. cases where changes in ESP-IDF (6.1) are not yet reeled in.
-#esp-idf-hal = { path = "/home/lima/esp-idf-hal.fork" }
-#esp-idf-hal = { git = "https://github.com/finalyards/esp-idf-hal.fork.git", branch = "..." }
+#[patch.crates-io]
+#esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf", branch = "master" }
+#esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf", branch = "master" }
+#esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf", branch = "master" }

@@ -8,10 +8,6 @@ publish = false
 # The '[package.metadata.esp-idf-sys]' needs to be within the Cargo crate designated as 'ESP_IDF_SYS_ROOT_CRATE'.
 #   👉 Please reflect any changes also in '{project}/_mc/main/idf_component.yml'
 #
-#r [package.metadata.esp-idf-sys]
-#r esp_idf_component_manager = "y"
-#r    # "on/y by default, but good practice to explicitly state"
-
 # Available versions (ESP Registry)
 #   -> https://components.espressif.com/components/espressif/esp-zigbee-lib/versions/2.0.4/readme
 #
@@ -92,3 +88,7 @@ esp32c6 = []
 #zcl_poll_control = []
 #zcl_device_temp_config = []
 #zcl_alarms = []
+
+[lints]
+# Do not bring workspace lints in, at least not now.
+#workspace = false

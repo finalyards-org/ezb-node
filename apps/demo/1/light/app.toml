@@ -6,12 +6,10 @@ primary_channels = [13]
 secondary_channels = "all"
 
 [platform]
-storage_partition_name = "zb_storage"
-#storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4 in their samples
 
 [node]
 type = "coordinator"
-install_code_policy = false
+allow_open_pairing = true
 max_children = 10
 
 [endpoint.defaults]

@@ -4,20 +4,18 @@
 # Provides:
 #   - "ias_cie" HA profile
 #       - "ias_zone" (client role)
-#   - "power_config" (server role)  <-- tbd. which one is it, really?
+#   - "power_config" (client role)
 #
 [network]
-primary_channels = [11, 15, 20, 25]     # 11, 15, 20 or 25 are best for commercial devices (google.ai)
+primary_channels = [11, 15, 20, 25]     # 11, 15, 20 or 25 are best for catching external devices
 secondary_channels = "all"
 
 [platform]
-storage_partition_name = "zb_storage"
-#storage_partition_name = "nvs"  # since esp-zigbee-lib 2.0.4 (could also be omitted from the config?)
 
 [node]
 type = "coordinator"
-install_code_policy = false
-    # false: allow "well known key" joining
+allow_open_pairing = true
+    # allow pairing with well known keys
 max_children = 5
 
 [endpoint.defaults]
@@ -30,6 +28,11 @@ device_type = "HA::ias_cie"
     # IAS = "Intrusion Alarm System"
     # CIE = "Control and Indicating Equipment"
 
-additional_server_clusters = [
+additional_client_clusters = [
     "HA::power_config"      # remaining battery
 ]
+
+[[pre_configured_devices]]
+name = "Sample door/window sensor"
+ieee_address = "40:30:59:FF:FE:9E:7D:3D"    # or "4030 59FF FE9E 7D3D"
+install_code = "964B B40A 0684 F31D 3181 8DFD 0525 4897 337E"
