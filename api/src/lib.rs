@@ -1,11 +1,5 @@
-// "std", not only alloc, because:
-//  - threading needs it
-//  - since apps will have it, there's no real down-side
-//
-#![feature(never_type)]
+//?? #![feature(never_type)]
     // applies to 'node/mod.rs'; needs to be declared here.
-
-extern crate core;
 
 mod config_views;
 pub use config_views::*;
@@ -19,7 +13,7 @@ mod app_signal;
 pub use app_signal::*;
 
 mod error;
-pub use error::Error;
+pub use error::*;
 
 pub mod utils;
 pub use utils::{

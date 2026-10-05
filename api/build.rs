@@ -28,10 +28,7 @@ fn main() {
     #[cfg(not(any(feature = "coordinator", feature = "router")))]  // add "end_device" #later
     {
         let arr = ["coordinator", "router", "end_device"].join(", ");
-        eprintln!("🛑Must have at least one feature: {}", arr);
+        eprintln!("🛑Please enable one of: {}", arr);
         std::process::exit(1);
     }
-
-    // Needed for 'ldproxy' linking (of examples) to succeed.
-    embuild::espidf::sysenv::output();
 }

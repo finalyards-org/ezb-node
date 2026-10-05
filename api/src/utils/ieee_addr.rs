@@ -10,7 +10,7 @@ use ezb_node_raw::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IeeeAddr(pub(crate) u64);
 
-#[cfg(false)]   // disabled; dealing with 'u64' instead
+#[cfg(false)]
 impl From<[u8; 8]> for IeeeAddr {
     fn from(bytes: [u8; 8]) -> Self {
         Self(u64::from_le_bytes(bytes))

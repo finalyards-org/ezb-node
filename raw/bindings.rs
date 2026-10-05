@@ -37,6 +37,13 @@ pub use a::*;
     // Note: This only exposes the C bindings to 'lib.rs', not dependent crates.
     //      Some values, e.g. 'EZB_ZCL_CLUSTER_{SERVER|CLIENT}' are not going to be further exposed.
 
+use log::warn;
+use crate::ezb_nwk_device_type_t::{
+    EZB_NWK_DEVICE_TYPE_COORDINATOR,
+    EZB_NWK_DEVICE_TYPE_ROUTER,
+    //EZB_NWK_DEVICE_TYPE_END_DEVICE,
+};
+
 // #hack: allow use of 'OnceLock<esp_zigbee_config_t>' within the 'api'.
 //
 unsafe impl Send for esp_zigbee_config_s {}
@@ -88,7 +95,7 @@ impl Default for ezb_zha_color_dimmer_switch_config_t {
 * variants.
 */
 impl esp_zigbee_device_config_t {
-    pub fn for_zczr(device_type: ezb_nwk_device_type_t, install_code_policy: bool, max_children: u8) -> Self {
+    fn for_zczr(device_type: ezb_nwk_device_type_t, install_code_policy: bool, max_children: u8) -> Self {
         esp_zigbee_device_config_t {
             device_type,
             install_code_policy,
@@ -100,9 +107,17 @@ impl esp_zigbee_device_config_t {
         }
     }
 
+    pub fn for_coordinator(install_code_policy: bool, max_children: u8) -> Self {
+        Self::for_zczr(EZB_NWK_DEVICE_TYPE_COORDINATOR, install_code_policy, max_children)
+    }
+
+    pub fn for_router(install_code_policy: bool, max_children: u8) -> Self {
+        Self::for_zczr(EZB_NWK_DEVICE_TYPE_ROUTER, install_code_policy, max_children)
+    }
+
     #[deprecated(note="Not yet tested")]
     #[cfg(false)]
-    pub fn for_zed(ed_timeout: ezb_nwk_ed_timeout_e, keep_alive: u32) -> Self {
+    pub fn for_end_device(ed_timeout: ezb_nwk_ed_timeout_e, keep_alive: u32) -> Self {
         esp_zigbee_device_config_t {
             device_type: EZB_NWK_DEVICE_TYPE_END_DEVICE,
             install_code_policy,
@@ -174,11 +189,18 @@ pub unsafe fn ezb_app_signal_get_type(signal: *const ezb_app_signal_t) -> ezb_ap
 // (as in, potentially invoking Undefined Behaviour) to simply read the '._u64' field of the union. We counteract
 // this here, in the 'raw' layer, to avoid such concerns in the API.
 //
-#[cfg(false)]   //Q: can we do without?
+#[cfg(false)]   //not needed
 impl ezb_eui64_s {
     pub fn to_le_bytes(self) -> [u8; 8] {
         unsafe {
             self.__bindgen_anon_1.u8_
+        }
+    }
+}
+impl From<&[u8;8]> for ezb_eui64_s {
+    fn from(v: &[u8;8]) -> ezb_eui64_s {
+        Self {
+            __bindgen_anon_1: ezb_eui64_s__bindgen_ty_1 { u8_: *v }
         }
     }
 }
@@ -281,7 +303,7 @@ impl ezb_app_signal_type_e {
     }
 }
 impl ezb_err_e {
-    pub fn parse(v: core::ffi::c_int) -> Option<Self> { Self::from_repr(v) }
+    pub fn parse(v: core::ffi::c_int) -> Option<Self> { Self::from_repr(v as u32) }
 }
 impl ezb_nwk_network_status_t { // is an enum, in 'bindings_0.rs'
     pub fn parse(v: u8) -> Option<Self> {
@@ -345,34 +367,6 @@ impl AsRef<ezb_address_s> for ezb_address_s {
     fn as_ref(&self) -> &Self {
         self
     }
-}
-
-// Such values are passed as 'u8' ('ezb_err_t') in the C API.
-//
-// We rename them to return to the C API names (which are #define's and were difficult to bring in, otherwise).
-//
-#[repr(u8)]
-#[cfg(false)]
-#[allow(non_camel_case_types)]
-pub enum ezb_err_e {
-    EZB_ERR_NONE           = a::ezb_err_e::_ERR_NONE as u8,  // 0
-    EZB_ERR_FAIL           = a::ezb_err_e::_ERR_FAIL as u8,  // -1 (0xff)
-        //
-    EZB_ERR_NO_MEM         = a::ezb_err_e::_ERR_NO_MEM as u8,
-    EZB_ERR_INV_ARG        = a::ezb_err_e::_ERR_INV_ARG as u8,
-    EZB_ERR_INV_STATE      = a::ezb_err_e::_ERR_INV_STATE as u8,
-    EZB_ERR_INV_SIZE       = a::ezb_err_e::_ERR_INV_SIZE as u8,
-    EZB_ERR_NOT_FOUND      = a::ezb_err_e::_ERR_NOT_FOUND as u8,
-    EZB_ERR_NOT_SUPPORTED  = a::ezb_err_e::_ERR_NOT_SUPPORTED as u8,
-    EZB_ERR_TIMEOUT        = a::ezb_err_e::_ERR_TIMEOUT as u8,
-    EZB_ERR_ABORT          = a::ezb_err_e::_ERR_ABORT as u8,
-    EZB_ERR_BUSY           = a::ezb_err_e::_ERR_BUSY as u8,
-    EZB_ERR_NOT_FINISHED   = a::ezb_err_e::_ERR_NOT_FINISHED as u8,
-    EZB_ERR_NOT_ALLOWED    = a::ezb_err_e::_ERR_NOT_ALLOWED as u8,
-    EZB_ERR_PARSE          = a::ezb_err_e::_ERR_PARSE as u8,
-    EZB_ERR_EMPTY_DATA     = a::ezb_err_e::_ERR_EMPTY_DATA as u8,
-    EZB_ERR_DROP           = a::ezb_err_e::_ERR_DROP as u8,
-    EZB_ERR_SECURITY       = a::ezb_err_e::_ERR_SECURITY as u8,
 }
 
 /// Zigbee Home Automation (ZHA) device identifiers.
@@ -446,7 +440,7 @@ pub enum ezb_zha_device_id_e {
 // 'esp_zigbee_lib' (2.0.4) calls these "role mask" in function parameters, but they are #defined
 // as unrelated constants. Also, they need to be used as 'u8', to fit the function calls.
 //
-// Note to #esp_zigbee_sdk: they could be defined as 'enum ezb_zcl_role_e', like some other masks are.
+// Feedback: They could be defined as 'enum ezb_zcl_role_e', like some other masks are. #esp_zigbee_sdk
 #[repr(u8)]
 #[allow(non_camel_case_types)]
 pub enum ezb_zcl_role_e {
@@ -517,3 +511,111 @@ impl Default for ezb_af_ep_config_t {
     }
 }
 
+//R
+/**
+* 'ezb_err_t' is an 'ffi::c_int' that carries:
+*   - code in bits 0..7
+*   - category in bits 8..15
+*
+* 'ezb_err_e' is an enum (caused by 'wrap.h'); it's main purpose is to ensure the #define'd values
+* the Rust side. It provides 'strum::from_repr'.
+*/
+#[cfg(false)]   //R; moved to 'api'???
+mod ezb_error {
+    use super::*;
+
+    /// We lose the C-side values here, on purpose, and make the names more descriptive.
+    #[derive(strum::Display)]
+    pub enum EzbError {
+        //  #define EZB_ERR_NO_MEM        EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x01) /*!< No sufficient memory */
+        //  #define EZB_ERR_INV_ARG       EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x02) /*!< Invalid argument */
+        //  #define EZB_ERR_INV_STATE     EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x03) /*!< Invalid state */
+        //  #define EZB_ERR_INV_SIZE      EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x04) /*!< Invalid size */
+        //  #define EZB_ERR_NOT_FOUND     EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x05) /*!< Requested resource not found */
+        //  #define EZB_ERR_NOT_SUPPORTED EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x06) /*!< Operation is not supported */
+        //  #define EZB_ERR_TIMEOUT       EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x07) /*!< Operation timed out */
+        //  #define EZB_ERR_ABORT         EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x08) /*!< Operation is aborted */
+        //  #define EZB_ERR_BUSY          EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x09) /*!< Busy state */
+        //  #define EZB_ERR_NOT_FINISHED  EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0C) /*!< Operation is not fully finished */
+        //  #define EZB_ERR_NOT_ALLOWED   EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0D) /*!< Operation is not allowed */
+        //
+        //  #define EZB_ERR_PARSE         EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x10) /*!< Fail to parse frame/packet */
+        //  #define EZB_ERR_EMPTY_DATA    EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x11) /*!< Received Empty data */
+        //  #define EZB_ERR_DROP          EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x12) /*!< Frame is dropped */
+        //  #define EZB_ERR_SECURITY      EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x13) /*!< Fail to process security */
+        //
+        NoSufficientMemory,
+        InvalidArgument,
+        InvalidState,
+        InvalidSize,
+        NotFound,
+        NotSupported,
+        TimedOut,
+        Aborted,
+        Busy,
+        NotFinished,
+        NotAllowed,
+        FailToParse,
+        EmptyData,
+        FrameIsDropped,
+        FailToProcessSecurity,
+
+        // MAC:
+        //  <<
+        //    /** Unable to transmit due to channel being busy */
+        //    #define EZB_ERR_MAC_CHANNEL_ACCESS_FAILURE EZB_MAKE_ERROR(EZB_ERR_CATEGORY_MAC, 0xe1U)
+        //    /** ACK not received after tx with ack_req flag set */
+        //    #define EZB_ERR_MAC_NO_ACK EZB_MAKE_ERROR(EZB_ERR_CATEGORY_MAC, 0xe9U)
+        //  <<
+        MacChannelAccessFailure,
+        MacNoAck,
+
+        _Other(ezb_err_t)   // "catch all" for possible other values
+    }
+
+    impl EzbError {
+        /// @return None if 'ezb_err_t is 0
+        ///     Otherwise, a Rust-side enum that matches the C-side error code.
+        ///
+        /// @note We don't need to carry the C side codes further (except when not recognized).
+        ///
+        pub fn parse(v: ezb_err_t) -> Option<Self> {
+
+            if v == 0 {
+                None    // no error
+            } else {
+                let x = if let Some(e) = ezb_err_e::parse(v) {     // recognized value
+                    use ezb_err_e::*;
+                    match e {
+                        NO_MEM => Self::NoSufficientMemory,
+                        INV_ARG => Self::InvalidArgument,
+                        INV_STATE => Self::InvalidState,
+                        INV_SIZE => Self::InvalidSize,
+                        NOT_FOUND => Self::NotFound,
+                        NOT_SUPPORTED => Self::NotSupported,
+                        TIMEOUT => Self::TimedOut,
+                        ABORT => Self::Aborted,
+                        BUSY => Self::Busy,
+                        NOT_FINISHED => Self::NotFinished,
+                        NOT_ALLOWED => Self::NotAllowed,
+                        PARSE => Self::FailToParse,
+                        EMPTY_DATA => Self::EmptyData,
+                        DROP => Self::FrameIsDropped,
+                        SECURITY => Self::FailToProcessSecurity,
+
+                        MAC_CHANNEL_ACCESS_FAILURE => Self::MacChannelAccessFailure,
+                        MAC_NO_ACK => Self::MacNoAck,
+
+                        // conclusive match
+                    }
+                } else {
+                    // UNRECOGNIZED value
+                    warn!("Unexpected 'ezb_err_t' value: {}", v);
+                    Self::_Other(v)
+                };
+                Some(x)
+            }
+        }
+    }
+}
+//pub use ezb_error::EzbError;

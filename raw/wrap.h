@@ -32,6 +32,9 @@
 #include "ezbee/zcl/cluster/ias_ace_desc.h"
   // ezb_zcl_ias_ace_cluster_server_config_t
 
+#include "ezbee/platform/radio.h"
+  // EZB_ERR_MAC_...
+
 #include "nvs_flash.h"
   // nvs_flash_init
 
@@ -86,27 +89,63 @@ const char *ESP_ZIGBEE_VER = \
   _TO_STR(ESP_ZIGBEE_VER_PATCH);
   // "2.0.1"
 
-// Without this, not all 'EZB_ERR_*' values make it to the Rust side.
-// There is no such 'ezb_err_e' in the C API, though 'ezb_err_t' is used. Range is 0..=19, and the -1.
-// Value range is
+// Make 'EZB_ERR_...' values bindgen-reachable. Without this, only 'EZB_ERR_NONE' and 'EZB_ERR_FAIL' are seen.
+//
+// Note: There is no such 'ezb_err_e' in the C API, though 'ezb_err_t' is used (which combines value in bits 0..7 with
+//      category in bits 8..15). The values seem unique per category but we should not rely on that.
+//
+// Generic category:
+//  <<
+//    #define EZB_ERR_NO_MEM        EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x01) /*!< No sufficient memory */
+//    #define EZB_ERR_INV_ARG       EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x02) /*!< Invalid argument */
+//    #define EZB_ERR_INV_STATE     EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x03) /*!< Invalid state */
+//    #define EZB_ERR_INV_SIZE      EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x04) /*!< Invalid size */
+//    #define EZB_ERR_NOT_FOUND     EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x05) /*!< Requested resource not found */
+//    #define EZB_ERR_NOT_SUPPORTED EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x06) /*!< Operation is not supported */
+//    #define EZB_ERR_TIMEOUT       EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x07) /*!< Operation timed out */
+//    #define EZB_ERR_ABORT         EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x08) /*!< Operation is aborted */
+//    #define EZB_ERR_BUSY          EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x09) /*!< Busy state */
+//    #define EZB_ERR_NOT_FINISHED  EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0C) /*!< Operation is not fully finished */
+//    #define EZB_ERR_NOT_ALLOWED   EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0D) /*!< Operation is not allowed */
+//
+//    #define EZB_ERR_PARSE         EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x10) /*!< Fail to parse frame/packet */
+//    #define EZB_ERR_EMPTY_DATA    EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x11) /*!< Received Empty data */
+//    #define EZB_ERR_DROP          EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x12) /*!< Frame is dropped */
+//    #define EZB_ERR_SECURITY      EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x13) /*!< Fail to process security */
+//  <<
+//
+//  MAC category:
+//  <<
+//    /** Unable to transmit due to channel being busy */
+//    #define EZB_ERR_MAC_CHANNEL_ACCESS_FAILURE EZB_MAKE_ERROR(EZB_ERR_CATEGORY_MAC, 0xe1U)
+//    /** ACK not received after tx with ack_req flag set */
+//    #define EZB_ERR_MAC_NO_ACK EZB_MAKE_ERROR(EZB_ERR_CATEGORY_MAC, 0xe9U)
+//  <<
+//
 typedef enum {
-    NONE           = EZB_ERR_NONE,  // 0
-    FAIL           = EZB_ERR_FAIL,  // -1
-    NO_MEM         = EZB_ERR_NO_MEM,
-    INV_ARG        = EZB_ERR_INV_ARG,
-    INV_STATE      = EZB_ERR_INV_STATE,
-    INV_SIZE       = EZB_ERR_INV_SIZE,
-    NOT_FOUND      = EZB_ERR_NOT_FOUND,
-    NOT_SUPPORTED  = EZB_ERR_NOT_SUPPORTED,
-    TIMEOUT        = EZB_ERR_TIMEOUT,
-    ABORT          = EZB_ERR_ABORT,
-    BUSY           = EZB_ERR_BUSY,
-    NOT_FINISHED   = EZB_ERR_NOT_FINISHED,
-    NOT_ALLOWED    = EZB_ERR_NOT_ALLOWED,
-    PARSE          = EZB_ERR_PARSE,
-    EMPTY_DATA     = EZB_ERR_EMPTY_DATA,
-    DROP           = EZB_ERR_DROP,
-    SECURITY       = EZB_ERR_SECURITY,
+    //NONE           = EZB_ERR_NONE,  // 0
+    //FAIL           = EZB_ERR_FAIL,  // -1
+    //
+    // Generic:
+    NO_MEM        = EZB_ERR_NO_MEM,
+    INV_ARG       = EZB_ERR_INV_ARG,
+    INV_STATE     = EZB_ERR_INV_STATE,
+    INV_SIZE      = EZB_ERR_INV_SIZE,
+    NOT_FOUND     = EZB_ERR_NOT_FOUND,
+    NOT_SUPPORTED = EZB_ERR_NOT_SUPPORTED,
+    TIMEOUT       = EZB_ERR_TIMEOUT,
+    ABORT         = EZB_ERR_ABORT,
+    BUSY          = EZB_ERR_BUSY,
+    NOT_FINISHED  = EZB_ERR_NOT_FINISHED,
+    NOT_ALLOWED   = EZB_ERR_NOT_ALLOWED,
+    PARSE         = EZB_ERR_PARSE,
+    EMPTY_DATA    = EZB_ERR_EMPTY_DATA,
+    DROP          = EZB_ERR_DROP,
+    SECURITY      = EZB_ERR_SECURITY,
+
+    // MAC:
+    MAC_CHANNEL_ACCESS_FAILURE = EZB_ERR_MAC_CHANNEL_ACCESS_FAILURE,
+    MAC_NO_ACK    = EZB_ERR_MAC_NO_ACK,
 } ezb_err_e;
 
 // 'esp-zigbee-lib' (2.0.4) defines these as an anonymous enum, leading them to become unrelated constants

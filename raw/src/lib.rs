@@ -1,6 +1,9 @@
 #![no_std]
 extern crate alloc;
 
+// Used for its ability to bring in the component(s), tools etc. UTTERLY IMPORTANT!
+use esp_idf_sys as _;
+
 #[path = "../bindings.rs"]
 mod bindings;
 
@@ -159,4 +162,17 @@ pub use bindings::{
     ezb_zcl_identify_create_cluster_desc,
     ezb_zcl_ias_wd_create_cluster_desc,
     nvs_flash_init,
+};
+
+pub use bindings::{
+    ezb_secur_set_ic_required,
+    ezb_secur_ic_add,
+    ezb_err_t,
+    //r EzbError,
+
+    // tbd. Only expose the security types we plan to support (is that possible?)
+    ezb_secur_ic_type_e, //::EZB_SECUR_IC_TYPE_128,
+
+    ezb_zcl_power_config_create_cluster_desc,
+    ezb_zcl_power_config_cluster_client_init,
 };

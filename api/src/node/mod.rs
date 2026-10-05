@@ -13,8 +13,10 @@
 mod zigbee_task;
 
 use std::sync::atomic::{AtomicBool, Ordering};
-//r use std::time::Duration;
 use zigbee_task::zigbee_spawn;
+
+mod zigbee_dev;
+pub(crate) use zigbee_dev::ZigbeeDev;
 
 mod access;
 #[cfg(feature = "_remote_any")]
@@ -24,8 +26,6 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::Channel
 };
-
-use esp_idf_svc::sys::EspError;
 
 use ezb_node_raw::{
     esp_zigbee_lock_acquire,
@@ -45,6 +45,7 @@ use crate::{
     BdbMode,
     Config,
     Error,
+    EspError,
     IeeeAddr,
     ZclError,
     ZclEvent,
@@ -186,12 +187,12 @@ pub trait Node {
     *
     * Note: Modes are bit patterns.
     */
-    fn start_top_level_commissioning(&self, mask: BdbMode) -> Option<EspError> {
+    fn start_top_level_commissioning(&self, mask: BdbMode) -> Result<(),EspError> {
         let _guard = ZigbeeGuard::acquire();
-        let err= unsafe {
+
+        EspError::wrap(unsafe {
             ezb_bdb_start_top_level_commissioning(mask.into())
-        };
-        EspError::from(err) // provides 'Option'
+        })
     }
 
     /**

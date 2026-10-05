@@ -1,5 +1,4 @@
 use bitflags::bitflags;
-use esp_idf_svc::sys::EspError;
 use log;
 use std::{
     boxed::Box,
@@ -15,8 +14,6 @@ use embassy_sync::{
         DynamicSender,
     }
 };
-
-use esp_idf_svc::sys;
 
 use ezb_node_raw::{
     esp_zigbee_config_t,
@@ -42,6 +39,7 @@ use ezb_node_raw::{
     ezb_nwk_get_extended_panid,
     ezb_nwk_get_panid,
     ezb_nwk_get_short_address,
+    ezb_secur_set_ic_required,
     ezb_zcl_basic_cluster_desc_add_attr,
     ezb_zcl_basic_server_attr_t,
     ezb_zcl_cluster_desc_t,
@@ -53,19 +51,23 @@ use ezb_node_raw::{
 };
 
 use crate::{
-    config_views::ConfigAccess,
     AppSignal,
     Config,
     EndpointCreator,
     Error::{
+        self,
         AlreadyInUse,
         InitializationFailed
     },
+    EspError,
+    EzbError,
     IeeeAddr,
     ZclEvent,
+    config_views::ConfigAccess,
+    utils::PascalString,
+    ZigbeeDev,
 };
 
-use crate::utils::PascalString;
 use ezb_node_config::{ChannelMask, CommonFields, Endpoint};
 use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 
@@ -96,107 +98,48 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
         .spawn(move || {
             log::info!("Zigbee task running");
 
-            let (cc, channel_masks) = ca.expand();
-                //
-                // 'esp_zigbee_init()' takes a pointer, so we must assume it can read that memory, later.
-                // Providing it a 'static', non-changing struct is safe.
-
-            // tbd. try calling these from outside of the 'spawn' - that way we get reasonable
+            // tbd. !! try calling these from outside of the 'spawn' - that way we get reasonable
             //      chance of reacting to errors (here we don't).
             //
-            local_zigbee_init(cc) .unwrap();
-            local_zigbee_setup_commissioning(channel_masks) .unwrap();
-            local_zigbee_create_endpoints(endpoint_cfg) .unwrap();;
+            let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
+
+            let () = unsafe {
+                ezb_zcl_core_action_handler_register(Some(crate::node::zigbee_task::zcl_action_handler));
+            };
+
+            ca.init() .unwrap();
+
+            // It seems (based on discussion with google.ai; tbd. CONFIRM FROM THE 'esp_zigbee_lib'
+            // SOURCES!!) that having 'install_policy: false' (= allow open pairing: false) WOULD NOT
+            // by itself ban attempts to use a default install code.
+            //
+            // This is weird. In the mean time, let's call this and see what happens.
+            //
+            // NOTE: 'allow_open_pairing: false' and _not_ having any pre-configured devices feels
+            //      like a configuration mismatch. Check whether that is so and catch in 'config'. #tbd.
+            //
+            #[cfg(feature = "coordinator")]
+            {
+                // Should we call this? "Enable Trust Center to require install code for joining."
+                EzbError::wrap( unsafe {
+                    ezb_secur_set_ic_required(true)
+                }) .unwrap();
+            }
+
+
+            //ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
+
+            EzbError::wrap(unsafe {
+                ezb_app_signal_add_handler(Some(app_signal_handler))
+            }) .unwrap();
+                // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
+                //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
 
             local_zigbee_run(auto_start) .unwrap();
             loop {}
         });
 
     Ok(())  // right after the thread is successfully spawned (app can start waiting on the channel)
-}
-
-/**
-* Zigbee init
-*/
-//ESP_ERROR_CHECK(esp_zigbee_init(&config));
-//
-fn local_zigbee_init(cc: &'static esp_zigbee_config_t) -> Result<(),EspError> {
-
-    // esp_err_t esp_zigbee_init(const esp_zigbee_config_t *config);
-    //
-    EspError::from(unsafe { esp_zigbee_init(cc) })
-        .map_or(Ok(()), Err)
-}
-
-/**
-* Zigbee ...{tbd. complete what this does}...
-*/
-//ezb_aps_secur_enable_distributed_security(false);
-//ESP_ERROR_CHECK(ezb_bdb_set_primary_channel_set(ESP_ZIGBEE_PRIMARY_CHANNEL_MASK));
-//ESP_ERROR_CHECK(ezb_bdb_set_secondary_channel_set(ESP_ZIGBEE_SECONDARY_CHANNEL_MASK));
-//ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
-//return ESP_OK;
-//
-fn local_zigbee_setup_commissioning(channel_masks: [ChannelMask;2]) -> Result<(),EspError> {
-
-    // In C examples, this is set to 'false'.
-    //
-    //  If set to `true`, the device is allowed to form or join a de-centralized Distributed Security network
-    //      (where every Router can authenticate nodes and distribute keys, often used in Touchlink/ZLL commissioning).
-    //      If set to `false`, the device will strictly require a Centralized Security network managed by a single
-    //      Trust Center (Coordinator).
-    //
-    // Note: Unknown whether the default is 'false'. Setting because the C examples do.
-    //
-    let () = unsafe { ezb_aps_secur_enable_distributed_security(false) };
-
-    // Since the configs are validated at compilation, we are not expecting a failure.
-    //
-    [ezb_bdb_set_primary_channel_set, ezb_bdb_set_secondary_channel_set].into_iter()
-        .zip( channel_masks.map(|cm| cm.bits() ))
-        .for_each(|(f, mask)| {
-            let err = unsafe { f(mask) };
-            // EZB_ERR_NONE
-            // EZB_ERR_INVALID_ARG  should not happen: 'ChannelMask'
-
-            match EspError::from(err) {
-                Some(e) => panic!("Unexpected problem setting channel masks: {}", e),
-                None => ()
-            }
-        });
-
-    EspError::from(unsafe { ezb_app_signal_add_handler(Some(app_signal_handler)) })
-        .map_or(Ok(()), Err)?;
-        //
-        // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
-        //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
-
-    Ok(())
-}
-
-/**
-* Create the device with configured endpoints.
-*/
-// ezb_af_device_desc_t                  dev_desc  = ezb_af_create_device_desc();
-//  ...creating and points and adding them to 'dev_desc'
-// ESP_ERROR_CHECK(ezb_af_device_desc_register(dev_desc));
-// ezb_zcl_core_action_handler_register(esp_zigbee_zcl_core_action_handler);
-//
-fn local_zigbee_create_endpoints(creator: EndpointCreator) -> Result<(), EspError> {
-
-    // Device where the endpoints will be added to.
-    let dev_desc: ezb_af_device_desc_t = unsafe { ezb_af_create_device_desc() };
-
-    creator.create_all(dev_desc)?;
-
-    let err = unsafe { ezb_af_device_desc_register(dev_desc) };
-    EspError::from(err).map_or(Ok(()), Err)?;
-
-    unsafe {
-        ezb_zcl_core_action_handler_register(Some(zcl_action_handler));
-    }
-
-    Ok(())
 }
 
 /**
@@ -211,15 +154,13 @@ fn local_zigbee_create_endpoints(creator: EndpointCreator) -> Result<(), EspErro
 //
 // tbd. Could merge this whole function to the place where it's called.
 fn local_zigbee_run(auto_start: bool) -> Result<!,EspError> {
-    let err = unsafe {
+    EspError::wrap( unsafe {
         esp_zigbee_start(auto_start)
-    };
-    EspError::from(err).map_or(Ok(()), Err)?;
+    })?;
 
-    let err = unsafe {
+    EspError::wrap( unsafe {
         esp_zigbee_launch_mainloop()
-    };
-    EspError::from(err).map_or(Ok(()), Err)?;
+    })?;
 
     unreachable!();     // C code continues with the below; do we ever get here?
 

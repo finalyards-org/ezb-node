@@ -215,7 +215,23 @@ For further builds, it will be faster.
 If you ever need to clean something up, fully, also `rm -rf ~/.espressif`. That's where the ESP-IDF tools are collected.
 
 
-**2. Api**
+**2. Config**
+
+This is a crate with no embedded dependencies. It takes care of tranforming a TOML configuration to Rust structs.
+
+- You will depend on this in your application's `[build-dependencies]` section.
+- The `api` level (below) also uses this crate, to consume the generated configuration.
+
+```
+$ cd ../config
+```
+
+```
+$ just build
+```
+
+
+**3. Api**
 
 ```
 $ cd ../api
@@ -225,7 +241,7 @@ $ cd ../api
 $ just build
 ```
 
-**3. Apps**
+**4. Apps**
 
 ```
 $ cd ../apps

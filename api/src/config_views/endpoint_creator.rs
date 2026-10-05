@@ -2,56 +2,65 @@
 use core::ffi::c_void;
 use std::collections::BTreeMap;
 
-use esp_idf_svc::sys::EspError;
-
 use ezb_node_config::{
     CommonFields,
     Config,
     Endpoint,
     DeviceType,
     NodeType::*,
+    Cluster,
 };
 
-use ezb_node_raw::{
-    ezb_af_device_add_endpoint_desc,
-    ezb_af_device_desc_t,
-    ezb_af_endpoint_get_cluster_desc,
-    ezb_nwk_device_type_t::*,
-    ezb_zcl_basic_cluster_desc_add_attr,
-    ezb_zcl_cluster_desc_t,
-    ezb_zcl_basic_server_attr_t,
-    ezb_zcl_cluster_id_e,
-    ezb_af_profile_id_e,
-    ezb_zha_device_id_e,
-    ezb_af_ep_desc_t,
-    ezb_zha_color_dimmer_switch_config_t,
-    ezb_zha_create_color_dimmer_switch,
-    ezb_zcl_role_e,
-    ezb_af_ep_config_t,
-    ezb_af_create_endpoint_desc,
-};
+use ezb_node_raw::{ezb_af_device_add_endpoint_desc, ezb_af_device_desc_t, ezb_af_endpoint_get_cluster_desc, ezb_nwk_device_type_t::*, ezb_zcl_basic_cluster_desc_add_attr, ezb_zcl_cluster_desc_t, ezb_zcl_basic_server_attr_t, ezb_zcl_cluster_id_e, ezb_af_profile_id_e, ezb_zha_device_id_e, ezb_af_ep_desc_t, ezb_zha_color_dimmer_switch_config_t, ezb_zha_create_color_dimmer_switch, ezb_zcl_role_e, ezb_af_ep_config_t, ezb_af_create_endpoint_desc, ezb_zcl_power_config_create_cluster_desc, ezb_af_endpoint_add_cluster_desc, ezb_zcl_power_config_cluster_client_init, ezb_zcl_role_e::CLUSTER_CLIENT, ezb_af_create_device_desc, ezb_af_device_desc_register, ezb_zcl_core_action_handler_register};
 
 use crate::{
     utils::PascalString,
+    EspError,
+    EzbEspError,
+    EzbError,
 };
 
 /**
-* A view to a 'Config' struct used in creating end points.
+* A view to a 'Config' struct used in creating -and initializing- end points.
 *
-* Note: It is perfectly okay for a node not to have an endpoint (i.e. just be a network repeater).
+* Note:
+*   For a router node, it is perfectly okay not to have an endpoint (i.e. just be a repeater).
+*   For coordinator and end device, without an end point there would be nothing.
 *
 * Covers TOML sections '[endpoint.default]', '[endpoint.{id}]'.
 */
 pub(crate) struct EndpointCreator(&'static BTreeMap<u8, Endpoint>);
 
 impl EndpointCreator {
-    pub(crate) fn create_all(self, dev: ezb_af_device_desc_t) -> Result<(), EspError> {
+    /// Create the configured endpoints.
+    ///
+    pub(crate) fn create_all(&self, dev_desc: ezb_af_device_desc_t) -> Result<(), EzbEspError> {
+
         for (&ep_id, entry) in self.0 {
             log::debug!("Creating endpoint: {} {:?}", ep_id, entry);
-
-            create_one(dev, ep_id, entry.clone())?;
+            create_one(dev_desc, ep_id, entry)?;
         }
         Ok(())
+    }
+
+    /// Initialize the parts that need it (that is, at least, additional clusters).
+    ///
+    /// This needs to be called:
+    ///     - after the device has been registered
+    ///
+    // #feedback 'esp_zigbee_lib' could be more specific, in its function documentation,
+    //     about the valid context of each function call. Like when they *may not* and when the
+    //     *can* be called.
+    //
+    /// @note There is no parameter. The 'esp_zigbee_lib' affects the changes based on endpoint
+    ///     indices, which are available in the config itself.
+    ///
+    pub(crate) fn init_all(&self) {
+        for (&ep_id, entry) in self.0 {
+            log::debug!("Initating endpoint: {}", ep_id);
+
+            init_one(ep_id, entry.additional_client_clusters .iter());
+        }
     }
 }
 
@@ -63,25 +72,31 @@ impl From<&'static Config> for EndpointCreator {
 }
 
 /// Create an end point, in the C library level.
-//
-fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: Endpoint) -> Result<(), EspError> {
+///
+/// Add it to the device descriptor 'dev'.
+fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, entry: &Endpoint) -> Result<(), EzbEspError> {
     use DeviceType::*;
 
     let Endpoint {
         common_fields,
         device_type,
-        additional_server_clusters
-    } = ab;
+        additional_client_clusters
+    } = entry;
 
-    // Note: It's perfectly possible to have a node without an endpoint (= a repeater). That means
-    //      this code would not be called - but it still is being built. Using '.clone()' tricks
-    //      the Rust compiler - it would not like matching a reference to an empty enum (which
-    //      cannot be instantiated).
+    // Note: It is possible to build 'config' with no 'DeviceType' support (not intended for any
+    //      endpoints; router only). This would provide us with an "empty enum" (that cannot exist,
+    //      and cannot be matched against, even if the code were never to get run, anyways)...
     //
-    //      An alternative is to opt-out the whole function, but that needs a '_dt_any' feature that
-    //      gets automatically set. Didn't bother with that.
+    //      There are ways around this (helpful feature as it otherwise is!):
+    //          - add a '_Dummy' clause to the enum in question.   WE DO THIS
+    //          - conditionally compile the whole function (based on all 'dt_...' features)
+    //          - using 'device_type.clone()' in the match; this tricks the Rust compiler to
+    //            allow such matches to exist.
     //
-    let ep_desc = match device_type .clone() {
+    //      While the third ('.clone()') is arguably the easiest, the author went for the '_Dummy'
+    //      approach.
+    //
+    let ep_desc = match device_type {
         #[cfg(feature = "dt_color_dimmable_light")]
         DeviceType::ColorDimmableLight => create_color_dimmable_light(ep_id),
 
@@ -90,6 +105,8 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: Endpoint) -> Result<(), 
 
         #[cfg(feature = "dt_ias_cie")]
         DeviceType::IasCie => create_ias_cie(ep_id),
+
+        _Dummy => unreachable!()
     };
 
     // Add common fields.
@@ -109,7 +126,7 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: Endpoint) -> Result<(), 
         let CommonFields {
             manufacturer_name,
             model_identifier,
-        } = common_fields;
+        } = *common_fields;
 
         let basic_desc: ezb_zcl_cluster_desc_t = unsafe {
             ezb_af_endpoint_get_cluster_desc(ep_desc, EZB_ZCL_CLUSTER_ID_BASIC, CLUSTER_SERVER)
@@ -121,10 +138,11 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: Endpoint) -> Result<(), 
             (model_identifier, EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID),
         ]
         .into_iter()
-        .filter_map(|(opt,id)| {
-            let s = opt?; // break on 'None' of .0
-            Some((s, id))
+        .filter_map(|(s_opt,id)| {
+            let s = s_opt?;
+            Some((s,id))
         })    // ones actually having a string
+
         .for_each(|(s, which)| {
             let ps: &'static [u8] = PascalString::from(s).into_leaked();
             unsafe { ezb_zcl_basic_cluster_desc_add_attr(basic_desc, which, ps.as_ptr() as *const c_void); }
@@ -133,20 +151,68 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, ab: Endpoint) -> Result<(), 
 
     // Additional clusters.
     {
-        for cl in additional_server_clusters {
-            todo!();
+        use ezb_node_config::Cluster;
+        use ezb_zcl_role_e::CLUSTER_CLIENT;
+
+        for cl in additional_client_clusters {
+            let cluster_desc = match cl {
+                // Implicit for device types we support - should not come about as '.additional_client_clusters'
+                Cluster::OnOff |
+                Cluster::LevelControl |
+                Cluster::IasZone => {
+                    unimplemented!()
+                },
+
+                Cluster::PowerConfig => {
+                    // ezb_zcl_cluster_desc_t ezb_zcl_power_config_create_cluster_desc(const void *cluster_cfg, uint8_t role_mask);
+
+                    let tmp = unsafe {
+                        ezb_zcl_power_config_create_cluster_desc(
+                            std::ptr::null_mut(),
+                            CLUSTER_CLIENT as u8    // tbd. find ways to make this less ...clunky?? :s
+                        )
+                    };
+                    tmp
+                },
+            };
+
+            EzbError::wrap(unsafe {
+                ezb_af_endpoint_add_cluster_desc(ep_desc, cluster_desc)
+            })?;
         }
     }
 
     // ESP_ERROR_CHECK(ezb_af_device_add_endpoint_desc(dev_desc, ep_desc));
     //
-    let err = unsafe { ezb_af_device_add_endpoint_desc(dev, ep_desc) };
+    EspError::wrap(unsafe {
+        ezb_af_device_add_endpoint_desc(dev, ep_desc)
+    })?;
 
-    match EspError::from(err) {
-        None => Ok(()),
-        Some(e) => Err(e),
+    Ok(())
+}
+
+/// Initialization places the necessary event listeners on the (already registered) endpoint.
+///
+fn init_one<'a>(ep_id: u8, additional_client_clusters: impl Iterator<Item = &'a Cluster>) {
+
+    for cl in additional_client_clusters {
+        match cl {
+            // Implicit for device types we support - should not come about as '.additional_client_clusters'
+            Cluster::OnOff |
+            Cluster::LevelControl |
+            Cluster::IasZone => {
+                unimplemented!()
+            },
+
+            Cluster::PowerConfig => {
+                unsafe {
+                    ezb_zcl_power_config_cluster_client_init(ep_id);
+                }
+            },
+        };
     }
 }
+
 
 #[cfg(feature = "dt_color_dimmable_light")]
 fn create_color_dimmable_light(ep_id: u8) -> ezb_af_ep_desc_t {
@@ -155,7 +221,7 @@ fn create_color_dimmable_light(ep_id: u8) -> ezb_af_ep_desc_t {
         ezb_zha_create_color_dimmable_light
     };
 
-    let mut cfg = ezb_zha_color_dimmable_light_config_t::default();
+    let cfg = ezb_zha_color_dimmable_light_config_t::default();
     unsafe { ezb_zha_create_color_dimmable_light(ep_id, &cfg) }
 }
 
@@ -166,7 +232,7 @@ fn create_color_dimmer_switch(ep_id: u8) -> ezb_af_ep_desc_t {
         ezb_zha_create_color_dimmer_switch
     };
 
-    let mut cfg = ezb_zha_color_dimmer_switch_config_t::default();
+    let cfg = ezb_zha_color_dimmer_switch_config_t::default();
     unsafe { ezb_zha_create_color_dimmer_switch(ep_id, &cfg) }
 }
 
@@ -213,7 +279,7 @@ fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
     desc
 }
 
-// This variant is what GOOGLE.AI suggested - building on top of a harmless device type.
+//r This variant is what GOOGLE.AI suggested - building on top of a harmless device type.
 #[cfg(false)]
 #[cfg(feature = "dt_ias_cie")]
 fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {

@@ -66,9 +66,8 @@ MCU = "esp32c6"
 # ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
 # Versions supported by 'esp-idf-sys', -> https://github.com/esp-rs/esp-idf-svc/blob/6292a2f9a041c6f1370c66678f360c164aef93a3/.github/workflows/ci.yml#L30-L37
 #
-#ESP_IDF_VERSION = "6.1"     # NOT okay in esp-idf-hal (Sep'26); see #10
-ESP_IDF_VERSION = "6.0.3"
-#r ESP_IDF_VERSION = "5.5.5"   # no longer; my app needs 6.0 because of 'espressif/w5500'
+ESP_IDF_VERSION = "6.1"     # NOT okay in esp-idf-hal (Sep'26); see #10
+#ESP_IDF_VERSION = "6.0.3"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
@@ -136,7 +135,13 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 
 #---
 # Trim down the set of components (~____ was:1050 -> ____ was:~930). OPTIONAL, but reduces the build time.
-    # ➡️ tbd. confirm the numbers with ESP-IDF 6.0
+#
+# NOTE! THIS DOES NOT SUCCEED WITH ESP-IDF 6.0.3.
+#
+#       tbd. TRY AGAIN, once we have a stable footing.
+#           - see how much trimming affects build duration
+#           - report e.g. accidential dependencies on LWIP (networking) to upstream; 'esp-idf-sys' is supposed to be
+#             buildable without it.
 #
 # List of 'esp-idf-sys' default components:
 #   <<

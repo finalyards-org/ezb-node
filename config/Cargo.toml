@@ -36,7 +36,7 @@ router = []
 
 # --- Device types
 
-# Use by: './Justfile'
+# Use by './Justfile' and 'build.rs'
 _all_dts = ["dt_color_dimmable_light", "dt_color_dimmer_switch", "dt_ias_cie"]
 
 # implements SERVER side of (clusters):

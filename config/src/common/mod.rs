@@ -98,11 +98,16 @@ pub enum NodeType {
     // }
 }
 
+// 'esp_zigbee_lib' 2.0.4 has the 'ezb_extaddr_t' "packed" (aligned to 1). This might, however,
+// change. Our alignment to 8 is mere robustness. Allows a pointer to the static config entry to be used,
+// all the way to C level.
+//
 #[derive(Debug, Copy, Clone)]
 #[cfg(feature = "coordinator")]
+#[repr(C, align(8))]
 pub struct PreConfiguredDevice {
     /// Address bytes, parsed from the input string
-    pub ieee_address: [u8;8],
+    pub mac_address: [u8;8],
     /// Install code + CRC
     pub install_code: [u8;18],
 }
@@ -126,8 +131,11 @@ pub enum DeviceType {
     ColorDimmerSwitch,
     #[cfg(feature = "dt_ias_cie")]
     IasCie,
-}
 
+    // It's possible to build a (Router) node with no end points. In such cases, this takes
+    // care of not creating an "empty enum" that complicates API layer coding.
+    _Dummy,
+}
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -144,6 +152,7 @@ pub enum Cluster {
 pub struct Endpoint {
     pub common_fields: CommonFields,
     pub device_type: DeviceType,
-    pub additional_server_clusters: Vec<Cluster>,
+    pub additional_client_clusters: Vec<Cluster>,
+    //pub additional_server_clusters: Vec<Cluster>,
     //#later pub discover_remote_server_clusters: Option<Vec<ZclServerCluster>>,
 }

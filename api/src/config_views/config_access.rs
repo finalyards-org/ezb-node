@@ -1,34 +1,48 @@
-use std::sync::OnceLock;
+use ezb_node_config::{ChannelMask, Config, NodeType::*, PreConfiguredDevice};
 
-use ezb_node_config::{
-    ChannelMask,
-    Config,
-    NodeType::*,
-};
+use ezb_node_raw::{esp_zigbee_config_t, esp_zigbee_device_config_t, esp_zigbee_platform_config_t, ezb_app_signal_add_handler, ezb_aps_secur_enable_distributed_security, ezb_bdb_set_primary_channel_set, ezb_bdb_set_secondary_channel_set, ezb_extaddr_t, ezb_secur_ic_type_e::EZB_SECUR_IC_TYPE_128};
 
 use ezb_node_raw::{
-    esp_zigbee_config_t,
-    esp_zigbee_device_config_t,
-    esp_zigbee_platform_config_t,
-    ezb_nwk_device_type_t::*,
+    esp_zigbee_init,
+    //ezb_secur_set_ic_required,
+    ezb_secur_ic_add,
+    ezb_secur_ic_type_e,
 };
 
-static BAKED: OnceLock<esp_zigbee_config_t> = OnceLock::new();
-    // 'esp_zigbee_config_t' is the struct itself (not a pointer)
+use crate::{
+    EzbError,
+    EspError,
+    EzbEspError,
+};
 
 /**
-* A view to a 'Config' struct used in initializing 'Node'.
-*
-* Covers TOML sections '[network]', '[platform]' and '[node]'.
+* An object to bridge the TOML sections '[network]', '[platform]' and '[node]' with 'esp_zigbee_lib'
+* APIs.
 */
-pub(crate) struct ConfigAccess(&'static Config);
+pub(crate) struct ConfigAccess{
+    /// Data structure needed for 'ezb_init()'
+    c_config: esp_zigbee_config_t,
+    channel_masks: [ChannelMask; 2],
+
+    #[cfg(feature = "coordinator")]
+    pre_configurers: Vec<PreConfigurer>,
+}
 
 impl ConfigAccess {
 
-    pub(crate) fn expand(&self) -> (&'static esp_zigbee_config_t, [ChannelMask;2]) {
-        let channels = [self.0.primary_channels, self.0.secondary_channels];
-        let storage_partition_name = self.0.storage_partition_name.as_ref();
-        let nt = self.0.node;
+    /// Form a *data structure* that leans towards the 'esp_zigbee_lib' usage, but *does not run
+    /// any initializations*, yet.
+    ///
+    fn new(cfg: &'static Config) -> Self {
+        let Config {
+            primary_channels,
+            secondary_channels,
+            storage_partition_name,
+            node,
+            .. } = cfg;
+
+        #[cfg(feature = "coordinator")]
+        let pre_configured_devices: &'static _;     // to be picked up, just for coordinator
 
         //typedef struct esp_zigbee_device_config_s {
         //     ezb_nwk_device_type_t device_type;          /*!< The nwk device type, @ref ezb_nwk_device_type_t */
@@ -43,19 +57,32 @@ impl ConfigAccess {
         //     uint8_t max_children; /*!< Max number of the children */
         // };
         //
-        let dev_cfg = match nt {
+        /// The 'dev_cfg_t' is a C-level configuration structure, but still just that - a data structure.
+        ///
+        let dev_cfg_t = match node {
+            // '.pre_configured_devices' is taken later (stage 2)
             #[cfg(feature = "coordinator")]
-            CoordinatorConfig { install_code_policy, max_children } => {
-                esp_zigbee_device_config_t::for_zczr(EZB_NWK_DEVICE_TYPE_COORDINATOR, install_code_policy, max_children)
+            CoordinatorConfig { install_code_policy, max_children, pre_configured_devices: pcds } => {
+                pre_configured_devices = pcds;  // put aside
+                let install_code_policy = *install_code_policy;
+                let max_children = *max_children;
+
+                esp_zigbee_device_config_t::for_coordinator(install_code_policy, max_children)
             },
             #[cfg(feature = "router")]
             RouterConfig { install_code_policy, max_children } => {
-                esp_zigbee_device_config_t::for_zczr(EZB_NWK_DEVICE_TYPE_ROUTER, install_code_policy, max_children)
+                let install_code_policy = *install_code_policy;
+                let max_children = *max_children;
+
+                esp_zigbee_device_config_t::for_router(install_code_policy, max_children)
             },
             #[cfg(false)]
-            EndDeviceConfig { } => {
+            EndDeviceConfig { install_code_policy, max_children } => {
+                let install_code_policy = *install_code_policy;
+                let max_children = *max_children;
+
                 todo!()
-                //esp_zigbee_device_config_t::for_zed(ed_timeout, keep_alive.as_millis())
+                //esp_zigbee_device_config_t::for_end_device(ed_timeout, keep_alive.as_millis())
             }
         };
 
@@ -71,28 +98,132 @@ impl ConfigAccess {
         //     };
         // } esp_zigbee_radio_config_t;
         //
+        /// A data structure, one used by C level.
+        ///
         let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
             storage_partition_name
         );
 
-        let cc = esp_zigbee_config_t {
-            device_config: dev_cfg,
+        /// Data we retain for the later '.init()'
+        ///
+        let c_config = esp_zigbee_config_t {
+            device_config: dev_cfg_t,
             platform_config: platform_cfg,
         };
 
-        // Since the config is only one (we know this, it's not in the types), we can simply provide the first
-        // value ever created. (We can also panic if coming here a second time; should not happen).
-        //
-        assert!(BAKED.get().is_none(), "Internal: initializing the node twice.");
+        Self {
+            c_config,
+            channel_masks: [*primary_channels, *secondary_channels],
 
-        let cc = BAKED.get_or_init(|| cc);
-        (cc, channels)
+            #[cfg(feature = "coordinator")]
+            pre_configurers: pre_configured_devices.iter().map(|entry: &'static _| {
+                PreConfigurer::from(entry)
+            }).collect()
+        }
+    }
+
+    /// Initialize the node, in C library.
+    ///
+    pub(crate) fn init(self) -> Result<(), EzbEspError> {
+        //ESP_ERROR_CHECK(esp_zigbee_init(&config));
+
+        // Note: By boxing and 'Box::leak' we ensure that the C-level data structure ('.c_config')
+        //      remains valid throughout the process lifespan.
+        //
+        let x = Box::leak(Box::new(self.c_config));
+
+        EzbError::wrap( unsafe {
+            esp_zigbee_init(x)
+        })?;
+
+        // Set the channels
+        set_channels(self.channel_masks)?;
+
+        #[cfg(feature = "coordinator")]
+        // Init the additional clusters
+        {
+            for pre_configurer in self.pre_configurers {
+                pre_configurer._call()?
+            }
+        }
+
+        Ok(())
     }
 }
 
 // This allows an app to provide a static '&Config' where the needing party only needs a view.
 impl From<&'static Config> for ConfigAccess {
     fn from(c: &'static Config) -> Self {
-        Self(c)
+        Self::new(c)
+    }
+}
+
+/**
+* Set the channels that the node uses for commissioning.
+*
+* Coordinator: selects the channel for the network, from these (considering noise levels).
+* others:   use these channels to find and join the network
+*
+* @note The possible failure code is 'EZB_ERR_INVALID_ARG' but the values have been pruned in
+*       'config' so we really should not get any errors.
+*/
+//ESP_ERROR_CHECK(ezb_bdb_set_primary_channel_set(ESP_ZIGBEE_PRIMARY_CHANNEL_MASK));
+//ESP_ERROR_CHECK(ezb_bdb_set_secondary_channel_set(ESP_ZIGBEE_SECONDARY_CHANNEL_MASK));
+//return ESP_OK;
+//
+fn set_channels(channel_masks: [ChannelMask;2]) -> Result<(), EzbError> {
+
+    EzbError::wrap( unsafe {
+        ezb_bdb_set_primary_channel_set(channel_masks[0].bits())
+    })?;
+
+    EzbError::wrap( unsafe {
+        ezb_bdb_set_secondary_channel_set(channel_masks[1].bits())
+    })?;
+
+    Ok(())
+}
+
+#[cfg(feature = "coordinator")]
+struct PreConfigurer {
+    mac_address: &'static [u8;8],     // 64-bit
+    install_code: &'static [u8;18],
+}
+
+#[cfg(feature = "coordinator")]
+impl From<&'static PreConfiguredDevice> for PreConfigurer {
+    fn from(o: &'static PreConfiguredDevice) -> Self {
+        let PreConfiguredDevice { mac_address, install_code } = o;
+        Self { mac_address, install_code }
+    }
+}
+
+#[cfg(feature = "coordinator")]
+impl PreConfigurer {
+    const IC_TYPE: ezb_secur_ic_type_e = EZB_SECUR_IC_TYPE_128;
+
+    /// Apply the pre-configured devices (if any); coordinator only.
+    ///
+    /// This needs to be done after endpoint creation but before the stack is started (source: google.ai).
+    ///
+    // Rust note: nightly allows making a struct 'impl Fn<(...,)>', but it becomes verbose because also 'FnMut' and 'FnOnce'
+    //          need to be defined.
+    //
+    pub(crate) fn _call(self) -> Result<(),EzbError>{
+
+        // These ptr's are valid forever, and safe to pass to C land; they are based on static stores.
+        //
+        let mac_address = self.mac_address.as_ptr() .cast();
+        let install_code = self.install_code.as_ptr();
+
+        //      #esp_zigbee_lib: It would be great if you document all the cases where pointers are
+        //          used longer than just during the call of the function.
+
+        EzbError::wrap( unsafe {
+            ezb_secur_ic_add(mac_address, Self::IC_TYPE as u8, install_code)
+        })?;
+        //.with_context(|| "ezb_secur_ic_add() failed")?;
+
+        Ok(())
     }
 }

@@ -145,7 +145,8 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--allowlist-function 'ezb_ep_create_ha_default' \
 	  	--allowlist-function 'ezb_get_current_.+' \
 			--allowlist-function 'ezb_nwk_.+' \
-			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_ace|ias_wd|ias_zone|identify|level|ota_upgrade)_.+' \
+			--allowlist-function 'ezb_secur_.+' \
+			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_ace|ias_wd|ias_zone|identify|level|ota_upgrade|power_config)_.+' \
 	  	--allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch|configuration_tool)' \
 	    --allowlist-function 'nvs_flash_init' \
@@ -157,7 +158,8 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_err_.+' \
 	    --allowlist-type 'ezb_ext(?:panid|addr)_t' \
 	    --allowlist-type 'ezb_nwk_.+' \
-	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|set|status)_.+' \
+	    --allowlist-type 'ezb_secur_ic_type_.+' \
+	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|power_config|set|status)_.+' \
 	    --allowlist-type 'ezb_zcl_(?:ias_zone_cluster|ias_zone_server)_.+' \
 	    --allowlist-type 'ezb_zha_device_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
@@ -177,7 +179,7 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --default-enum-style rust \
 	    --with-derive-custom "ezb_addr_mode_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_app_signal_type_e=strum::FromRepr,strum::Display" \
-	    --with-derive-custom "ezb_err_e=strum::FromRepr,strum::Display" \
+ 			--with-derive-custom "ezb_err_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_nwk_network_status_t=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_attr_type_e=strum::FromRepr,strum::Display" \
 	    --with-derive-custom "ezb_zcl_cluster_id_e=strum::FromRepr,strum::Display" \
