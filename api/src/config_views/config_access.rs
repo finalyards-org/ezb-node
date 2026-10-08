@@ -101,7 +101,9 @@ impl ConfigAccess {
         /// A data structure, one used by C level.
         ///
         let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
-            storage_partition_name
+            storage_partition_name.unwrap_or(
+                "nvs"   // what the 2.0.4 C examples use
+            )
         );
 
         /// Data we retain for the later '.init()'

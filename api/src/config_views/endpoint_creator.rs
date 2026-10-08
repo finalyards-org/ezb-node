@@ -80,7 +80,11 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, entry: &Endpoint) -> Result<
     let Endpoint {
         common_fields,
         device_type,
-        additional_client_clusters
+        additional_client_clusters,
+        #[cfg(feature = "coordinator")]
+        discover_server_clusters: _,    // 'None' for a coordinator; ignore
+        #[cfg(not(feature = "coordinator"))]
+        discover_server_clusters,   // router, end device
     } = entry;
 
     // Note: It is possible to build 'config' with no 'DeviceType' support (not intended for any
@@ -180,6 +184,12 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, entry: &Endpoint) -> Result<
                 ezb_af_endpoint_add_cluster_desc(ep_desc, cluster_desc)
             })?;
         }
+    }
+
+    #[cfg(not(feature = "coordinator"))]
+    {
+        discover_server_clusters;
+        unimplemented!()
     }
 
     // ESP_ERROR_CHECK(ezb_af_device_add_endpoint_desc(dev_desc, ep_desc));

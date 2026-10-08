@@ -5,8 +5,20 @@
 *
 * For structs where inner validation is needed (set of valid values, string syntax etc.) we provide
 * parsing functions. This keeps all the errors on the build side of things.
+*
+* @note The TOML side DOES NOT USE 'coordinator', 'router', and 'end_device' features!! For simplicity
+*       (yes!!) we take all-in, generate the code that the TOML corresponds to, and only *once the
+*       embedded side* reads it in, it will struggle if the wrong features are not enabled.
+*
+*       At the least, this should make the TOML creation more testable. #hope
 */
-use serde::Deserialize;
+use serde::{
+    de::Error as SerdeDeError,
+    Deserialize,
+    Deserializer,
+};
+
+use itertools::Itertools;
 
 use std::{
     collections::BTreeMap,
@@ -15,6 +27,7 @@ use std::{
 };
 
 use core::time::Duration;
+use std::convert::identity;
 use std::ops::RangeInclusive;
 use crate::convert::error::ConfigError;
 
@@ -29,6 +42,12 @@ pub struct RootConfig {
     pub platform: PlatformSection,
     pub node: NodeSection,
     pub endpoint: EndpointConfig,
+
+    /// This is logically a part of 'NodeSection::Coordinator' but having it as a separate root-level
+    /// entry allows more freedom in how the TOML is arranged. These entries can be at the end.
+    ///
+    #[serde(rename = "pre_configured_device", default)]
+    pub pre_configured_devices: Vec<PreConfiguredDevice>,   // coordinator only
 }
 
 #[derive(Deserialize, Debug)]
@@ -63,8 +82,7 @@ pub enum NodeSection {
     Coordinator{
         allow_open_pairing: bool,
         max_children: u8,
-        #[serde(default)]
-        pre_configured_devices: Vec<PreConfiguredDevice>,
+        // 'pre_configured_devices': see as a root level section
     },
     Router{
         allow_open_pairing: bool,
@@ -81,32 +99,22 @@ pub enum NodeSection {
     },
 }
 
+impl NodeSection {
+    pub(crate) fn is_coordinator(&self) -> bool { matches!(self, Self::Coordinator{..}) }
+    pub(crate) fn is_router(&self) -> bool { matches!(self, Self::Router{..}) }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct PreConfiguredDevice {
     /// This is *only* a descriptive name; can be used for error messages, though. It is not needed
     /// by the underlying 'esp_zigbee_sdk', but might prove useful for the human managing a configuration.
-    #[serde(rename = "name")]
-    _name: String,
+    #[serde(rename = "log_name")]
+    pub(crate) _name: String,
 
-    ieee_address: String,   // "xx:yy:...:zz" | "xxyy ... __zz" (8 bytes)
-    install_code: String,   // "aaaa bbbb ..." (18 bytes)
-}
-
-#[cfg(feature = "coordinator")]
-impl PreConfiguredDevice {
-    pub(crate) fn parse(self) -> Result<([u8;8], [u8;18]),ConfigError> {
-        let Self { ieee_address, install_code, _name: _ } = self;
-
-        let a = parse_mac_address(ieee_address.as_str()).ok_or_else(|| {
-            format!("Not correct syntax for '.ieee_address': {}", ieee_address)
-        })?;
-
-        let b = parse_install_code(install_code.as_str()).ok_or_else(|| {
-            format!("Not correct syntax for '.install_code': {}", install_code)
-        })?;
-
-        Ok((a, b))
-    }
+    #[serde(deserialize_with = "chunked_hex")]   // "aaaa ... dddd" (8 bytes)
+    pub(crate) mac_address: [u8;8],
+    #[serde(deserialize_with = "chunked_hex")]   // "aaaa bbbb ..." (18 bytes)
+    pub(crate) install_code: [u8;18],
 }
 
 #[derive(Deserialize, Debug)]
@@ -171,16 +179,15 @@ pub struct EndpointInstance {
     #[cfg(false)]
     pub additional_server_clusters_NOT_YET: Vec<Cluster>, // enable if needed
 
-    /// Look for a remote end point with said server-side clusters, bind to it.
+    /// Clusters (client and/or server) that a binding candidate must provide, in order for the join
+    /// to take place.
     ///
-    /// Note: An end point can only bind to one other endpoint (it's 1:1). The list defines the
-    ///     clusters required from such an end point.
+    /// For router and end device only.
     ///
-    #[serde(default)]
-    #[allow(dead_code)] // tbd. finish it. Perhaps grouped as 'discover.remote_server_clusters' (could include also a field for client clusters, of the same candidate)
-    #[cfg(false)]
-    pub discover_remote_server_clusters_UNTESTED: Option<Vec<Cluster>>,
-        // tbd. check in construction that if given, must contain at least one cluster.
+    // Note: 'Option<Vec<...>>' is intentional, to highlight that it's a collection-of-collections.
+    //
+    #[serde(default)]   // optional
+    pub discover_server_clusters: Option<Vec<Cluster>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -216,6 +223,64 @@ pub enum Cluster {
     HA_PowerConfig,
     #[serde(rename = "ias_zone", alias = "HA::ias_zone")]
     HA_IasZone,
+}
+
+/// Deserialize "aabb ccdd ..." (four chars hex + one space; repeat) into byte arrays.
+///
+/// @note This is the syntax printed on Zigbee devices, for both MAC address and Install Code.
+///
+fn chunked_hex<'de, D, const N: usize>(deserializer: D) -> Result<[u8;N], D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;   // "aaaa bbbb ..."
+
+   let bytes: Vec<u8> = s.chars()
+       .chunk_by(|&c| c == ' ')    // leads to: (false, "aabb"), (true, " "), ...
+       .into_iter()
+
+       // key: the evaluated key for each chunk
+       // chunk: the portion, where the 'key' stayed constant
+       //
+       .map(|(is_white_space, chunk)| {
+           let chunk: String = chunk.collect();
+
+           log::warn!("XXX iterating: {} '{:?}'", is_white_space, chunk);    // DEBUG
+
+           if is_white_space {
+               // Note: We could silently allow the extra spaces
+               if chunk.len() > 1 {
+                   return Err(format!("Expected one space between hex blocks (got {}): {}", chunk.len(), s));
+               }
+               Ok(vec!())   // nothing
+           } else {
+               if chunk.len() != 4 {
+                   return Err(format!("Expected blocks of 4 hex chars, got: '{}': {}", &chunk, s));
+               }
+
+               let mut buf = [0u8; 2];
+
+               for i in 0..=1 {
+                   let sl = &chunk[i*2..=i*2+1];
+                   buf[i]= u8::from_str_radix(&sl, 16).map_err(|_| {
+                       format!("Expected hexadecimal, got: '{}'", &sl)
+                   })?;
+               }
+               Ok(buf.to_vec())
+           }
+       })
+       .flatten_ok()
+       .collect::<Result<Vec<u8>, String>>()
+       .map_err(D::Error::custom)?;
+
+    if bytes.len() != N {
+        return Err(D::Error::custom(format!(
+            "Unexpected length ({} != {}): {}", bytes.len(), N, &s )));
+    }
+
+    let mut arr = [0u8; N];
+    arr.copy_from_slice(&bytes);
+    Ok(arr)
 }
 
 //---

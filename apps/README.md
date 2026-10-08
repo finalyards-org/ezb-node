@@ -26,12 +26,22 @@ Runnable programs to showcase the `ezb-node`.
 |**Demo 1** - light and switch|2 pc|none|
 |**Demo 2** - door/window sensor|1 pc|Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html) |
 
->For detailed information about each of the demos, see their respective READMEs.
+>📜 For detailed information about each of the demos, see their respective READMEs.
 
 ### Setting up `espflash`
 
 To flash the applications on your devkit(s), you'll need the `espflash` tool.
 
+
+>You can also use `idf.py` if you have the target device directly connected (and not using a VM). If so, use the one provided by the `esp-idf-sys` installation:
+>
+>```
+>$ find ~/.espressif/ -name idf.py
+/home/lima/.espressif/esp-idf/v6.0.3/tools/idf.py
+>```
+>You might also need to go through other hoops. See `_mc/README.md` for inspiration.
+
+<!-- #r: was
 <details><summary>Alternatives to `espflash`</summary>
 >The author prefers `espflash` because there's a remoting tool for it: he can keep the devkit and the development machine **physically separate**.
 >
@@ -44,7 +54,7 @@ To flash the applications on your devkit(s), you'll need the `espflash` tool.
 >
 >You might need to go through other hoops. See `_mc/README.md` for inspiration...
 </details>
-
+-->
 
 **It pings?**
 
@@ -86,7 +96,7 @@ Once you see that, we can proceed to flashing and running.
 
 ## Build and run
 
-These steps are pretty similar across all the demos. 
+These steps are pretty similar across all (both?) the demos. 
 
 ⚠️ Be aware that **any information you have on the devkit will be erased** by the flashing. This includes prior Zigbee network pairings.
 
@@ -113,7 +123,7 @@ $ just lr
 
 This launches a certain demo.
 
-For other demos, variate the commands (e.g. `db`, `dr` for demo 2). See inside the `Justfile` for details.
+For other demos, variate the commands (e.g. `db`, `dr` for demo 2). See `Justfile` for details.
 
 ```
 $ just --list
@@ -136,4 +146,12 @@ Available recipes:
 
 <!-- tbd. How to proceed from here?
 -->
+
+
+## next
+
+You might want to check the specific instructions for a certain demo:
+
+- [demo/1/README.md](demo/1/README.md)
+- [demo/2/README.md](demo/2/README.md)
 

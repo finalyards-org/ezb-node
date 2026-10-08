@@ -3,6 +3,8 @@
 */
 fn main() {
 
+    // tbd. enforce that for feature 'toml', _none_ of the coordinator/router/end device is enabled!!!
+
     // One node can be only one of:
     //  - coordinator
     //  - router

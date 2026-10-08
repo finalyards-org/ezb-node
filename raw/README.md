@@ -35,7 +35,7 @@ Pros/cons of the current approach:
 - GNU `make` >= 4.3
 
 <!-- Author uses:
-- bindgen 0.72.1
+- bindgen 0.73.2
 -->
 
 ## Build

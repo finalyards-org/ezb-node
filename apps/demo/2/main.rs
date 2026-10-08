@@ -43,7 +43,7 @@ async fn main(_spawner: Spawner) {
     });
 
     let (_keep, lc) = (|| -> anyhow::Result<(_,IasCoordinator)> {    // scope the '?' by an anonymous closure
-        let nvs_res = init_nvs(CFG.storage_partition_name)
+        let nvs_res = init_nvs(CFG.storage_partition_name.unwrap_or("nvs"))
             .context("Failed to initialize NVS")?;
 
         let tmp = IasCoordinator::new(&CFG)

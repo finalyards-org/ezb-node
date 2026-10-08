@@ -1,10 +1,12 @@
 #![cfg(feature = "toml")]
 
+use std::any::Any;
+use std::str::FromStr;
 use std::string::String;
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-//r use syn::parse::Parser;
+use syn::token::Token;
 use toml;
 
 mod in_;
@@ -20,15 +22,14 @@ use in_::{
 mod error;
 use error::ConfigError::{
     self,
-    FeatureConflict,
 };
-
-#[cfg(feature = "coordinator")]
-const ROLE: &'static str = "coordinator";
-#[cfg(feature = "router")]
-const ROLE: &'static str = "router";
-//#[cfg(feature = "end_device")]
-//const ROLE: &'static str = "end device";
+use crate::convert::in_::PreConfiguredDevice;
+//R #[cfg(feature = "coordinator")]
+//R const ROLE: &'static str = "coordinator";
+//R #[cfg(feature = "router")]
+//R const ROLE: &'static str = "router";
+//R //#[cfg(feature = "end_device")]
+//R //const ROLE: &'static str = "end device";
 
 // tbd. This is SO LONG!!! Find ways to split it into a few.
 /**
@@ -64,93 +65,105 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     };
 
     //--- platform
-    // "None" | "Option({string})"
+    // "None" | "Some("...")"
     let q_storage_partition_name = {
         let opt = c.platform.storage_partition_name;
-        quote! { #opt }
+        q_opt(opt)  // retains 'None'
     };
 
     //--- node
 
+    // Take 'pre_configured_devices' first. It belongs to 'NodeSection::Coordinator' though is
+    // presented stand-alone in the TOML.
+    //
+    let pre_configured_devices = c.pre_configured_devices;
+
+    //r assert!(pre_configured_devices.len() > 0);  // DEBUG
+
+    #[allow(non_snake_case)]
+    let ROLE: &'static str;
+
     // Feature notes:
-    //      - Both the 'build.rs' and the application _will_ use features for node type.
-    //      - by parsing all possible node types, we allow the user to get better error messages
-    //        (wrong-featured but otherwise valid TOML will always parse).
+    //      - The 'build.rs' side (feature = "toml") DOES NOT use coordinator/router/end_device features.
+    //      - by parsing all possible node types, we may allow the user to get better error messages
     //      - We don't create '#[cfg]' barriers in the generated output (avoiding complexity), just
     //          expect the user to bring in enough features.
     //
     let q_node = {
         match c.node {
-            NodeSection::Coordinator { allow_open_pairing, max_children, pre_configured_devices} => {
-                #[cfg(not(feature = "coordinator"))]
-                return Err(FeatureConflict("coordinator"));
+            NodeSection::Coordinator { allow_open_pairing, max_children/*, pre_configured_devices*/} => {
+                let install_code_policy = !allow_open_pairing;
+                ROLE = "Coordinator";
 
-                #[cfg(feature = "coordinator")]
-                {
-                    let install_code_policy = !allow_open_pairing;
+                // 'PreConfiguredDevice' still needs some parsing.
+                //
+                let q_pre_configured_devices: Vec<TokenStream> = pre_configured_devices .into_iter()
+                    .map(|o| {
+                        let PreConfiguredDevice{ mac_address, install_code, _name: _ } = o;
 
-                    // 'PreConfiguredDevice' still needs some parsing.
-                    //
-                    let q_pre_configured_devices: Vec<TokenStream> = pre_configured_devices .into_iter()
-                        .map(|o| {
-                            let (ieee_address_bytes, install_code_bytes): ([u8;8], [u8;18]) = o.parse()?;
+                        let q_mac_address = proc_macro2::Literal::byte_string(&mac_address);
+                        let q_install_code = proc_macro2::Literal::byte_string(&install_code);
 
-                            let ieee_address = proc_macro2::Literal::byte_string(&ieee_address_bytes);
-                            let install_code = proc_macro2::Literal::byte_string(&install_code_bytes);
+                        let q_doc = {
+                            fn f(bytes: &[u8]) -> String {
+                                let s = bytes
+                                    .chunks(2)
+                                    .map(|chunk| {
+                                        assert_eq!(chunk.len(), 2);
+                                        format!("{:02X}{:02X}", chunk[0], chunk[1])
+                                    })
+                                    .collect ::<Vec<String>>()  // note: '.join()' doesn't work on iterators; must collect
+                                    .join(" ");
+                                s
+                            }
+                            format!("MAC address: {}", f(&mac_address))
+                        };
 
-                            let ieee_address_comment = ieee_address_bytes .into_iter()
-                                .map(|b| format!("{:02X}", b))
-                                .collect ::<Vec<String>>()  // note: force iteration to finish; '.join()' doesn't work on iterators.
-                                .join(":");
+                        Ok(quote! {
+                            #[doc = #q_doc]
+                            PreConfiguredDevice {
+                                mac_address: *#q_mac_address,
+                                install_code: *#q_install_code,
+                            }
+                        })
+                    }).collect ::<Result<_,ConfigError>>()?;
 
-                            let install_code_comment = install_code_bytes
-                                .chunks(2)
-                                .map(|chunk| {
-                                    assert!(chunk.len() == 2);
-                                    format!("{:02X}{:02X}", chunk[0], chunk[1])
-                                })
-                                .collect ::<Vec<String>>()
-                                .join(" ");
-
-                            Ok(quote! {
-                                PreConfiguredDevice {{
-                                    #[doc = #ieee_address_comment]
-                                    ieee_address: *#ieee_address,
-                                    #[doc = #install_code_comment]
-                                    install_code: *#install_code,
-                                }}
-                            })
-                        }).collect ::<Result<_,ConfigError>>()?;
-
-                    quote! {
-                        NodeType::CoordinatorConfig {
-                            install_code_policy: #install_code_policy,
-                            max_children: #max_children,
-                            pre_configured_devices: #( #q_pre_configured_devices ),*,
-                        }
+                quote! {
+                    NodeType::CoordinatorConfig {
+                        install_code_policy: #install_code_policy,
+                        max_children: #max_children,
+                        pre_configured_devices: vec![ #( #q_pre_configured_devices ),* ],
                     }
                 }
             },
-            #[cfg_attr(not(feature = "router"), allow(unused_variables))]
+
             NodeSection::Router { allow_open_pairing, max_children} => {
-                #[cfg(not(feature = "router"))]
-                return Err(FeatureConflict("router"));
+                let install_code_policy = !allow_open_pairing;
+                ROLE = "Router";
 
-                #[cfg(feature = "router")]
-                {
-                    let install_code_policy = !allow_open_pairing;
-                    quote! {
-                        NodeType::RouterConfig {
-                            install_code_policy: #install_code_policy,
-                            max_children: #max_children,
-                        }
+                if !pre_configured_devices.is_empty() {
+                    Err(format!("'.pre_configured_devices' is Coordinator only; should not be provided for: {}", ROLE))?;
+                }
+
+                quote! {
+                    NodeType::RouterConfig {
+                        install_code_policy: #install_code_policy,
+                        max_children: #max_children,
                     }
                 }
             },
+
             NodeSection::EndDevice { allow_open_pairing: _, .. } => {
                 unimplemented!();
+                ROLE = "End device";
+
                 /*** just giving a taste; implement only if we *actually* do devices that are only EndDevice role.
                 let install_code_policy = !allow_open_pairing;
+
+                if !pre_configured_devices.is_empty() {
+                    Err("'.pre_configured_devices' is Coordinator only; should not be provided for: {}", ROLE)?;
+                }
+
                 quote! {
                     NodeType::EndDeviceConfig {
                         install_code_policy: #install_code_policy,
@@ -181,18 +194,17 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
         // Coordinator and end device are meaningless without an end point.
         //
-        #[cfg(not(feature = "router"))]
-        if instances.is_empty() {
-            return Err(ConfigError::from(
+        if !c.node.is_router() && instances.is_empty() {
+            Err(ConfigError::from(
                 format!("Need at least one end point for {ROLE}. Please define '[endpoint.{{id}}]'.")
-            ));
+            ))?;
         }
 
         // '.as_ref()'s turn to 'Option<&String>' (important later)
         let manufacturer_name_def = manufacturer_name_def.as_ref();
         let model_identifier_def = model_identifier_def.as_ref();
 
-        instances.into_iter().for_each(|(k,v)| { // k ∈ 1..=240
+        instances.into_iter().try_for_each(|(k,v)| { // k ∈ 1..=240
             // ep_10
             let ident = format_ident!("ep_{}", k);
 
@@ -231,16 +243,42 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 // exhaustive match
             };
 
-            let q_additional_client_clusters = {
-                let qs = v.additional_client_clusters.iter().map(|cluster| {
-                    match cluster {
-                        Cluster::HA_OnOff =>        quote! { Cluster::OnOff },
-                        Cluster::HA_LevelControl => quote! { Cluster::LevelControl },
-                        Cluster::HA_PowerConfig =>  quote! { Cluster::PowerConfig },
-                        Cluster::HA_IasZone =>      quote! { Cluster::IasZone },
-                    }
-                });
+            fn q_cluster(cluster: Cluster) -> TokenStream {
+                match cluster {
+                    Cluster::HA_OnOff =>        quote! { Cluster::OnOff },
+                    Cluster::HA_LevelControl => quote! { Cluster::LevelControl },
+                    Cluster::HA_PowerConfig =>  quote! { Cluster::PowerConfig },
+                    Cluster::HA_IasZone =>      quote! { Cluster::IasZone },
+                }
+            }
+
+            fn q_clusters<I: IntoIterator<Item=Cluster>>(xs: I) -> TokenStream {
+                let xs = xs.into_iter();
+
+                let qs = xs.map(q_cluster);
                 quote! { vec![ #(#qs),* ] }
+            }
+
+            let q_additional_client_clusters = {
+                q_clusters( v.additional_client_clusters )
+            };
+
+            /// Inject the 'discover_server_clusters: ...' for router and end device, but keep
+            /// it empty for a coordinator.
+            ///
+            let q_discover_server_clusters: TokenStream = {
+
+                if c.node.is_coordinator() {
+                    match v.discover_server_clusters {
+                        None => quote!(None),   // not applicable on a coordinator
+                        Some(x) =>
+                            return Err(ConfigError::from(
+                                format!("A coordinator does not use '.discover_server_clusters', but has {}", x.len())
+                            )),
+                    }
+                } else { // router, end device
+                    q_opt( v.discover_server_clusters.map(q_clusters) )
+                }
             };
 
             q_lets.extend(quote!{
@@ -248,11 +286,15 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                     common_fields: #q_common_fields,
                     device_type: #q_device_type,
                     additional_client_clusters: #q_additional_client_clusters,
-                    // tbd. discover_remote_server_clusters
+
+                    discover_server_clusters: #q_discover_server_clusters,
                 };
             });
+
             q_arr_contents.extend(quote!{ (#k, #ident), });
-        });
+
+            Ok(())  // continue
+        })?;
 
         quote!{ {
             #q_lets
@@ -262,8 +304,10 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
     // All together now!
     //
+    // Note: Can use 'std::' since any ESP-IDF + Embassy application will need it.
+    //
     let q_all = quote!{ {
-        use alloc::collections::BTreeMap;
+        use std::collections::BTreeMap;
         use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
 
         let primary_channels = #q_primary_channels;
@@ -290,17 +334,27 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 */
 fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
 
-    // DEBUG: enable this if there are internal problems with code generation.
-    //panic!("CHECK: {:?}", q);
-
     // Note: 'prettyplease' is designed to handle full files. To handle an expression, we do some wrapping and unwrapping,
     //
-    let q_file = quote! {
+    let q_all = quote! {
         fn dummy_wrapper() { #q }
     };
 
-    // If there's something wrong with the 'quote!' macros, 'syn::parse2' fails.
-    let syntax_tree: syn::File = syn::parse2(q_file)?;
+    // If there's something wrong with the 'quote!' macros,
+    //let syntax_tree: syn::File = syn::parse2(q_all)?;
+
+    // If the generated tokens are not compliant Rust, help by showing the tokens. THIS IS ENOUGH:
+    // there's no reason for a fancier mechanism.
+    //
+    let syntax_tree: syn::File = syn::parse2(q_all.clone()).map_err(|e| {
+        panic!(
+         "INTERNAL: Code generation failed.\n\
+         Message: {}\n\
+         Tokens: {}",
+            e, q_all.to_string()
+        );
+        e
+    })?;
 
     let formatted = prettyplease::unparse(&syntax_tree);
 
@@ -316,4 +370,15 @@ fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
         .join("\n");
 
     Ok(ret)
+}
+
+/// Turn 'Option' into a 'TokenStream', _keeping_ the Option abstraction.
+///
+/// @note Mere 'quote!(opt)' creates nothing on 'None' and the contents on 'Some'.
+///
+fn q_opt<T: quote::ToTokens>(opt: Option<T>) -> TokenStream {
+    match opt {
+        None => quote! { None },
+        Some(x) => quote! { Some(#x) },
+    }
 }

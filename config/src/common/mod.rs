@@ -41,7 +41,7 @@ pub struct Config {
     // Platform
     /// Partition name (needs to have 'SubType: nvs'). By default, use the common NVS partition
     /// ("nvs") with a namespace.
-    pub storage_partition_name: &'static str,
+    pub storage_partition_name: Option<&'static str>,
 
     // Node
     pub node: NodeType,
@@ -83,6 +83,9 @@ pub enum NodeType {
     CoordinatorConfig {
         install_code_policy: bool,
         max_children: u8,
+
+        /// Though 'pre_configured_devices' may be a stand-alone entry on the TOML side, it is
+        /// always specific to Coordinator, and it's safest to pass it on within here.
         pre_configured_devices: Vec<PreConfiguredDevice>,
     },
     #[cfg(feature = "router")]
@@ -154,5 +157,7 @@ pub struct Endpoint {
     pub device_type: DeviceType,
     pub additional_client_clusters: Vec<Cluster>,
     //pub additional_server_clusters: Vec<Cluster>,
-    //#later pub discover_remote_server_clusters: Option<Vec<ZclServerCluster>>,
+
+    /// Clusters the endpoint wants to see, in order to bind. Router, End device only.
+    pub discover_server_clusters: Option<Vec<Cluster>>,
 }

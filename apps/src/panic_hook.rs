@@ -17,7 +17,7 @@ pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(panic_hook));
 }
 
-fn panic_hook(info: &PanicHookInfo) -> () /* !*/ {
+fn panic_hook(info: &PanicHookInfo<'_>) -> () /* !*/ {
     // ROM 'print' is slightly safer to use than 'log::error!'; both should work.
     {
         let mut buf = [0u8; 512];

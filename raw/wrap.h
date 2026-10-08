@@ -87,8 +87,10 @@ const char *ESP_ZIGBEE_VER = \
   _TO_STR(ESP_ZIGBEE_VER_MAJOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_MINOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_PATCH);
-  // "2.0.1"
+  // "2.0.4"
 
+//R: '--clang-macro-fallback' does the job, for us.
+//
 // Make 'EZB_ERR_...' values bindgen-reachable. Without this, only 'EZB_ERR_NONE' and 'EZB_ERR_FAIL' are seen.
 //
 // Note: There is no such 'ezb_err_e' in the C API, though 'ezb_err_t' is used (which combines value in bits 0..7 with
@@ -122,6 +124,7 @@ const char *ESP_ZIGBEE_VER = \
 //    #define EZB_ERR_MAC_NO_ACK EZB_MAKE_ERROR(EZB_ERR_CATEGORY_MAC, 0xe9U)
 //  <<
 //
+#if 0
 typedef enum {
     //NONE           = EZB_ERR_NONE,  // 0
     //FAIL           = EZB_ERR_FAIL,  // -1
@@ -147,6 +150,7 @@ typedef enum {
     MAC_CHANNEL_ACCESS_FAILURE = EZB_ERR_MAC_CHANNEL_ACCESS_FAILURE,
     MAC_NO_ACK    = EZB_ERR_MAC_NO_ACK,
 } ezb_err_e;
+#endif
 
 // 'esp-zigbee-lib' (2.0.4) defines these as an anonymous enum, leading them to become unrelated constants
 // in 'bindgen'. We can give the enum a name (only using the values we need), leading to more bindable C code.

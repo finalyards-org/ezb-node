@@ -41,23 +41,22 @@ embassy-time    = { workspace = true }
 futures-util = { version = "0.3.32" }
 
 [build-dependencies]
-ezb-node-config = { workspace = true, default-features = true, features = ["_dt_all"] }
-    # In your own application, omit the 'default-features = true' and
-    # ..consider explicitly listing only the dt's you need.
+ezb-node-config = { workspace = true, default-features = true, features = ["dt_color_dimmable_light", "dt_color_dimmer_switch", "dt_ias_cie"] }
+    # In your own application, omit the 'default-features = true'.
 
 anyhow = { version = "1.0" }
 embuild.workspace = true
 
 [features]
-default = ["esp32c6", "_coordinator", "_router"]
+default = ["esp32c6"]
 
 esp32c6 = [
     "ezb-node/esp32c6",
 ]
 
 # Note: By defining the creation features like this, we get them in one place.
-_coordinator = ["ezb-node-config/coordinator", "ezb-node/coordinator"]
-_router = ["ezb-node-config/router", "ezb-node/router"]
+_c = ["ezb-node-config/coordinator", "ezb-node/coordinator"]
+_r = ["ezb-node-config/router", "ezb-node/router"]
 
 [lints]
 workspace = true
@@ -65,14 +64,14 @@ workspace = true
 [[bin]]
 name = "1-light"
 path = "demo/1/light/main.rs"
-required-features = ["esp32c6", "ezb-node/dt_color_dimmable_light"]
+required-features = ["esp32c6", "_c", "ezb-node/dt_color_dimmable_light"]
 
 [[bin]]
 name = "1-switch"
 path = "demo/1/switch/main.rs"
-required-features = ["esp32c6", "ezb-node/dt_color_dimmer_switch"]
+required-features = ["esp32c6", "_r", "ezb-node/dt_color_dimmer_switch"]
 
 [[bin]]
 name = "2-door"
 path = "demo/2/main.rs"
-required-features = ["esp32c6", "ezb-node/dt_ias_cie", "ezb-node/remote_cl_power_config"]
+required-features = ["esp32c6", "_c", "ezb-node/dt_ias_cie", "ezb-node/remote_cl_power_config"]

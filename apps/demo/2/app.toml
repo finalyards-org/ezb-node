@@ -32,7 +32,7 @@ additional_client_clusters = [
     "HA::power_config"      # remaining battery
 ]
 
-[[pre_configured_devices]]
-name = "Sample door/window sensor"
-ieee_address = "40:30:59:FF:FE:9E:7D:3D"    # or "4030 59FF FE9E 7D3D"
+[[pre_configured_device]]
+log_name = "Sample door/window sensor"
+mac_address = "4030 59FF FE9E 7D3D"
 install_code = "964B B40A 0684 F31D 3181 8DFD 0525 4897 337E"

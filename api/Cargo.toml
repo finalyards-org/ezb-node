@@ -18,7 +18,9 @@ esp-idf-svc = { workspace = true, default-features = false, features = ["std", "
 
 log.workspace = true
 
-bitflags = { version = "2.11.1" }
+async-stream = { version = "0.3.6", optional = true }
+#bitflags = { version = "2.11.1" }
+futures-util = { version = "0.3", optional = true }
 strum = { version = "0.28", features = ["derive"] }
 
 [features]
@@ -38,7 +40,7 @@ dt_ias_cie = ["ezb-node-config/dt_ias_cie"]
 #
 # Note: We do differentiate between what-you-want-to-bind-with here, but not in the code. Experimenting.
 #
-_remote_any = []
+_remote_any = ["dep:async-stream", "dep:futures-util"]
 remote_dt_color_dimmable_light = ["_remote_any"]
 remote_cl_power_config = ["_remote_any"]
 

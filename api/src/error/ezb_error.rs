@@ -81,9 +81,6 @@ impl EzbError {
     /// @return None if 'ezb_err_t' is 0
     ///     Otherwise, a Rust-side enum that matches the C-side error code.
     ///
-    /// @note Values of 'ezb_err_t' are only available via 'ezb_err_e::*', due to problems in the
-    ///     binding (C sources use macros that bindgen does not follow).
-    ///
     fn parse(v: ezb_err_t) -> Option<Self> {
         if v == 0 {
             None    // no error

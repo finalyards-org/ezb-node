@@ -136,6 +136,7 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--formatter rustfmt \
 	    --generate-inline-functions \
 	    --use-core \
+			--clang-macro-fallback \
 			\
 	  	--allowlist-function 'esp_zigbee_.+' \
 			--allowlist-function 'ezb_af_(?:create|device|endpoint)_.+' \
@@ -165,7 +166,6 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
 	    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
 	    \
-	    --allowlist-var 'ESP_ERR_.+' \
 	    --allowlist-var 'EZB_ERR_.+' \
 	    --allowlist-var 'EZB_INVALID_AF_EP_DESC' \
 	    --allowlist-var 'EZB_ZCL_CLUSTER_.+' \
@@ -221,6 +221,8 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 		\
 		-Wno-int-to-void-pointer-cast -Wno-void-pointer-to-int-cast \
 	  > $@
+
+#	    --allowlist-var 'ESP_ERR_.+' \
 
 # Entries removed (keep for a while):
 #	    --allowlist-type 'esp_zb_ha_standard_devices_t' \

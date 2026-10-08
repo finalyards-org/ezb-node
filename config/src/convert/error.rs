@@ -14,8 +14,8 @@ pub enum ConfigError {
     ///     - values out of expected range
     ContentError(Cow<'static, str>),    // msg in '.0'
 
-    /// Error if TOML contains a node type that's not supported by the features.
-    FeatureConflict(&'static str),      // feature name in '.0'
+    //r /// Error if TOML contains a node type that's not supported by the features.
+    //r FeatureConflict(&'static str),      // feature name in '.0'
 
     ParseError(toml::de::Error),
     InternalError(syn::Error),
@@ -27,9 +27,9 @@ impl fmt::Display for ConfigError {
             ConfigError::ContentError(msg) => {
                 write!(f, "{}", msg)
             },
-            ConfigError::FeatureConflict(feat) => {
-                write!(f, "'node.type' \"{}\" but that feature is not enabled.", feat)
-            },
+            //r ConfigError::FeatureConflict(feat) => {
+            //r     write!(f, "'node.type' \"{}\" but that feature is not enabled.", feat)
+            //r },
             ConfigError::ParseError(err) => write!(f, "TOML parsing: {err}"),
             ConfigError::InternalError(err) => {
                 write!(f, "Internal error (syntax error in generated code): {err}")

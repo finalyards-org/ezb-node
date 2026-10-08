@@ -77,7 +77,7 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
 # Earlier comment:
 #   >IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
 #
-ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
+#ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
     # tbd. Try whether this matters. Rewrite the docs --^
 
 # ESP_IDF_SDKCONFIG
