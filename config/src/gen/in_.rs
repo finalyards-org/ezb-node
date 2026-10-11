@@ -1,16 +1,10 @@
-#![cfg(feature = "toml")]
+#![cfg(feature = "gen")]
 
 /**
 * Structs that describe the expected TOML content.
 *
-* For structs where inner validation is needed (set of valid values, string syntax etc.) we provide
-* parsing functions. This keeps all the errors on the build side of things.
-*
-* @note The TOML side DOES NOT USE 'coordinator', 'router', and 'end_device' features!! For simplicity
-*       (yes!!) we take all-in, generate the code that the TOML corresponds to, and only *once the
-*       embedded side* reads it in, it will struggle if the wrong features are not enabled.
-*
-*       At the least, this should make the TOML creation more testable. #hope
+* For structs where inner validation is needed (set of valid values etc.) we may provide parsing
+* functions. This keeps all the errors on the build side of things.
 */
 use serde::{
     de::Error as SerdeDeError,
@@ -22,32 +16,30 @@ use itertools::Itertools;
 
 use std::{
     collections::BTreeMap,
+    //convert::identity,
+    ops::RangeInclusive,
     string::String,
     vec::Vec,
 };
 
-use core::time::Duration;
-use std::convert::identity;
-use std::ops::RangeInclusive;
-use crate::convert::error::ConfigError;
+use super::error::ConfigError;
 
 /**
 * Presents 1:1 relation from the TOML to Struct, for reading things in.
 *
-* @note Not the eventual 'Config' format, which resides in 'ezb_node_config::Config'.
+* Value validation may be done using custom deserializers.
 */
 #[derive(Deserialize, Debug)]
 pub struct RootConfig {
     pub network: NetworkSection,
-    pub platform: PlatformSection,
     pub node: NodeSection,
     pub endpoint: EndpointConfig,
 
-    /// This is logically a part of 'NodeSection::Coordinator' but having it as a separate root-level
-    /// entry allows more freedom in how the TOML is arranged. These entries can be at the end.
-    ///
-    #[serde(rename = "pre_configured_device", default)]
-    pub pre_configured_devices: Vec<PreConfiguredDevice>,   // coordinator only
+    //r /// This is logically a part of 'NodeSection::Coordinator' but having it as a separate root-level
+    //r /// entry allows more freedom in how the TOML is arranged. These entries can be at the end.
+    //r ///
+    //r #[serde(rename = "pre_configured_device", default)]
+    //r pub pre_configured_devices: Vec<PreConfiguredDevice>,   // coordinator only
 }
 
 #[derive(Deserialize, Debug)]
@@ -63,33 +55,40 @@ pub enum SecondaryChannels {
     Preferred
 }
 
-#[derive(Deserialize, Debug)]
-pub struct PlatformSection {
-    #[serde(default)]   // optional
-    pub storage_partition_name: Option<String>,
-}
+//r #[derive(Deserialize, Debug)]
+//r pub struct PlatformSection {
+//r     #[serde(default)]   // optional
+//r     pub storage_partition_name: Option<String>,
+//r }
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum NodeSection {
-    // Note: All variants are included. This allows us to provide better error messages (i.e. we
-    //      can read in a TOML variant that is not supported by the 'feature' set of the build).
-
-    // Note: 'allow_open_pairing' is '!install_code_policy'. The author wanted to rename it, to:
+    // Note: 'allow_open_pairing' is '!install_code_policy'.
+    //      The author wanted to rename it, to:
     //          a) make it more understandable for a larger audience
     //          b) make the boolean term work (having a "policy" true/false is weird)
-    //
+
+    #[cfg(feature = "coordinator")]
     Coordinator{
-        allow_open_pairing: bool,
+        //r allow_open_pairing: bool,
         max_children: u8,
-        // 'pre_configured_devices': see as a root level section
+
+        // tbd. EXPLORE: does '[[node.pre_configured_device]]' reach us?
+        #[serde(rename = "pre_configured_device", default)]
+        pre_configured_devices: Vec<PreConfiguredDevice>,
     },
+    #[cfg(feature = "router")]
     Router{
+        /// Try joining the network with default install code.
         allow_open_pairing: bool,
         max_children: u8
     },
+    #[cfg(false)]
+    ///#[cfg(feature = "end_device_UNUSED")]
     #[allow(dead_code)]
     EndDevice{  // NOT TESTED
+        /// Try joining the network with default install code.
         allow_open_pairing: bool,
         #[serde(with = "humantime_serde")]
         ed_timeout: Duration,
@@ -99,11 +98,15 @@ pub enum NodeSection {
     },
 }
 
+#[cfg(false)]  //R
 impl NodeSection {
+    #[cfg(feature = "coordinator")]
     pub(crate) fn is_coordinator(&self) -> bool { matches!(self, Self::Coordinator{..}) }
+    #[cfg(feature = "router")]
     pub(crate) fn is_router(&self) -> bool { matches!(self, Self::Router{..}) }
 }
 
+#[cfg(feature = "coordinator")]
 #[derive(Deserialize, Debug)]
 pub struct PreConfiguredDevice {
     /// This is *only* a descriptive name; can be used for error messages, though. It is not needed
@@ -124,12 +127,16 @@ pub struct EndpointConfig {
 
     #[serde(flatten)]
     // Note: 'String' (not 'u8') as map key avoids collision with ".defaults".
+    //  tbd. Try using 'u8'.
     instances: BTreeMap<String, EndpointInstance>,
 }
 
 impl EndpointConfig {
+    // tbd. instead of '.parse', use 'serde(deserialize_with = ...' on 'instances'
+
     /// Convert 'String' to 'u8' and also validate the values are valid endpoint indices.
     ///
+    #[deprecated]
     pub(crate) fn parse(/*mut*/ self) -> Result<(EndpointDefaults, BTreeMap<u8,EndpointInstance>), ConfigError> {
         let a = self.defaults;
 
@@ -180,9 +187,8 @@ pub struct EndpointInstance {
     pub additional_server_clusters_NOT_YET: Vec<Cluster>, // enable if needed
 
     /// Clusters (client and/or server) that a binding candidate must provide, in order for the join
-    /// to take place.
-    ///
-    /// For router and end device only.
+    /// to take place. FOR ROUTER AND END DEVICE ONLY. (we let it exist for Coordinator, and raise
+    /// an alert later, if it were to carry something).
     ///
     // Note: 'Option<Vec<...>>' is intentional, to highlight that it's a collection-of-collections.
     //
@@ -204,10 +210,6 @@ pub enum DeviceType {
     #[cfg(feature = "dt_ias_cie")]
     #[serde(rename = "ias_cie", alias = "HA::ias_cie")]
     HA_IasCie,
-
-    //r /// Dummy for tests. This allows us to build without enabling *any* of the 'dt_...' features.
-    //r //#[cfg(test)]
-    //r TestDummy,
 }
 
 // Note: Supported clusters are not feature-flagged. Would be too much hassle to selectively include
@@ -285,12 +287,12 @@ where
 
 //---
 
-/// Helper for reading a string with repeating syntax (an IEEE address or install code), into
+/*** DISABLED; simpler tests, please!?
+
+/// Helper for reading a string with repeating syntax (a MAC address or install code), into
 /// byte slice.
 ///
-/// For inputs with '{XX}{delim}', use 'T = u8'.
-/// For inputs with '{XXYY}{delim}', use 'T = u16'
-///
+// tbd. simplify; now only supporting DELIM=<space> and N=4
 fn f11<const DELIM: char, const N: usize, T: Hexable>(s: &str) -> Option<[T;N]> {
 
     let v: Vec<T> = s.split(DELIM)
@@ -322,12 +324,12 @@ pub trait Hexable: Sized {
     fn from_hex(s: &str) -> Result<Self, ParseIntError>;
 }
 
-impl Hexable for u8 {
-    const BYTES: usize = 1;
-    fn from_hex(s: &str) -> Result<Self, ParseIntError> {
-        Self::from_str_radix(s, 16)
-    }
-}
+//impl Hexable for u8 {
+//    const BYTES: usize = 1;
+//    fn from_hex(s: &str) -> Result<Self, ParseIntError> {
+//        Self::from_str_radix(s, 16)
+//    }
+//}
 
 impl Hexable for u16 {
     const BYTES: usize = 2;
@@ -338,8 +340,8 @@ impl Hexable for u16 {
 
 fn parse_mac_address(s: &str) -> Option<[u8; 8]> {
     // First try with "00:0D:6F:..." -> [u8; 8]
-    f11::<':', 8, u8>(s)
-        .or_else(|| {
+    //f11::<':', 8, u8>(s)
+        //.or_else(|| {
             // ..if not, with Zigbee on-device print: "000D 6F..." -> [u16; 4]
             f11::<' ', 4, u16>(s).and_then(|u16_array| {
                 let bytes_vec: Vec<u8> = u16_array
@@ -349,7 +351,7 @@ fn parse_mac_address(s: &str) -> Option<[u8; 8]> {
 
                 bytes_vec.try_into().ok()
             })
-        })
+        //})
 }
 
 fn parse_install_code(s: &str) -> Option<[u8;18]> {
@@ -372,22 +374,23 @@ mod tests {
         let mac_sample = [0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF];
 
         // Can parse hex (ignoring case)
-        assert_eq!(parse_mac_address("12:34:56:78:90:AB:cd:EF"), Some(mac_sample));
-
-        // ..also as written on devices
+        //assert_eq!(parse_mac_address("12:34:56:78:90:AB:cd:EF"), Some(mac_sample));
         assert_eq!(parse_mac_address("1234 5678 90AB cdEF"), Some(mac_sample));
 
         // Fails on wrong length
-        assert_eq!(parse_mac_address("12:34:56:78:90:AB:cd"), None);
+        //assert_eq!(parse_mac_address("12:34:56:78:90:AB:cd"), None);
         assert_eq!(parse_mac_address("1234 5678 90AB"), None);
 
         // Fails on non-hex
-        assert_eq!(parse_mac_address("12:34:56:78:90:AB:cd:ZZ"), None);
+        //assert_eq!(parse_mac_address("12:34:56:78:90:AB:cd:ZZ"), None);
+        assert_eq!(parse_mac_address("1234 5678 90AB cdZZ"), None);
 
         // Fails on wrongly placed delimiter
-        assert_eq!(parse_mac_address("1234:5678:90:AB:cd:EF"), None);
+        //assert_eq!(parse_mac_address("1234:5678:90:AB:cd:EF"), None);
+        assert_eq!(parse_mac_address("12345 678 90AB cdEF"), None);
 
         // Fails on wrong delimiter
-        assert_eq!(parse_mac_address("12 34 56 78 90 AB cd EF"), None);
+        assert_eq!(parse_mac_address("1234_5678 90AB cdEF"), None);
     }
 }
+***/

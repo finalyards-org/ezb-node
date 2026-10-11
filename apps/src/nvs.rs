@@ -4,14 +4,10 @@ use esp_idf_svc::nvs::{
 };
 use esp_idf_svc::sys::EspError;
 
-use log::warn;
-
 /**
 * Init flash filesystem for using with 'esp-zigbee-lib'.
-*
-* @note The caller is expected to keep the return value alive.
 */
-pub fn init_nvs(partition_name: &'static str) -> Result<(EspDefaultNvsPartition,Option<EspCustomNvsPartition>),EspError> {
+pub fn init_nvs(partition_name: Option<&'static str>) -> Result<(),EspError> {
 
     // "Take the default NVS partition, initializing it if full or if a new version is detected."
     // Should be like C 'nvs_flash_init()'.
@@ -21,15 +17,20 @@ pub fn init_nvs(partition_name: &'static str) -> Result<(EspDefaultNvsPartition,
     // In 'esp-zigbee-sdk' 2.x, examples moved from a named partition to the default ("nvs").
     // Initiate the separate partition, if used.
     //
-    let ob = if partition_name != "nvs" {
-        warn!("Using a dedicated partition for Zigbee persistence: {}", partition_name);
-
-        // Initialize a named partition; should be like C 'nvs_flash_init_partition(name)'.
-        let b = EspCustomNvsPartition::take(partition_name)?;
-        Some(b)
-    } else {
-        None
+    let b_opt = match partition_name {
+        Some(name) => {
+            // Initialize a named partition; should be like C 'nvs_flash_init_partition(name)'.
+            let b = EspCustomNvsPartition::take(name)?;
+            Some(b)
+        },
+        _ => None
     };
 
-    Ok((a,ob))
+    // It's important to keep the returned values away from being dropped. This implementation
+    // does that by 'Box::leak'. If you want, you can return the values to the caller, instead.
+    //
+    let _keep = Box::new((a,b_opt));
+    Box::leak(_keep);
+
+    Ok(())
 }

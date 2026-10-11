@@ -1,24 +1,51 @@
 [toolchain]
-channel = "nightly"
+#channel = "nightly"
+#channel = "nightly-2026-10-09" # fine!
+channel = "nightly-2026-10-10" # breaks
 
 components = ["rust-src", "rustfmt"]
 
-# Building 'std' on 'nightly' (1-Aug-26) is broken (aarch64):
+# 2026-10-10 fails like this:
 #   <<
-#     error[E0425]: cannot find value `AT_FDCWD` in crate `libc`
-#     --> /home/lima/.rustup/toolchains/nightly-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/fs/unix.rs:1896:38
+#       error: Recipe `build` failed on line 15 with exit code 101
 #   <<
 #
-
-# 31-Aug-2026 fails like this:
-# <<
-#   Compiling strum_macros v0.24.3
-#   error[E0599]: no method named `as_ptr` found for struct `DropGuard<Pin<&COpaque<pthread_attr_t>>, {closure@unix.rs:61:34}>` in the current scope
-#   --> /home/lima/.rustup/toolchains/nightly-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:70:57
-#   |
-#   70 |                     cmp::max(stack, min_stack_size(attr.as_ptr()))
-#   |                                                         ^^^^^^ method not found in `DropGuard<Pin<&COpaque<pthread_attr_t>>, {closure@unix.rs:61:34}>`
-# <<
+#   ..scroll up:
+#   <<
+#       query stack during panic:
+#       #0 [compare_impl_item] checking assoc item `wifi::<impl at /home/lima/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-svc-0.53.0/src/wifi.rs:3123:1: 3125:45>::scan_n::{anon_assoc#0}` is compatible with trait definition
+#       #1 [check_well_formed] checking that `wifi::<impl at /home/lima/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-svc-0.53.0/src/wifi.rs:3123:1: 3125:45>` is well-formed
+#       ... and 2 other queries... use `env RUST_BACKTRACE=1` to see the full query stack
+#       error: could not compile `esp-idf-svc` (lib)
+#   <<
+#
+#   ..and up: :)
+#   <<
+#       thread 'rustc' (470866) panicked at /rustc-dev/32dba69d69c5b10ea89a4042de8d0619f7756203/compiler/rustc_hir_analysis/src/check/compare_impl_item.rs:2144:64:
+#       DefId::expect_local: `DefId(21:1225 ~ embedded_svc[7e63]::wifi::asynch::Wifi::scan_n::N)` isn't local
+#       stack backtrace:
+#       0:     0xe290d3cc8524 - std[383bcb7eef995a13]::backtrace_rs::backtrace::libunwind::trace
+#       at /rustc/32dba69d69c5b10ea89a4042de8d0619f7756203/library/std/src/../../backtrace/src/backtrace/libunwind.rs:117:9
+#           [...]
+#       40:     0xe290d3cc4514 - <std[383bcb7eef995a13]::sys::thread::unix::Thread>::new::thread_start
+#       at /rustc/32dba69d69c5b10ea89a4042de8d0619f7756203/library/std/src/sys/thread/unix.rs:127:17
+#       41:     0xe290cf1cc248 - <unknown>
+#       42:     0xe290cf236b9c - <unknown>
+#       43:                0x0 - <unknown>
+#
+#       error: the compiler unexpectedly panicked. This is a bug
+#
+#       note: we would appreciate a bug report: https://github.com/rust-lang/rust/issues/new?labels=C-bug%2C+I-ICE%2C+T-compiler&template=ice.md
+#
+#       note: please make sure that you have updated to the latest nightly
+#
+#       note: please attach the file at `/home/lima/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-svc-0.53.0/rustc-ice-2026-10-11T20_10_40-470864.txt` to your bug report
+#
+#       note: rustc 1.101.0-nightly (32dba69d6 2026-10-09) running on aarch64-unknown-linux-gnu
+#   <<
+#
+# Larger background in:
+#   /_report/rust-ice-2026-10-11T...txt
 
 #---
 # Would automatically install the target. However. ESP32's don't come with pre-built std libraries.

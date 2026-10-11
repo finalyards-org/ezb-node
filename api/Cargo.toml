@@ -6,7 +6,7 @@ rust-version = "1.94"
 
 [dependencies]
 ezb-node-raw = { workspace = true }
-ezb-node-config = { workspace = true, default-features = false }
+ezb-node-config = { workspace = true, default-features = false, features = [] }   # "coordinator"|"router"|"end_device"
 
 embassy-sync = { version = "0.8.0", features = ["std"] }    # "std": thread mode
 embassy-time = { workspace = true }
@@ -19,7 +19,6 @@ esp-idf-svc = { workspace = true, default-features = false, features = ["std", "
 log.workspace = true
 
 async-stream = { version = "0.3.6", optional = true }
-#bitflags = { version = "2.11.1" }
 futures-util = { version = "0.3", optional = true }
 strum = { version = "0.28", features = ["derive"] }
 

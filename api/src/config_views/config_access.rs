@@ -33,11 +33,11 @@ impl ConfigAccess {
     /// Form a *data structure* that leans towards the 'esp_zigbee_lib' usage, but *does not run
     /// any initializations*, yet.
     ///
-    fn new(cfg: &'static Config) -> Self {
+    fn new(cfg: &'static Config, storage_partition_name: &'static str) -> Self {
         let Config {
             primary_channels,
             secondary_channels,
-            storage_partition_name,
+            //r storage_partition_name,
             node,
             .. } = cfg;
 
@@ -62,10 +62,14 @@ impl ConfigAccess {
         let dev_cfg_t = match node {
             // '.pre_configured_devices' is taken later (stage 2)
             #[cfg(feature = "coordinator")]
-            CoordinatorConfig { install_code_policy, max_children, pre_configured_devices: pcds } => {
+            CoordinatorConfig { max_children, pre_configured_devices: pcds } => {
                 pre_configured_devices = pcds;  // put aside
-                let install_code_policy = *install_code_policy;
                 let max_children = *max_children;
+
+                // true: require actual install codes
+                // false: allow known install codes (e.g. 'Zigbee09Alliance')
+                //
+                let install_code_policy = ! pre_configured_devices.is_empty();
 
                 esp_zigbee_device_config_t::for_coordinator(install_code_policy, max_children)
             },
@@ -101,9 +105,7 @@ impl ConfigAccess {
         /// A data structure, one used by C level.
         ///
         let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
-            storage_partition_name.unwrap_or(
-                "nvs"   // what the 2.0.4 C examples use
-            )
+            storage_partition_name
         );
 
         /// Data we retain for the later '.init()'
@@ -156,7 +158,7 @@ impl ConfigAccess {
 // This allows an app to provide a static '&Config' where the needing party only needs a view.
 impl From<&'static Config> for ConfigAccess {
     fn from(c: &'static Config) -> Self {
-        Self::new(c)
+        Self::new(c, "nvs")
     }
 }
 

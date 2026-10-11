@@ -1,6 +1,3 @@
-//ruse embassy_sync::channel::{
-//r    DynamicReceiver
-//r};
 use embassy_time::{
     Duration
 };
@@ -15,9 +12,10 @@ use ezb_node::{
     ZclError,
 };
 
+// If you want to have state, use interior mutability (e.g., 'Mutex'), as the node (a singleton)
+// is accessed via immutable references.
 pub(crate) struct IasCoordinator
 where Self: Node {
-    // Use interior mutability (e.g., 'Mutex') if shared state is needed, as the node (a singleton) is accessed via immutable references.
 }
 
 impl Node for IasCoordinator {}

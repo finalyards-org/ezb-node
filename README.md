@@ -287,7 +287,7 @@ $ rm -rf ~/.espressif
 
 ## References
 
-- [Espressif Zigbee SDK 2.x](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html) (Espressif docs; ESP32-C6)
+- [Espressif Zigbee SDK 2.x](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html) (Espressif docs)
 
 	- "Zigbee Pro R23"
 	- "Zigbee Cluster Library (ZCL) v8"

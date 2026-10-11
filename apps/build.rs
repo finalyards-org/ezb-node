@@ -10,6 +10,8 @@ use anyhow::*;
 use std::{env, fs};
 use ezb_node_config::convert_toml;
 
+const TMP_DIR: &str = "tmp/";
+
 fn main() -> Result<()> {
 
     // Detect when IDE is running us, and DO NOT ENGAGE with 'esp-idf-sys' if we're under IDE.
@@ -34,18 +36,19 @@ fn main() -> Result<()> {
 
     ensure_no_sdkconfig();
 
-    // Turn 'demo/{**}/app.toml' -> '{out_dir}/{bin-name}_conf.rs'
+    // Turn _all_ 'demo/{**}/app.toml' -> 'tmp/{bin-name}_conf.rs'
     //
-    // Note: This needs to be done for all such targets, each time, because of the 'build.rs' execution
-    //      model. The model is NOT RELATED TO INDIVIDUAL BUILDS, but for providing dynamically built
-    //      pre-compilation dependencies for any builds.
+    // Note: This needs to be done for all such targets, at once, whenever anything moves. This is
+    //      because of the 'build.rs' execution model: it's NOT RELATED TO INDIVIDUAL BUILDS, but
+    //      for providing dynamically built pre-compilation dependencies for any builds.
     //
-    // Note2:
+    // Note 2:
     //      If you create a new 'bin' target, you MUST add it here. That edit of 'build.rs' then
     //      also triggers a new run.
     //
-    // Note3:
-    //      "If two binary targets (light and switch) exist within the same Cargo crate, they share the OUT_DIR."
+    // Note 3:
+    //      The output is in 'tmp', not 'OUT_DIR' (as often is customary) so that also the IDE
+    //      (we assume it's host side) gets to see the generated contents.
     {
         let demos = [   // (path, bin-name)
             ("1/light", "1-light"),
@@ -53,7 +56,8 @@ fn main() -> Result<()> {
             ("2", "2-door")
         ];
 
-        let out_dir = env::var("OUT_DIR").unwrap();
+        //r let out_dir = env::var("OUT_DIR").unwrap();
+        let out_dir = TMP_DIR;
 
         for (sub_path, bin_name) in demos {
             let toml_path = std::path::Path::new("demo")

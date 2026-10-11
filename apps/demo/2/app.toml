@@ -32,7 +32,7 @@ additional_client_clusters = [
     "HA::power_config"      # remaining battery
 ]
 
-[[pre_configured_device]]
+[[node.pre_configured_device]]
 log_name = "Sample door/window sensor"
 mac_address = "4030 59FF FE9E 7D3D"
 install_code = "964B B40A 0684 F31D 3181 8DFD 0525 4897 337E"

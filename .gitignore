@@ -6,3 +6,7 @@ components_esp32c6.lock
 
 # 'sdkconfig.defaults' is in version control; this not
 #/sdkconfig
+
+# local 'target' (if global override isn't used)
+/target/
+

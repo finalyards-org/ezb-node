@@ -1,4 +1,4 @@
-#![cfg(feature = "toml")]
+#![cfg(feature = "gen")]
 
 use std::{
     borrow::Cow,
@@ -14,9 +14,6 @@ pub enum ConfigError {
     ///     - values out of expected range
     ContentError(Cow<'static, str>),    // msg in '.0'
 
-    //r /// Error if TOML contains a node type that's not supported by the features.
-    //r FeatureConflict(&'static str),      // feature name in '.0'
-
     ParseError(toml::de::Error),
     InternalError(syn::Error),
 }
@@ -27,10 +24,9 @@ impl fmt::Display for ConfigError {
             ConfigError::ContentError(msg) => {
                 write!(f, "{}", msg)
             },
-            //r ConfigError::FeatureConflict(feat) => {
-            //r     write!(f, "'node.type' \"{}\" but that feature is not enabled.", feat)
-            //r },
-            ConfigError::ParseError(err) => write!(f, "TOML parsing: {err}"),
+            ConfigError::ParseError(err) => {
+                write!(f, "TOML parsing: {err}")
+            },
             ConfigError::InternalError(err) => {
                 write!(f, "Internal error (syntax error in generated code): {err}")
             }
@@ -38,7 +34,7 @@ impl fmt::Display for ConfigError {
     }
 }
 
-// Allows diving to the core error. #Good_manners (also, required by e.g. 'anyhow')
+// Allows diving to the core error. Good manners (also, required by e.g. 'anyhow')
 impl std::error::Error for ConfigError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {

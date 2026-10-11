@@ -81,8 +81,6 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, entry: &Endpoint) -> Result<
         common_fields,
         device_type,
         additional_client_clusters,
-        #[cfg(feature = "coordinator")]
-        discover_server_clusters: _,    // 'None' for a coordinator; ignore
         #[cfg(not(feature = "coordinator"))]
         discover_server_clusters,   // router, end device
     } = entry;

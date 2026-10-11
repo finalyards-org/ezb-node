@@ -1,13 +1,16 @@
-#![cfg(feature = "toml")]
+#![cfg(feature = "gen")]
 
-use std::any::Any;
-use std::str::FromStr;
-use std::string::String;
+use std::{
+    string::String,
+};
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::token::Token;
+//use syn::token::Token;
 use toml;
+
+// We'll need it once end device joins in.
+use humantime_serde as _;
 
 mod in_;
 use in_::{
@@ -15,25 +18,21 @@ use in_::{
     SecondaryChannels,
     NodeSection,
     EndpointDefaults,
+    EndpointInstance,
     DeviceType,
     Cluster,
 };
+#[cfg(feature = "coordinator")]
+use in_::PreConfiguredDevice;
 
 mod error;
 use error::ConfigError::{
     self,
 };
-use crate::convert::in_::PreConfiguredDevice;
-//R #[cfg(feature = "coordinator")]
-//R const ROLE: &'static str = "coordinator";
-//R #[cfg(feature = "router")]
-//R const ROLE: &'static str = "router";
-//R //#[cfg(feature = "end_device")]
-//R //const ROLE: &'static str = "end device";
 
 // tbd. This is SO LONG!!! Find ways to split it into a few.
 /**
-* Convert TOML input string to Rust snippet that generates an 'esp_zb::Config' instance, when read in.
+* Convert TOML input string to Rust module that can provide an 'esp_zb::Config' instance.
 */
 pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
@@ -64,39 +63,32 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         }
     };
 
-    //--- platform
-    // "None" | "Some("...")"
-    let q_storage_partition_name = {
-        let opt = c.platform.storage_partition_name;
-        q_opt(opt)  // retains 'None'
-    };
-
     //--- node
-
-    // Take 'pre_configured_devices' first. It belongs to 'NodeSection::Coordinator' though is
-    // presented stand-alone in the TOML.
-    //
-    let pre_configured_devices = c.pre_configured_devices;
-
-    //r assert!(pre_configured_devices.len() > 0);  // DEBUG
 
     #[allow(non_snake_case)]
     let ROLE: &'static str;
 
+    let mut is_router = false;
+    let mut is_coordinator = false;
+
     // Feature notes:
-    //      - The 'build.rs' side (feature = "toml") DOES NOT use coordinator/router/end_device features.
+    //      - The 'build.rs' side (feature = "gen") DOES NOT use coordinator/router/end_device features.
     //      - by parsing all possible node types, we may allow the user to get better error messages
-    //      - We don't create '#[cfg]' barriers in the generated output (avoiding complexity), just
-    //          expect the user to bring in enough features.
+    //      - We also don't create '#[cfg]' barriers in the generated output (we could!), avoiding complexity.
+    //        Just expect the user to bring in enough features.
     //
     let q_node = {
         match c.node {
-            NodeSection::Coordinator { allow_open_pairing, max_children/*, pre_configured_devices*/} => {
-                let install_code_policy = !allow_open_pairing;
+            #[cfg(feature = "coordinator")]
+            NodeSection::Coordinator { /*r allow_open_pairing,*/ max_children, pre_configured_devices } => {
                 ROLE = "Coordinator";
+                is_coordinator = true;
 
-                // 'PreConfiguredDevice' still needs some parsing.
+                // Deduce 'install_code_policy' from the presence or absence of 'pre_configured_devices'.
+                // We could also do this only in the API side (perhaps a better choice?) tbd.
                 //
+                //let install_code_policy = ! pre_configured_devices.is_empty();
+
                 let q_pre_configured_devices: Vec<TokenStream> = pre_configured_devices .into_iter()
                     .map(|o| {
                         let PreConfiguredDevice{ mac_address, install_code, _name: _ } = o;
@@ -130,20 +122,18 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
                 quote! {
                     NodeType::CoordinatorConfig {
-                        install_code_policy: #install_code_policy,
+                        //install_code_policy: #install_code_policy,
                         max_children: #max_children,
                         pre_configured_devices: vec![ #( #q_pre_configured_devices ),* ],
                     }
                 }
             },
 
+            #[cfg(feature = "router")]
             NodeSection::Router { allow_open_pairing, max_children} => {
                 let install_code_policy = !allow_open_pairing;
                 ROLE = "Router";
-
-                if !pre_configured_devices.is_empty() {
-                    Err(format!("'.pre_configured_devices' is Coordinator only; should not be provided for: {}", ROLE))?;
-                }
+                is_router = true;
 
                 quote! {
                     NodeType::RouterConfig {
@@ -153,16 +143,13 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 }
             },
 
+            #[cfg(false)] //#[cfg(feature = "end_device_UNUSED")]
             NodeSection::EndDevice { allow_open_pairing: _, .. } => {
                 unimplemented!();
                 ROLE = "End device";
 
                 /*** just giving a taste; implement only if we *actually* do devices that are only EndDevice role.
                 let install_code_policy = !allow_open_pairing;
-
-                if !pre_configured_devices.is_empty() {
-                    Err("'.pre_configured_devices' is Coordinator only; should not be provided for: {}", ROLE)?;
-                }
 
                 quote! {
                     NodeType::EndDeviceConfig {
@@ -194,17 +181,17 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
         // Coordinator and end device are meaningless without an end point.
         //
-        if !c.node.is_router() && instances.is_empty() {
-            Err(ConfigError::from(
+        if instances.is_empty() && !is_router {
+            Err(
                 format!("Need at least one end point for {ROLE}. Please define '[endpoint.{{id}}]'.")
-            ))?;
+            )?;
         }
 
         // '.as_ref()'s turn to 'Option<&String>' (important later)
         let manufacturer_name_def = manufacturer_name_def.as_ref();
         let model_identifier_def = model_identifier_def.as_ref();
 
-        instances.into_iter().try_for_each(|(k,v)| { // k ∈ 1..=240
+        instances.into_iter().try_for_each(|(k,v): (u8,EndpointInstance)| { // k ∈ 1..=240
             // ep_10
             let ident = format_ident!("ep_{}", k);
 
@@ -263,21 +250,24 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 q_clusters( v.additional_client_clusters )
             };
 
-            /// Inject the 'discover_server_clusters: ...' for router and end device, but keep
-            /// it empty for a coordinator.
-            ///
-            let q_discover_server_clusters: TokenStream = {
+            // Inject the 'discover_server_clusters: ...' for router and end device, not for
+            // coordinator.
+            //
+            let q_discover_server_clusters_field: TokenStream = {
 
-                if c.node.is_coordinator() {
-                    match v.discover_server_clusters {
-                        None => quote!(None),   // not applicable on a coordinator
-                        Some(x) =>
-                            return Err(ConfigError::from(
-                                format!("A coordinator does not use '.discover_server_clusters', but has {}", x.len())
-                            )),
+                if cfg!(feature = "coordinator") && is_coordinator {
+                    // If the TOML does have the field, we only realise it here.
+                    if v.discover_server_clusters.is_none() {
+                        Err(
+                            format!("Coordinator should not carry '.discover_server_clusters'.")
+                        )?;
                     }
-                } else { // router, end device
-                    q_opt( v.discover_server_clusters.map(q_clusters) )
+                    assert!( v.discover_server_clusters .is_none() );
+                    quote!()    // gen nothing
+                } else {
+                    // router, end device has the field
+                    let q = q_opt( v.discover_server_clusters.map(q_clusters) );
+                    quote!( discover_server_clusters: #q )
                 }
             };
 
@@ -286,14 +276,13 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                     common_fields: #q_common_fields,
                     device_type: #q_device_type,
                     additional_client_clusters: #q_additional_client_clusters,
-
-                    discover_server_clusters: #q_discover_server_clusters,
+                    #q_discover_server_clusters_field
                 };
             });
 
             q_arr_contents.extend(quote!{ (#k, #ident), });
 
-            Ok(())  // continue
+            Ok::<_,ConfigError>(())  // continue
         })?;
 
         quote!{ {
@@ -307,38 +296,42 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     // Note: Can use 'std::' since any ESP-IDF + Embassy application will need it.
     //
     let q_all = quote!{ {
-        use std::collections::BTreeMap;
+        use std::{
+            collections::BTreeMap,
+            sync::OnceLock,
+        };
+
         use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
 
-        let primary_channels = #q_primary_channels;
-        let secondary_channels = #q_secondary_channels;
-        let storage_partition_name = #q_storage_partition_name;
-        let node = #q_node;
-        let endpoints = #q_endpoints;
+        pub get() -> &'static Config {
+            static CFG: OnceLock<Config> = OnceLock::new();
 
-        Config {
-            primary_channels,
-            secondary_channels,
-            storage_partition_name,
-            node,
-            endpoints
+            let primary_channels = #q_primary_channels;
+            let secondary_channels = #q_secondary_channels;
+            //r let storage_partition_name = #q_storage_partition_name;
+            let node = #q_node;
+            let endpoints = #q_endpoints;
+
+            CFG.get_or_init(|| {
+                Config {
+                    primary_channels,
+                    secondary_channels,
+                    //r storage_partition_name,
+                    node,
+                    endpoints
+                }
+            })
         }
     } };
 
-    let s= pretty(q_all)?;
+    let s= final_(q_all)?;
     Ok(s)
 }
 
 /**
 * Check a Rust expression for syntactical correctness, and format it similar to 'rustfmt'.
 */
-fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
-
-    // Note: 'prettyplease' is designed to handle full files. To handle an expression, we do some wrapping and unwrapping,
-    //
-    let q_all = quote! {
-        fn dummy_wrapper() { #q }
-    };
+fn final_(q_all: TokenStream) -> Result<String,ConfigError> {
 
     // If there's something wrong with the 'quote!' macros,
     //let syntax_tree: syn::File = syn::parse2(q_all)?;
@@ -347,29 +340,25 @@ fn pretty(q: proc_macro2::TokenStream) -> Result<String,ConfigError> {
     // there's no reason for a fancier mechanism.
     //
     let syntax_tree: syn::File = syn::parse2(q_all.clone()).map_err(|e| {
-        panic!(
-         "INTERNAL: Code generation failed.\n\
-         Message: {}\n\
-         Tokens: {}",
-            e, q_all.to_string()
-        );
-        e
+        format!(
+             "INTERNAL: Code generation failed.\n\
+             Message: {}\n\
+             Tokens: {}",
+                e, q_all.to_string()
+        )
     })?;
 
     let formatted = prettyplease::unparse(&syntax_tree);
+    Ok(formatted)
 
-    // Just the innards of the function (skip first and last line)
-    let ls: Vec<&str> = formatted.lines().collect();
-    assert!(ls.len() > 2);
-
-    let inner_lines = & ls[1..ls.len() -1];
-
-    let ret: String = inner_lines.into_iter()
-        .map(|line| { line.strip_prefix("    ").unwrap_or(line).to_string() })
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    Ok(ret)
+    //rlet inner_lines = & ls[1..ls.len() -1];
+    //r
+    //rlet ret: String = inner_lines.into_iter()
+    //r    .map(|line| { line.strip_prefix("    ").unwrap_or(line).to_string() })
+    //r    .collect::<Vec<String>>()
+    //r    .join("\n");
+    //r
+    //rOk(ret)
 }
 
 /// Turn 'Option' into a 'TokenStream', _keeping_ the Option abstraction.

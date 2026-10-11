@@ -43,5 +43,5 @@ impl fmt::Debug for ChannelMask {
     }
 }
 
-#[allow(dead_code)]
-fn is_valid_channel(ch: u8) -> bool { VALID_CHANNELS.contains(&ch) }
+//#[allow(dead_code)]
+//fn is_valid_channel(ch: u8) -> bool { VALID_CHANNELS.contains(&ch) }

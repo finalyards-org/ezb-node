@@ -18,46 +18,62 @@ itertools = { version = "0.15", optional = true }
 log = { workspace = true }
 
 # The library has two faces:
-#   - used from build.rs
-#       - enable feature 'toml'
+#   - used from build.rs (feature = "gen")
 #       - generates a source module from the TOML
+#       - MORE THAN ONE node types CAN BE ENABLED at once. THIS IS VITAL for the "apps" crate's demos, where demos
+#         represent different node types. For such a crate, all TOML -> code generation happens WITHIN THE SAME 'build.rs'
+#         run. Thus, it becomes a hard requirement to either not do node type features at all, or to allow multiple. :)
 #       - target: host
-#   - used from embedded application:
-#       - do NOT enable feature 'toml'
-#       - used by the snippet that got generated
-#       - target: embedded
+#   - used from an application:
+#       - only ONE of the node types is to be enabled
+#       - used by the code that got generated in the build
+#       - target: esp32-c6
+#
+# NOTE: This could be done in many ways. The author has attempted to balance between ability to express things build-
+#       time (i.e. to use features), which has documentary advantages, and simplicity overall.
 #
 [features]
-default = ["toml"]
+# Default: all node types, all device types.
+#   The defaults are _only applied for "gen" builds_. For applications, the application should specifically define
+#   its needs (and 'api' level runs defaults off).
+#
+default = ["coordinator", "router", "_all_dts"]
 
-# Applications using this from 'build.rs' must enable 'toml'.
-# API layer works without it.
-toml = ["humantime-serde", "quote", "prettyplease", "proc-macro2", "serde", "syn", "dep:toml", "itertools"]
+# When using from 'build.rs'.
+#
+# Note: We enable all node types, all device types. The
+#
+gen = [
+    "humantime-serde", "quote", "prettyplease", "proc-macro2", "serde", "syn", "toml", "itertools",
+]
 
+# These for using in the application code.
 coordinator = []
 router = []
 #end_device_UNTESTED = []
 
 # --- Device types
 
-# Use by './Justfile' and 'build.rs'
+# Use by './Justfile', 'build.rs'
 _all_dts = ["dt_color_dimmable_light", "dt_color_dimmer_switch", "dt_ias_cie"]
+_any_dt = []
+    # enabled if any device type is enabled (used by 'build.rs')
 
 # implements SERVER side of (clusters):
 #   HA::on_off
 #   HA::level_control
 #   HA::color_control
-dt_color_dimmable_light = []
+dt_color_dimmable_light = ["_any_dt"]
 
 # implements CLIENT side of (clusters):
 #   HA::on_off
 #   HA::level_control
 #   HA::color_control
-dt_color_dimmer_switch = []
+dt_color_dimmer_switch = ["_any_dt"]
 
 # implements SERVER side of (clusters):
 #   HA::ias_zone    // receives Door/Window/Movement alert information
-dt_ias_cie = []
+dt_ias_cie = ["_any_dt"]
 
 # --- Additional ZCL profiles (all HA)
 #

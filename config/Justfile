@@ -13,13 +13,11 @@ default:
 	@just --list
 
 build:
-	cargo build --release --features toml,coordinator,_all_dts
-	cargo build --release --features toml,router,_all_dts
+	cargo build --release --features gen,coordinator,router,_all_dts
 	cargo build --release --features coordinator,_all_dts
 	cargo build --release --features router,_all_dts
 
 test:
-	cargo test --features toml,coordinator,_all_dts
-	cargo test --features toml,router,_all_dts
+	cargo test --features gen,coordinator,router,_all_dts
 	cargo test --features coordinator,_all_dts
 	cargo test --features router,_all_dts
