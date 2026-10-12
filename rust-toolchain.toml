@@ -1,7 +1,8 @@
 [toolchain]
 #channel = "nightly"
-#channel = "nightly-2026-10-09" # fine!
-channel = "nightly-2026-10-10" # breaks
+channel = "nightly-2026-10-09" # fine!
+#channel = "nightly-2026-10-10" # breaks
+  # see: https://github.com/rust-lang/rust/issues/164177
 
 components = ["rust-src", "rustfmt"]
 

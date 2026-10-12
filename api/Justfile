@@ -8,6 +8,7 @@ default:
 nightly := ""
 
 alias b:= build
+alias br:= build-router
 
 build:
 	cargo {{nightly}} build --release -vv \

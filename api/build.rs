@@ -25,10 +25,24 @@ fn main() {
         }
     }
 
-    #[cfg(not(any(feature = "coordinator", feature = "router")))]  // add "end_device" #later
+    // Exactly one node type should be enabled.
+    //
+    // Note: Though 'config' would check this as well, it's good to be early. (or late: may be that
+    //      config check happens before us). Anyhow.
     {
-        let arr = ["coordinator", "router", "end_device"].join(", ");
-        eprintln!("🛑Please enable one of: {}", arr);
-        std::process::exit(1);
+        let roles = 0;
+        #[cfg(feature = "coordinator")]
+        let roles = roles +1;
+        #[cfg(feature = "router")]
+        let roles = roles +1;
+        //#[cfg(feature = "end_device_UNTESTED")]
+        //let roles = roles +1;
+
+        let role_features = ["coordinator", "router" /*, "end_device"*/].join(", ");
+
+        if roles != 1 {
+            eprintln!("🛑 Please enable exactly one of: {}", role_features);
+            std::process::exit(1);
+        }
     }
 }

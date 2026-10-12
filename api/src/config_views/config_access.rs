@@ -1,10 +1,21 @@
-use ezb_node_config::{ChannelMask, Config, NodeType::*, PreConfiguredDevice};
 
-use ezb_node_raw::{esp_zigbee_config_t, esp_zigbee_device_config_t, esp_zigbee_platform_config_t, ezb_app_signal_add_handler, ezb_aps_secur_enable_distributed_security, ezb_bdb_set_primary_channel_set, ezb_bdb_set_secondary_channel_set, ezb_extaddr_t, ezb_secur_ic_type_e::EZB_SECUR_IC_TYPE_128};
+use ezb_node_config::{
+    ChannelMask,
+    Config,
+    NodeType::*,
+};
+
+#[cfg(feature = "coordinator")]
+use ezb_node_config::PreConfiguredDevice;
 
 use ezb_node_raw::{
+    esp_zigbee_config_t,
+    esp_zigbee_device_config_t,
+    esp_zigbee_platform_config_t,
+    ezb_bdb_set_primary_channel_set,
+    ezb_bdb_set_secondary_channel_set,
+    ezb_secur_ic_type_e::EZB_SECUR_IC_TYPE_128,
     esp_zigbee_init,
-    //ezb_secur_set_ic_required,
     ezb_secur_ic_add,
     ezb_secur_ic_type_e,
 };

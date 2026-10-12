@@ -24,6 +24,7 @@ strum = { version = "0.28", features = ["derive"] }
 
 [features]
 default = ["esp32c6"]
+
 coordinator = ["ezb-node-config/coordinator"]
 router = ["ezb-node-config/router"]
 #end_device_UNTESTED = [] #["ezb-node-config/end_device"]
