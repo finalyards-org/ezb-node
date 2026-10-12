@@ -26,10 +26,9 @@ pub use types::*;
 
 // Pass-through the config.
 //
-// This is essential for the from-TOML-generated snippet digestion, but also useful for the apps in general,
-// them not needing to depend on the config crate, directly.
+// Essential for the from-TOML-generated code.
 pub use ezb_node_config as config;
-pub use ezb_node_config::Config;
+use ezb_node_config::Config;    // just for own consumption, this way
 
 mod zcl_event;
 pub use zcl_event::*;

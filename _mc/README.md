@@ -100,30 +100,35 @@ Do this:
 	- within this shell, set up `idf.py`:
 
 		```
-		$ export IDF_PATH="$HOME/.espressif/esp-idf/v6.0.3"
-		$ export IDF_PYTHON_ENV_PATH="$HOME/.espressif/python_env/idf6.0_py3.14_env"
+		$ export ESP_IDF_VERSION=6.1
+		```
+		
+		```
+		$ export IDF_PATH="$HOME/.espressif/esp-idf/v$ESP_IDF_VERSION"
+		$ export IDF_PYTHON_ENV_PATH="$HOME/.espressif/python_env/idf${ESP_IDF_VERSION}_py3.14_env"
+		```
+		
+		>Obviously, you'll use versions that actually exist on your VM.
 
+		```
 		$ source "$IDF_PYTHON_ENV_PATH/bin/activate"
 		```
 		
 		The prompt now shows as:
 		
 		```
-		(idf6.0_py3.14_env) lima@lima-edge-vm:~[...]$
+		(idf6.1_py3.14_env) lima@lima-edge-vm:~[...]$
 		```
 
 		```
-		$ export PATH="$IDF_PATH/tools:$PATH:$IDF_PATH/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/bin"
-		$ export ESP_IDF_VERSION=6.0.3
+		$ export PATH="$IDF_PATH/tools:$PATH:$HOME/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/bin"
 		```
-		
-		>Note: As with all these paths, check the right one *you* have. *tbd. We'll automate this later, perhaps?*
 
+		<!--R was not needed
 		```
 		$ export IDF_TOOLS_PATH="$HOME/.espressif"
 		```
-
-		<!-- #whisper: did not test whether above really needed; AI suggested it for finding `ninja` etc.-->
+		-->
 
 Now you should be able to:
 
@@ -132,7 +137,7 @@ $ idf.py --help
 [...]
 ```
 
-Once no longer needed, exit the shell, so the setup does not conflict with Rust builds.
+Once no longer needed, `exit` the shell, so the setup does not conflict with Rust builds.
 
 
 ### Prep
@@ -145,9 +150,9 @@ $ idf.py set-target esp32c6
 -- Build files have been written to: /home/lima/Den.edge/_mc/build
 ```
 
-This is **important**. You need to set the target MCU within the project folder.
+>This is **important**. You need to set the target MCU within the project folder.
 
-In this case, `_mc` is a fake (C) project folder, but it suits our aim of being able to study the `sdkconfig`, with official `menuconfig` tool.
+In this case, `_mc` is a fake (C) project folder, but it suits our aim of being able to study the configuration using the official `menuconfig` tool.
 
 
 ### Launching
@@ -169,10 +174,13 @@ $ idf.py menuconfig
 
 ![](.images/menuconfig.png)
 
+<font size="+7">🙌</font>
+
 >**First**, check with some known-good value (e.g. `ESP_MAIN_TASK_STACK_SIZE`) that the `sdkconfig` really is from the Rust project. It's fairly easy to end up with a default that bares no relation to the project you actually work with! 🙃
 
 **Take your time going around the menu structure.** Then return here.
 
+--- 
 
 The interesting part is often under `Component config`.
 

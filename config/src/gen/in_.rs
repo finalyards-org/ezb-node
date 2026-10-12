@@ -187,11 +187,13 @@ pub struct EndpointInstance {
     pub additional_server_clusters_NOT_YET: Vec<Cluster>, // enable if needed
 
     /// Clusters (client and/or server) that a binding candidate must provide, in order for the join
-    /// to take place. FOR ROUTER AND END DEVICE ONLY. (we let it exist for Coordinator, and raise
-    /// an alert later, if it were to carry something).
+    /// to take place. FOR ROUTER AND END DEVICE ONLY.
     ///
-    // Note: 'Option<Vec<...>>' is intentional, to highlight that it's a collection-of-collections.
-    //
+    /// @note We need to sometimes let it exist also for a Coordinator, and just not be used (we'll
+    ///     give an alert later, if it does exist). This is for cases where coordinator *and* some
+    ///     other node type are enabled ("gen" allows this).
+    ///
+    //let it always exist: #[cfg(any(feature = "router" /*, feature = "end_device_NOT_YET"*/))]
     #[serde(default)]   // optional
     pub discover_server_clusters: Option<Vec<Cluster>>,
 }

@@ -66,7 +66,7 @@ MCU = "esp32c6"
 # ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
 # Versions supported by 'esp-idf-sys', -> https://github.com/esp-rs/esp-idf-svc/blob/6292a2f9a041c6f1370c66678f360c164aef93a3/.github/workflows/ci.yml#L30-L37
 #
-ESP_IDF_VERSION = "6.1"     # NOT okay in esp-idf-hal (Sep'26); see #10
+ESP_IDF_VERSION = "6.1"
 #ESP_IDF_VERSION = "6.0.3"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
@@ -77,8 +77,8 @@ ESP_IDF_TOOLS_INSTALL_DIR = "global"
 # Earlier comment:
 #   >IMPORTANT so that the configurations in 'sdkconfig.defaults' regarding that component get applied.
 #
-#ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
-    # tbd. Try whether this matters. Rewrite the docs --^
+ESP_IDF_PROJECT_DIR = { value = ".", relative = true }
+    # tbd. Try whether this matters...
 
 # ESP_IDF_SDKCONFIG
 #

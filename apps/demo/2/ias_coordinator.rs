@@ -6,11 +6,13 @@ use ezb_node::{
     AppSignal,
     BdbMode,
     BdbStatus,
-    Config,
     Node,
     ZclEvent,
     ZclError,
 };
+
+#[path = ".conf.rs"]
+mod cfg;
 
 // If you want to have state, use interior mutability (e.g., 'Mutex'), as the node (a singleton)
 // is accessed via immutable references.
@@ -21,11 +23,11 @@ where Self: Node {
 impl Node for IasCoordinator {}
 
 impl IasCoordinator {
-    pub fn new(c: &'static Config) -> Result<Self, ezb_node::Error> {
+    pub fn new() -> Result<Self, ezb_node::Error> {
         const AUTO_START: bool = false;
         // Note: This might disappear, see comment of 'Node::init()'.
 
-        let () = <Self as Node>::init(c, AUTO_START)?;  // BUG: CRASHES HERE
+        let () = <Self as Node>::init(cfg::get(), AUTO_START)?;  // BUG: CRASHES HERE
         Ok(Self {})
     }
 

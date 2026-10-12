@@ -1,3 +1,4 @@
 .BUILD_ENV
 
-/tmp/
+# Generated configurations
+/demo/**/.conf.rs

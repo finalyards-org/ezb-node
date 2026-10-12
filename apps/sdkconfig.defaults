@@ -120,6 +120,14 @@ CONFIG_ESP_CONSOLE_UART=y
 # Another way for registry dump avoidance. NOTE: TRY WITH 'panic' deeper than from main.
 #CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
 
+# Was on by default (ESP-IDF 6.1)
+CONFIG_ESP_WIFI_REMOTE_ENABLED=n
+
+# Was on by default (ESP-IDF 6.1)
+# NOTE: THIS DOES NOT STEER IT!! RESEARCH.
+CONFIG_ESP_WIFI_ENABLED=n
+CONFIG_ESP32_WIFI_ENABLED=n
+
 #---
 # EXPERIMENTAL
 # Trim (aim: faster development builds)
@@ -132,3 +140,4 @@ CONFIG_ESP_CONSOLE_UART=y
 
 # Default is on. The build (ESP-IDF, or 'esp-idf-sys'?) seems to assume LWIP is always enabled.
 #CONFIG_LWIP_ENABLE=n
+

@@ -10,13 +10,13 @@ use anyhow::*;
 use std::{env, fs};
 use ezb_node_config::convert_toml;
 
-const TMP_DIR: &str = "tmp/";
+//r const TMP_DIR: &str = "tmp/";
 
 fn main() -> Result<()> {
 
     // Detect when IDE is running us, and DO NOT ENGAGE with 'esp-idf-sys' if we're under IDE.
-    // i.e. keep this before 'embuild::...' - otherwise '.espressif' or '.embuild' start occuring
-    //      on the local disk.
+    // i.e. keep this before 'embuild::...' - otherwise '.espressif' or '.embuild' start occurring
+    //      on the host disk.
     //
     //  - Rust Rover:
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
@@ -50,16 +50,16 @@ fn main() -> Result<()> {
     //      The output is in 'tmp', not 'OUT_DIR' (as often is customary) so that also the IDE
     //      (we assume it's host side) gets to see the generated contents.
     {
-        let demos = [   // (path, bin-name)
-            ("1/light", "1-light"),
-            ("1/switch", "1-switch"),
-            ("2", "2-door")
+        let demos = [   // path
+            //r("1/light", "1-light"),
+            //r("1/switch", "1-switch"),
+            //r ("2", "2/tmp/-door")
+            "1/light",
+            "1/switch",
+            "2",
         ];
 
-        //r let out_dir = env::var("OUT_DIR").unwrap();
-        let out_dir = TMP_DIR;
-
-        for (sub_path, bin_name) in demos {
+        for sub_path in demos {
             let toml_path = std::path::Path::new("demo")
                 .join(sub_path)
                 .join("app.toml");
@@ -86,11 +86,11 @@ fn main() -> Result<()> {
                 let snippet = convert_toml(&content)
                     .context("TOML parsing")?;
 
-                let fn_ = format!("{}/{}_conf.in", out_dir, bin_name);
+                let fn_ = format!("demo/{sub_path}/.conf.rs");
                 fs::write(&fn_, snippet)
                     .with_context(|| format!("Unable to write {fn_}"))?;
 
-                println!("cargo::warning=Created snippet: {fn_}");
+                println!("cargo::warning=Created module: {fn_}");
             }
         }
     }
@@ -102,6 +102,7 @@ fn main() -> Result<()> {
     //
     // Note! Recompilation will happen, if 'src/*' changes, but 'build.rs' won't get run. Which is good.
     //      Only environment changes that *affect the 'build.rs' output* need be mentioned.
+    //      TOML files have already been added.
     //
     println!("cargo::rerun-if-changed=build.rs");
 
@@ -109,7 +110,7 @@ fn main() -> Result<()> {
 }
 
 /**
-* Ensure there isn't a 'sdkconfig' file accidentially left at 'apps' level. It *could* get picked
+* Ensure there isn't a 'sdkconfig' file accidentally left at 'apps' level. It *could* get picked
 * up as the truth (instead of generating one below "out dir"), and confuse builds.
 */
 fn ensure_no_sdkconfig() {

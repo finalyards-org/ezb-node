@@ -71,6 +71,9 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     let mut is_router = false;
     let mut is_coordinator = false;
 
+    // Helper functions; by default renders to nothing
+    let mut q_helpers = quote!();
+
     // Feature notes:
     //      - The 'build.rs' side (feature = "gen") DOES NOT use coordinator/router/end_device features.
     //      - by parsing all possible node types, we may allow the user to get better error messages
@@ -84,49 +87,93 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 ROLE = "Coordinator";
                 is_coordinator = true;
 
-                // Deduce 'install_code_policy' from the presence or absence of 'pre_configured_devices'.
-                // We could also do this only in the API side (perhaps a better choice?) tbd.
-                //
-                //let install_code_policy = ! pre_configured_devices.is_empty();
-
-                let q_pre_configured_devices: Vec<TokenStream> = pre_configured_devices .into_iter()
+                let q_pre_configured_devices: Vec<TokenStream> = pre_configured_devices .iter()
                     .map(|o| {
-                        let PreConfiguredDevice{ mac_address, install_code, _name: _ } = o;
+                        let PreConfiguredDevice{ mac_address, install_code, _name } = o;
 
-                        let q_mac_address = proc_macro2::Literal::byte_string(&mac_address);
-                        let q_install_code = proc_macro2::Literal::byte_string(&install_code);
+                        // Convert the hex strings (back to) the format they were on the Zigbee device packaging.
+                        // This is to keep the generated code human-friendly.
+                        fn f(bytes: &[u8]) -> TokenStream {
+                            let s = bytes
+                                .chunks(2)
+                                .map(|chunk| {
+                                    assert_eq!(chunk.len(), 2);
+                                    format!("{:02X}{:02X}", chunk[0], chunk[1])
+                                })
+                                .collect ::<Vec<String>>()  // note: '.join()' doesn't work on iterators; must collect
+                                .join(" ");
+                            quote!(#s)
+                        }
+                        let q_mac_hex = f(mac_address);
+                        let q_install_code_hex = f(install_code);
 
-                        let q_doc = {
-                            fn f(bytes: &[u8]) -> String {
-                                let s = bytes
-                                    .chunks(2)
-                                    .map(|chunk| {
-                                        assert_eq!(chunk.len(), 2);
-                                        format!("{:02X}{:02X}", chunk[0], chunk[1])
-                                    })
-                                    .collect ::<Vec<String>>()  // note: '.join()' doesn't work on iterators; must collect
-                                    .join(" ");
-                                s
-                            }
-                            format!("MAC address: {}", f(&mac_address))
-                        };
+                        let q_name = quote!(#_name);
 
+                        // quote! note: When we want to include a comment with dynamic contents, '///'
+                        //      will not cut it. Use of '#[doc = ...]' does.
+                        //
                         Ok(quote! {
-                            #[doc = #q_doc]
+                            #[doc = #q_name]
                             PreConfiguredDevice {
-                                mac_address: *#q_mac_address,
-                                install_code: *#q_install_code,
+                                mac_address: hex_bytes( #q_mac_hex ),
+                                install_code: hex_bytes( #q_install_code_hex ),
                             }
                         })
                     }).collect ::<Result<_,ConfigError>>()?;
 
-                quote! {
+                // Note: Let's output helpers even when there are no pre-configured devices.
+                //      This helps catch possible generative errors, since those will show up
+                //      just having a Coordinator, not being "behind the corner" of whether we
+                //      have pre-configured-devices or not.
+                //
+                q_helpers = quote!(
+                    // Convert human-readable hex string.
+                    #[allow(dead_code)]
+                    const fn hex_bytes<const N: usize>(s: &str) -> [u8; N] {
+                        let s = s.as_bytes();   // so it's easy to iterate (it's ASCII)
+
+                        let mut buf = [0u8; N];
+                        let mut j = 0;  // position within 's' (jumps over spaces)
+
+                        // Rust note: cannot use 'for .. 0..N' in 'const fn'. Revert to 'while'
+                        //for i in 0..N {
+
+                        let mut i = 0;
+                        while i < N {
+                            while s[j] == b' ' { j += 1; }; // step over space(s)
+
+                            // Rust note: '&s[x..y]' does not work within 'const fn'
+                            //buf[i] = bite(&s[j..j+2]);
+                            buf[i] = bite(&[s[j],s[j+1]]);
+                            j += 2;
+                            i += 1;
+                        }
+                        assert!(j == s.len()); // all processed (note: 'assert_eq' not supported in 'const fn')
+                        buf
+                    }
+
+                    // Helper: two hex chars -> full byte
+                    #[allow(dead_code)]
+                    const fn bite(sl: &[u8;2]) -> u8 {
+                        const fn nibble(c: u8) -> u8 {
+                            match c as u8 {
+                                b'0'..=b'9' => c - b'0',
+                                b'A'..=b'F' => c - b'A' + 10,
+                                _ => unreachable!(),
+                            }
+                        }
+                        let hi = nibble(sl[0]);
+                        let lo = nibble(sl[1]);
+                        (hi << 4) | lo
+                    }
+                );
+
+                quote!(
                     NodeType::CoordinatorConfig {
-                        //install_code_policy: #install_code_policy,
                         max_children: #max_children,
                         pre_configured_devices: vec![ #( #q_pre_configured_devices ),* ],
                     }
-                }
+                )
             },
 
             #[cfg(feature = "router")]
@@ -135,12 +182,12 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                 ROLE = "Router";
                 is_router = true;
 
-                quote! {
+                quote!(
                     NodeType::RouterConfig {
                         install_code_policy: #install_code_policy,
                         max_children: #max_children,
                     }
-                }
+                )
             },
 
             #[cfg(false)] //#[cfg(feature = "end_device_UNUSED")]
@@ -257,12 +304,9 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
 
                 if cfg!(feature = "coordinator") && is_coordinator {
                     // If the TOML does have the field, we only realise it here.
-                    if v.discover_server_clusters.is_none() {
-                        Err(
-                            format!("Coordinator should not carry '.discover_server_clusters'.")
-                        )?;
+                    if ! v.discover_server_clusters.is_none() {
+                        Err( format!("Coordinator should not carry '.discover_server_clusters'."))?;
                     }
-                    assert!( v.discover_server_clusters .is_none() );
                     quote!()    // gen nothing
                 } else {
                     // router, end device has the field
@@ -295,34 +339,41 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     //
     // Note: Can use 'std::' since any ESP-IDF + Embassy application will need it.
     //
-    let q_all = quote!{ {
+    // 'quote' notes:
+    //      - Regular comments '//' get eaten out, but '///', '//!' (doc comments) remain.
+    //
+    let q_all = quote!(
+        //! Generated code.
+        #![allow(unused_doc_comments)]
+
         use std::{
             collections::BTreeMap,
             sync::OnceLock,
         };
 
         use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
+        pub use ezb_node::config::Config;
 
-        pub get() -> &'static Config {
-            static CFG: OnceLock<Config> = OnceLock::new();
+        #q_helpers
 
-            let primary_channels = #q_primary_channels;
-            let secondary_channels = #q_secondary_channels;
-            //r let storage_partition_name = #q_storage_partition_name;
-            let node = #q_node;
-            let endpoints = #q_endpoints;
+        static CFG: OnceLock<Config> = OnceLock::new();
 
+        pub fn get() -> &'static Config {
             CFG.get_or_init(|| {
+                let primary_channels = #q_primary_channels;
+                let secondary_channels = #q_secondary_channels;
+                let node = #q_node;
+                let endpoints = #q_endpoints;
+
                 Config {
                     primary_channels,
                     secondary_channels,
-                    //r storage_partition_name,
                     node,
                     endpoints
                 }
             })
         }
-    } };
+    );
 
     let s= final_(q_all)?;
     Ok(s)
@@ -350,15 +401,6 @@ fn final_(q_all: TokenStream) -> Result<String,ConfigError> {
 
     let formatted = prettyplease::unparse(&syntax_tree);
     Ok(formatted)
-
-    //rlet inner_lines = & ls[1..ls.len() -1];
-    //r
-    //rlet ret: String = inner_lines.into_iter()
-    //r    .map(|line| { line.strip_prefix("    ").unwrap_or(line).to_string() })
-    //r    .collect::<Vec<String>>()
-    //r    .join("\n");
-    //r
-    //rOk(ret)
 }
 
 /// Turn 'Option' into a 'TokenStream', _keeping_ the Option abstraction.
