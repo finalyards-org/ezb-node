@@ -13,9 +13,9 @@
 #   - C 'esp_zigbee_sdk' examples use 4096
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=20000
 
-# Recommended by 'esp-idf-svc', at least if (as we do) 'embassy-time-driver' is being used.
-CONFIG_ESP_TIMER_TASK_STACK_SIZE=4096
+# Recommended by 'esp-idf', at least if (as we do) 'embassy-time-driver' is being used.
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=8192
+CONFIG_ESP_TIMER_TASK_STACK_SIZE=4096
 CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 
 # 1 ms granularity for (FreeRTOS) thread sleeps (10 ms by default).
@@ -23,37 +23,72 @@ CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 CONFIG_FREERTOS_HZ=1000
 
 #---
-# Zigbee
-#|CONFIG_ZB_ENABLED=y
-#|CONFIG_ZB_ZCZR=y
-#|    # Controller/Router code included (can also do EndDevices with this)
-#|CONFIG_ZB_RADIO_NATIVE=y
+# From esp-rs/esp-idf/sdkconfig.defaults[.nimble]
+#   -> https://github.com/esp-rs/esp-idf/blob/master/sdkconfig.defaults.nimble
+#
+# "Go figure..."
+CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096
 
-#??? should it be kept here?
-# Partition Table
-# based on 'esp-zigbee-sdk' > examples > home_automation_devices
-#
-# These ARE NOT properly handled by 'esp-idf-sys' (0.37.2) |1|, leading to a build error on 'apps':
-#   <<
-#         CMake Warning at /home/ubuntu/.espressif/esp-idf/v5.5.4/components/partition_table/project_include.cmake:37 (message):
-#    Partition table CSV file
-#    /home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-15e6d77135ef9b21/out/partitions.csv
-#    not found.  Change custom partition CSV path in menuconfig.
-#  Call Stack (most recent call first):
-#    /home/ubuntu/.espressif/esp-idf/v5.5.4/tools/cmake/build.cmake:469 (include)
-#    /home/ubuntu/.espressif/esp-idf/v5.5.4/tools/cmake/build.cmake:720 (__build_process_project_includes)
-#    /home/ubuntu/.espressif/esp-idf/v5.5.4/tools/cmake/project.cmake:752 (idf_build_process)
-#    CMakeLists.txt:36 (project)
-#   <<
-#   Let's keep them disabled. That's fine, as long as we flash with the right 'partitions.csv'.
-#
-#   |1|: "Custom partitions.csv with relative path is not copied to build folder causing build to fail" (GitHub Issues)
-#       https://github.com/esp-rs/esp-idf-sys/issues/395
-#
-#|CONFIG_PARTITION_TABLE_CUSTOM=y
-#|CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+# "Async SPI only enabled when this config is disabled (it is enabled by default)"
+#CONFIG_SPI_MASTER_ISR_IN_IRAM=n
 
+# Suppress deprecation warnings for legacy drivers still included in bindings
+CONFIG_I2C_SUPPRESS_DEPRECATE_WARN=y
+CONFIG_TWAI_SUPPRESS_DEPRECATE_WARN=y
+CONFIG_TOUCH_SUPPRESS_DEPRECATE_WARN=y
+
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+
+#---
+# Our own
+#CONFIG_BT_ENABLED=n
+    # disabled by default
+
+#CONFIG_OPENTHREAD_ENABLED=n
+    # disabled by default
+
+# Was on by default (ESP-IDF 6.1)
+CONFIG_ESP_WIFI_REMOTE_ENABLED=n
+
+# Was on by default (ESP-IDF 6.1)
+# NOTE: THIS DOES NOT STEER IT!! RESEARCH NEEDED.
+CONFIG_ESP_WIFI_ENABLED=n
+CONFIG_ESP32_WIFI_ENABLED=n
+
+# Switch off coexistence support with Wifi
+CONFIG_ESP_COEX_SW_COEXIST_ENABLE=n
+
+#---
+# Newlib / picolibc
 #
+# ESP-IDF 6.x transitioned to 'picolibc' by default, but we likely would get no benefits from it, above 'newlib'.
+#
+# Without this, we get the error in 'make manual' (raw):
+#   <<
+#       Unable to generate bindings: clang diagnosed error: /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:66:9: error: unknown type name '__FILE'
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:696:10: error: member reference base type 'FILE' (aka 'int') is not a structure or union
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:696:26: error: member reference base type 'FILE' (aka 'int') is not a structure or union
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:696:36: error: member reference base type 'FILE' (aka 'int') is not a structure or union
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:697:14: error: member reference base type 'FILE' (aka 'int') is not a structure or union
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:750:9: error: use of undeclared identifier '_REENT'
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:170:21: error: call to undeclared function '_REENT_STDIN'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:658:51: error: member reference type 'int' is not a pointer
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:170:21: error: incompatible integer to pointer conversion passing 'int' to parameter of type 'FILE *' (aka 'int *') [-Wint-conversion]
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:658:98: error: member reference type 'int' is not a pointer
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:759:9: error: use of undeclared identifier '_REENT'
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:171:22: error: call to undeclared function '_REENT_STDOUT'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+#       /home/lima/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h:171:22: error: incompatible integer to pointer conversion passing 'int' to parameter of type 'FILE *' (aka 'int *') [-Wint-conversion]
+#   <<
+#
+CONFIG_LIBC_NEWLIB=y
+#CONFIG_NEWLIB_STDOUT_LINE_ENDING_CRLF=n
+#CONFIG_NEWLIB_STDOUT_LINE_ENDING_LF=y
+CONFIG_LIBC_STDOUT_LINE_BUF=y
+#CONFIG_LIBC_NEWLIB_NANO_FORMAT=n
+    # off, by default
+
+#---
 # mbedTLS
 #
 # Optimizes the mbedTLS code size by disabling unused features.
@@ -101,12 +136,6 @@ CONFIG_MBEDTLS_SHA384_C=n
 
 # /mbedTLS
 
-# ESP-IDF 6.x has 'Picolibc' by default, leading to '__FILE' compilation problems in 'raw' > 'make manual'.
-CONFIG_LIBC_NEWLIB=y
-#CONFIG_LIBC_STDOUT_LINE_BUF=y
-#CONFIG_LIBC_NEWLIB_NANO_FORMAT=n # is so, by default
-CONFIG_ESP_CONSOLE_UART=y
-
 # Avoids a register dump on panic.
 #
 # Not very pretty this one, either; can likely be worked upon.. (tbd. what's with the DWARF?)
@@ -119,14 +148,6 @@ CONFIG_ESP_CONSOLE_UART=y
 
 # Another way for registry dump avoidance. NOTE: TRY WITH 'panic' deeper than from main.
 #CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
-
-# Was on by default (ESP-IDF 6.1)
-CONFIG_ESP_WIFI_REMOTE_ENABLED=n
-
-# Was on by default (ESP-IDF 6.1)
-# NOTE: THIS DOES NOT STEER IT!! RESEARCH.
-CONFIG_ESP_WIFI_ENABLED=n
-CONFIG_ESP32_WIFI_ENABLED=n
 
 #---
 # EXPERIMENTAL

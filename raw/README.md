@@ -17,7 +17,7 @@ Cases where you might want to spend time here:
 
 ## Approach
 
-We use the `bindgen` CLI explicitly, via a `Makefile`. The other alternative would be to integrate `bindgen` into the `esp-idf-sys` build stage (it does support creating bindings).
+We use the `bindgen` CLI explicitly, via a `Makefile`. The other alternative would be to integrate `bindgen` into the `esp-idf-sys` build stage (it does support creating bindings). Yet another is to use it as a library, from `build.rs`.
 
 Pros/cons of the current approach:
 
@@ -26,7 +26,7 @@ Pros/cons of the current approach:
 |**Pro**|
 ||Allows fine grained control of the `bindgen` stage.|
 |**Con**|
-||Requires CLI tools (`bindgen`, `make`) to be installed for *any* build (also those deriving from us, `api` and `apps`).|
+||Requires CLI tools (`bindgen`, `make`) to be installed for *any* build (also the eventual application, in a separate crate).|
 
 
 ## Requirements
@@ -57,7 +57,7 @@ Build configuration: BuildConfig {
     esp_idf_sdkconfig: None,
     esp_idf_sdkconfig_defaults: Some(
         [
-            "/home/ubuntu/esp-zb/sdkconfig.defaults",
+            "/home/lima/ezb-node/raw/../apps/sdkconfig.defaults",
         ],
     ),
     mcu: Some(
@@ -66,73 +66,40 @@ Build configuration: BuildConfig {
     native: NativeConfig {
         esp_idf_version: Some(
             Tag(
-                "v5.5.4",
+                "v6.1",
             ),
         ),
         esp_idf_repository: None,
         esp_idf_cmake_generator: None,
         idf_path: None,
-        extra_components: [
-            ExtraComponent {
-                component_dirs: [],
-                remote_component: Some(
-                    RemoteComponent {
-                        name: "espressif/esp-zigbee-lib",
-                        version: "1.*",
-                        git: None,
-                        path: None,
-                        service_url: None,
-                    },
-                ),
-                bindings_header: None,
-                bindings_module: None,
-                manifest_dir: "/home/ubuntu/esp-zb/raw",
-            },
-            ExtraComponent {
-                component_dirs: [],
-                remote_component: Some(
-                    RemoteComponent {
-                        name: "espressif/esp-zboss-lib",
-                        version: "1.*",
-                        git: None,
-                        path: None,
-                        service_url: None,
-                    },
-                ),
-                bindings_header: None,
-                bindings_module: None,
-                manifest_dir: "/home/ubuntu/esp-zb/raw",
-            },
-        ],
-        esp_idf_components: Some(
+        extra_components: Some(
             [
-                "cxx",
-                "newlib",
-                "freertos",
-                "esp_hw_support",
-                "heap",
-                "log",
-                "soc",
-                "hal",
-                "esp_rom",
-                "esp_common",
-                "esp_system",
-                "riscv",
-                "main",
-                "driver",
-                "nvs_flash",
-                "wear_levelling",
-                "fatfs",
-                "spiffs",
+                ExtraComponent {
+                    component_dirs: [],
+                    remote_component: Some(
+                        RemoteComponent {
+                            name: "espressif/esp-zigbee-lib",
+                            version: "2.0.4",
+                            git: None,
+                            path: None,
+                            service_url: None,
+                        },
+                    ),
+                    bindings_header: None,
+                    bindings_module: None,
+                    manifest_dir: "/home/lima/ezb-node/raw",
+                },
             ],
         ),
+        esp_idf_components: None,
         esp_idf_component_manager: None,
     },
     esp_idf_sys_root_crate: Some(
-        "esp-zb-raw",
+        "ezb-node-raw",
     ),
 }
-Using managed esp-idf repository: RemoteSdk { repo_url: None, git_ref: Tag("v5.5.4") }
+Using managed esp-idf repository: RemoteSdk { repo_url: None, git_ref: Tag("v6.1") }
+[...]
 ```
 
 Let's go through some of these things.
@@ -143,7 +110,7 @@ Let's go through some of these things.
     ),
 ```
 
-The ESP-IDF tooling is installed in `~/.espressif`. See ´.cargo/config.toml` (project root) for more info.
+The ESP-IDF tooling is installed in `~/.espressif`. See `.cargo/config.espidf.toml` for more info.
 
 ```
     esp_idf_sdkconfig: None,
@@ -154,30 +121,29 @@ We don't steer the location of the `sdkconfig` file. (The author never got this 
 ```
     esp_idf_sdkconfig_defaults: Some(
         [
-            "/home/ubuntu/esp-zb/sdkconfig.defaults",
+            "/home/lima/ezb-node/raw/../apps/sdkconfig.defaults",
         ],
 ```
 
 The `sdkconfig.defaults` file provides *defaults* to certain ESP-IDF *components*. These steer what gets compiled, and the whole configuration output in `sdkconfig`.
 
->`sdkconfig` should be edited _only_ with `menuconfig` tool. More about it elsewhere (`DEVS/`, `mc/`).
+<!--
+>`sdkconfig` should be edited _only_ with `menuconfig` tool. More about it elsewhere (`/DEVS/`, `/mc/`).
+-->
 
 ```
     native: NativeConfig {
         esp_idf_version: Some(
             Tag(
-                "v5.5.4",
+                "v6.1",
             ),
         ),
         [...]
 ```
 
-<!--
-5.5.4 is currently (Apr'26) the latest ESP-IDF compatible with `esp-zigbee-sdk`. We'll move on to whichever is the latest supported one.
--->
-5.5.5 is currently (Aug'26) the latest ESP-IDF compatible with `esp-zigbee-sdk`.
+6.1 is currently (Oct'26) the latest ESP-IDF release.
 
->Each ESP-IDF version installs their own tools, in our case to `~/.espressif`.
+>Each ESP-IDF version installs their own tools, in our case to `~/.espressif/esp-idf/`.
 
 ```
         extra_components: [
@@ -186,7 +152,7 @@ The `sdkconfig.defaults` file provides *defaults* to certain ESP-IDF *components
                 remote_component: Some(
                     RemoteComponent {
                         name: "espressif/esp-zigbee-lib",
-                        version: "1.*",
+                        version: "2.0.4",
                         git: None,
                         path: None,
                         service_url: None,
@@ -194,35 +160,20 @@ The `sdkconfig.defaults` file provides *defaults* to certain ESP-IDF *components
                 ),
                 bindings_header: None,
                 bindings_module: None,
-                manifest_dir: "/home/ubuntu/esp-zb/raw",
-            },
-            ExtraComponent {
-                component_dirs: [],
-                remote_component: Some(
-                    RemoteComponent {
-                        name: "espressif/esp-zboss-lib",
-                        version: "1.*",
-                        git: None,
-                        path: None,
-                        service_url: None,
-                    },
-                ),
-                bindings_header: None,
-                bindings_module: None,
-                manifest_dir: "/home/ubuntu/esp-zb/raw",
+                manifest_dir: "/home/lima/ezb-node/raw",
             },
         ],
 ```
 
-Important that these exist!! Shows that the ESP-IDF system has picked up `esp-zigbee-lib` and its ZBOSS dependency. These are the Zigbee libraries we want to work with.
+This shows `espressif/esp-zigbee-lib` is indeed included in the build.
 
 >The components are downloaded to:
 >
->`{target path}/riscv32imac-esp-espidf/release/build/esp-idf-sys-85c99a2b1216aeac/out/managed_components`
+>`{target}/riscv32imac-esp-espidf/release/build/esp-idf-sys/{..}/out/managed_components`
 >
->Hint: To find the path, do `find ~/target -name managed_components`. 
->You can also see the `.BUILD_ENV` file (generated by `build.rs`) for its `DEP_ESP_IDF_ROOT` line.
+>For finding the latest hash, check the `.BUILD_ENV` file (generated by `build.rs`) and its `DEP_ESP_IDF_ROOT` entry.
 
+<!-- #hidden; currently building with defaults
 ```
         esp_idf_components: Some(
             [
@@ -251,15 +202,22 @@ Important that these exist!! Shows that the ESP-IDF system has picked up `esp-zi
 This array is populated if the build constraints the number of ESP-IDF components. We'd do this simply to speed up the build - and to reduce the size of the output binary.
 
 The array can also be empty.
+-->
 
 ```
         esp_idf_component_manager: None,
 ```
 
-Not sure what that means. Things work without.
+Likely component manager gets in, by default.
 
 
 ## Running `manual`
+
+The build runs a `Makefile` step automatically, but if it were to fail, you may need to run it manually for debugging.
+
+>Note: It may be a good idea to transition away from this `Makefile` + `bindgen` CLI approach, to using `bindgen` as a library. This would remove the requirement of dependent applications to install command line tools, before building.
+>
+>It's served well in initial development, though.
 
 ```
 $ make manual
@@ -274,24 +232,18 @@ tmp/bindings_0.rs: ASCII text, with very long lines (340)
 
 That file is used within the Rust portion of this crate.
 
+### `wrap.c` 
 
-<!--R
-### `global` vs. `out`
-
-This is a setting that affects where the build output files (Espressif tools, in particular) are placed.
-
-Steered in `.cargo/config.toml`:
+There are also:
 
 ```
-ESP_IDF_TOOLS_INSTALL_DIR = "out"
-#ESP_IDF_TOOLS_INSTALL_DIR = "global"
+libezb_wrap.a  wrap.c  wrap.o
 ```
 
->As mentioned in the comments in that file:
+This is a slightly elaborate approach, the `Makefile` creating an essentially two-liner `tmp/wrap.c` that gets built, and linked, into the output.
 
-**`out`**: keep tools within the Rust `target`; `cargo clean` also clears tool selection (and rebuild means they will be downloaded and installed again).
+The reason are the two 
+`EZB_ZHA_COLOR_DIMMABLE_LIGHT_CONFIG` -like macros. We *could* just reproduce their contents within Rust, but this is now in, so...
 
-**`global`**: keep tools apart, in `~/.espressif`. This is useful if you change deep build settings (e.g. test the `sdkconfig` generation) but don't need the tools to be reset each time.
+Working together with `esp-zigbee-lib` could expose ways that the binding can be made simpler.
 
->For release, it's likely best to keep it as `out`. This way, a dependency causing our build will not create folders outside of the usual build target.
--->

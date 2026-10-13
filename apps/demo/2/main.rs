@@ -1,5 +1,3 @@
-//r #![feature(const_iter)]
-
 use embassy_executor::Spawner;
 use esp_idf_hal::sys::EspError;
 use esp_idf_svc::{

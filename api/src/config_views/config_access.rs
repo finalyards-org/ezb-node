@@ -48,7 +48,6 @@ impl ConfigAccess {
         let Config {
             primary_channels,
             secondary_channels,
-            //r storage_partition_name,
             node,
             .. } = cfg;
 
@@ -187,6 +186,8 @@ impl From<&'static Config> for ConfigAccess {
 //return ESP_OK;
 //
 fn set_channels(channel_masks: [ChannelMask;2]) -> Result<(), EzbError> {
+
+    log::trace!("ezb_bdb_set_primary_channel_set()");   // TEMP
 
     EzbError::wrap( unsafe {
         ezb_bdb_set_primary_channel_set(channel_masks[0].bits())

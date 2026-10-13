@@ -61,12 +61,11 @@ fn main() {
         let arr = [
             "DEP_ESP_IDF_EMBUILD_ENV_PATH",
             "DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH",
-            "DEP_ESP_IDF_ROOT",
+            "DEP_ESP_IDF_ROOT",                     // "/home/lima/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/{..hash..}/out"
                 //
             "ESP_IDF_TOOLS_INSTALL_DIR",            //"global"|"out"
-            "ESP_IDF_VERSION",                      //"5.5.4"
+            "ESP_IDF_VERSION",                      //"6.1"
             "MCU",
-            //"OUT_DIR",                              //"{target}/riscv32imac-esp-espidf/release/build/esp-zb-raw-f7c4340a8cec066b/out"
         ].map(|x| {
             let val = env::var(x)
                 .or_else(|_| env::var(x.to_ascii_lowercase()))  // check e.g. "esp_idf_version"
@@ -125,6 +124,35 @@ fn main() {
         println!("cargo:rustc-link-search={}/tmp", manifest_dir);
 
         println!("cargo::rustc-link-lib=static=ezb_wrap");
+    }
+
+    // Take in 'esp_zigbee_lib'
+    //
+    // NOTE: For some reason, this started to be needed when moving from ESP-IDF 5.5.5 -> 6.1.
+    //
+    //  <<
+    //  $ ls /home/lima/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/3bb15b1af9451e27/out/managed_components/espressif__esp-zigbee-lib/lib/esp32c6
+    //  libesp-zigbee-core.zczr.debug.a    libesp-zigbee-core.zed.release.a    libesp-zigbee-idf.remote.debug.a    libesp-zigbee.release.a
+    //  libesp-zigbee-core.zczr.release.a  libesp-zigbee-idf.native.debug.a    libesp-zigbee-idf.remote.release.a
+    //  libesp-zigbee-core.zed.debug.a     libesp-zigbee-idf.native.release.a  libesp-zigbee.debug.a
+    //  <<
+    {
+        let path = format!("{}/managed_components/espressif__esp-zigbee-lib/lib/{}",
+            env::var("DEP_ESP_IDF_ROOT").unwrap(),
+            env::var("MCU").unwrap()
+        );
+            // "/home/lima/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/3bb15b1af9451e27/out/managed_components/espressif__esp-zigbee-lib/lib/esp32c6"
+
+        assert!( std::path::Path::new(&path).exists(), "INTERNAL: {} does not exist", path );
+
+        println!("cargo:rustc-link-search=native={}", path);
+
+        let is_debug = env::var("DEBUG") .is_ok();    // Note: we never do debug builds (untested)
+        let prof = if is_debug { "debug" } else { "release" };
+
+        println!("cargo:rustc-link-lib=static=esp-zigbee.{prof}");
+        println!("cargo:rustc-link-lib=static=esp-zigbee-core.zczr.{prof}");
+        println!("cargo:rustc-link-lib=static=esp-zigbee-idf.native.{prof}");
     }
 
     // What files should trigger a new 'build.rs' run, if they change?

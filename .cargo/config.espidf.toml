@@ -35,7 +35,8 @@ build-std = ["std", "panic_abort"]
 linker = "ldproxy"
 runner = "espflash flash --monitor --partition-table partitions.csv"
     #
-    # Note: Speed up the flashing by creating a '$HOME/.config/espflash/espflash.toml' (default is a meager 115_200):
+    # Note: Speed up the flashing by creating a '$HOME/.config/espflash/espflash.toml' in your VM.
+    #       The default is a meager 115_200
     #       <<
     #       baudrate = 1152000
     #       <<

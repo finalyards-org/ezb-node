@@ -2,7 +2,12 @@ use ezb_node_config::{
     NodeType::*,
 };
 
-use ezb_node_raw::{ezb_af_device_desc_t, ezb_af_create_device_desc, ezb_af_device_desc_register, ezb_aps_secur_enable_distributed_security};
+use ezb_node_raw::{
+    ezb_af_device_desc_t,
+    ezb_af_create_device_desc,
+    ezb_af_device_desc_register,
+    ezb_aps_secur_enable_distributed_security
+};
 
 use crate::{
     EzbError,
@@ -35,14 +40,14 @@ impl ZigbeeDev {
             ezb_af_device_desc_register(desc)
         })?;
 
-        // In C examples, this is set to 'false'.
-        //
         // We only support centralized trust, i.e. the coordinator (not a router) decides, which devices are let to enter.
         //
         // NOTE!:
         //      - Unknown whether the default is 'false'. Setting because the C examples do.
         //      - tbd. IS THIS IN THE RIGHT PLACE, with regard to device registration etc.?
+        //          (in C, it's right before calling 'ezb_bdb_set_primary_channel_set')
         //
+        log::trace!("ezb_aps_secur_enable_distributed_security");   // TEMP
         let () = unsafe { ezb_aps_secur_enable_distributed_security(false) };
 
         // Only now, initialize the endpoints.

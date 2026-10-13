@@ -52,29 +52,35 @@ impl IasCoordinator {
         // tbd. bring the endpoint's number from configuration. #hack
         //r const MY_IAS_ENDPOINT: u8 = 1;
 
+        // If there is an error, all we really can is log it, and keep going.
+        //
         match sig {
             ZdoSignalSkipStartup => {
                 log::info!("Initialize Zigbee stack");
-                self.start_top_level_commissioning(BdbMode::Initialization);
+                self.start_top_level_commissioning(BdbMode::Initialization)
+                    .map_err(|e| log::warn!("Failed handling '{}': {}", ZdoSignalSkipStartup, e));
             },
 
             BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
                 let is_new = self.is_factory_new();
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
-                    self.start_top_level_commissioning(BdbMode::NetworkFormation);
+                    self.start_top_level_commissioning(BdbMode::NetworkFormation)
+                        .map_err(|e| log::warn!("Failed handling '{}' (new): {}", sig, e));
                 } else {
                     log::info!("Device rebooted. Opening network for existing devices.");
 
                     // Open for pairing for a moment.
-                    self.start_top_level_commissioning(BdbMode::NetworkSteering);
+                    self.start_top_level_commissioning(BdbMode::NetworkSteering)
+                        .map_err(|e| log::warn!("Failed handling '{}' (NOT new): {}", sig, e));
                 }
             },
             BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
-                log::warn!("{} failed with status = {}; retrying...", sig, st);
+                log::warn!("{} failed; retrying...", sig);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::Initialization);
+                self.start_top_level_commissioning(BdbMode::Initialization)
+                    .map_err(|e| log::warn!("Failed handling {}: {}", sig, e));
             },
 
             BdbSignalFormation(BdbStatus::Success) => {
@@ -85,13 +91,15 @@ impl IasCoordinator {
                     self.get_short_address()
                 );
                 // Allow devices to join.
-                self.start_top_level_commissioning(BdbMode::NetworkSteering);
+                self.start_top_level_commissioning(BdbMode::NetworkSteering)
+                    .map_err(|e| log::warn!("Failed handling '{}': {}", sig, e));
             },
             BdbSignalFormation(st) => {
                 log::info!("Failed to form network: {}, st = {}", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkFormation);
+                self.start_top_level_commissioning(BdbMode::NetworkFormation)
+                    .map_err(|e| log::warn!("Failed handling '{}': {}", sig, e));
             },
 
             BdbSignalSteering(BdbStatus::Success) => {
@@ -109,7 +117,8 @@ impl IasCoordinator {
                 log::info!("Failed the network steering: st = {}", st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkSteering);
+                self.start_top_level_commissioning(BdbMode::NetworkSteering)
+                    .map_err(|e| log::warn!("Failed handling '{}': {}", sig, e));
             }
 
             ZdoSignalDeviceAnnce { short_addr, device_addr, .. } => {

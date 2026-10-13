@@ -14,11 +14,11 @@
 
 include .BUILD_ENV
 	# contains ("global" mode):
-	#		DEP_ESP_IDF_EMBUILD_ENV_PATH=[ ... ]:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin:[ ... ]
-	#		DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/.espressif/esp-idf/v5.5.4
-	#		DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-661d76f25670d30a/out
+	#		DEP_ESP_IDF_EMBUILD_ENV_PATH=[ ... ]:/home/ubuntu/.espressif/tools/riscv32-esp-elf/esp-15.2.0_20251204/riscv32-esp-elf/bin:[ ... ]
+	#		DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH=/home/ubuntu/.espressif/esp-idf/v6.1
+	#		DEP_ESP_IDF_ROOT=/home/ubuntu/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/661d76f25670d30a/out
 	#		ESP_IDF_TOOLS_INSTALL_DIR=global
-	#		ESP_IDF_VERSION=5.5.4
+	#		ESP_IDF_VERSION=6.1
 	#		MCU=esp32c6
 
 _ESP_IDF_PATH:=$(DEP_ESP_IDF_EMBUILD_ESP_IDF_PATH)
@@ -36,9 +36,13 @@ _NVS_INCLUDES:=\
 	  	# 'esp_partition' is transitively needed by 'nvs_flash'
 	  	# 'esp_blockdev' is, in turn, transitively needed by it.
 
-_NEWLIB_INCLUDE := $(if $(filter 5.%,$(ESP_IDF_VERSION)),\
-    $(_ESP_IDF_PATH)/components/newlib/platform_include,\
-    $(_ESP_IDF_PATH)/components/esp_libc/platform_include)
+# was:
+#_PLATFORM_INCLUDE := $(if $(filter 5.%,$(ESP_IDF_VERSION)),\
+#    $(_ESP_IDF_PATH)/components/newlib/platform_include,\
+#    $(_ESP_IDF_PATH)/components/esp_libc/platform_include)
+
+# ESP-IDF 6.x
+_PLATFORM_INCLUDE := $(_ESP_IDF_PATH)/components/esp_libc/platform_include
 
 _ESP_HAL_INCLUDES := $(if $(filter 5.%,$(ESP_IDF_VERSION)),\
     $(_ESP_IDF_PATH)/components/hal/include, \
@@ -195,7 +199,7 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 		-D __riscv -D __riscv_xlen=32 --sysroot $(_SYSROOT) \
 		\
 	  -I. -I$(_TMP) \
-	  -I. -I$(_NEWLIB_INCLUDE) \
+	  -I. -I$(_PLATFORM_INCLUDE) \
 	  $(addprefix -I, $(_ESP_ZIGBEE_LIB_INCLUDE)) \
 		-I $(dir $(_SDKCONFIG_H)) \
 	  $(addprefix -I, $(_NVS_INCLUDES)) \
@@ -238,7 +242,7 @@ $(_TMP)/wrap.o: $(_TMP)/wrap.c
 	  riscv32-esp-elf-gcc -c $< -o $@ -O2 \
 		-D __riscv -D __riscv_xlen=32 --sysroot $(_SYSROOT) \
 	  -I. -I$(_TMP) \
-	  -I. -I$(_NEWLIB_INCLUDE) \
+	  -I. -I$(_PLATFORM_INCLUDE) \
 	  $(addprefix -I, $(_ESP_ZIGBEE_LIB_INCLUDE)) \
 		-I $(dir $(_SDKCONFIG_H)) \
 	  $(addprefix -I, $(_NVS_INCLUDES)) \

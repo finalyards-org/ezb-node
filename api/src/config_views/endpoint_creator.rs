@@ -82,7 +82,7 @@ fn create_one(dev: ezb_af_device_desc_t, ep_id: u8, entry: &Endpoint) -> Result<
         device_type,
         additional_client_clusters,
         #[cfg(not(feature = "coordinator"))]
-        discover_server_clusters,   // router, end device
+        discover_server_clusters,
     } = entry;
 
     // Note: It is possible to build 'config' with no 'DeviceType' support (not intended for any
