@@ -95,6 +95,15 @@ fn main() -> Result<()> {
         }
     }
 
+    // Allow steering of logging by an env.var
+    {
+        if let Some(lev) = std::env::var("RUST_LOG") .ok() {
+            // Pass it to the code
+            println!("cargo:rustc-env=RUST_LOG_LEVEL={}", lev.to_lowercase());
+        }
+        println!("cargo::rerun-if-env-changed=RUST_LOG");
+    }
+
     // Needed for linking of executables to succeed.
     embuild::espidf::sysenv::output();
 

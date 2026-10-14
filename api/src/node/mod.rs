@@ -85,9 +85,8 @@ pub trait Node {
     //      activated by a call to '...'.
     //
     fn init(cfg: &'static Config, auto_start: bool) -> Result<(), crate::Error> where Self: Sized {
-        let () = zigbee_spawn(cfg, auto_start)
-            .map_err(|e| { Error::SpawnFailed(e) })?;
-        Ok(())
+        zigbee_spawn(cfg, auto_start)
+            .map_err(|e| { Error::SpawnFailed(e) })
     }
 
     /**

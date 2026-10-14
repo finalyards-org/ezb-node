@@ -22,6 +22,27 @@ CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 # This is likely vital, for having 'esp-zigbee-lib' respond in a timely manner.
 CONFIG_FREERTOS_HZ=1000
 
+# Avoids a register dump on panic.
+#
+# Not very pretty this one; can likely be worked upon..
+#
+CONFIG_ESP_SYSTEM_USE_EH_FRAME=y
+    # "not recommended to be used for production"
+
+# tbd. is this useful?  Would likely provide stack dump information when within ESP-IDF code???
+#CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+
+# Avoids a reboot-loop, if the C side were to panic.
+CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT=y
+
+# C logging
+#
+# Default: the logging level we use. Changes to this are made _in code_; can be declared component specific.
+# Maximum: keep logs up to this level (including) in the binary. VERBOSE allows adjusting to any log level.
+#
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=y
+
 #---
 # From esp-rs/esp-idf/sdkconfig.defaults[.nimble]
 #   -> https://github.com/esp-rs/esp-idf/blob/master/sdkconfig.defaults.nimble
@@ -135,19 +156,6 @@ CONFIG_MBEDTLS_SHA384_C=n
 #CONFIG_MBEDTLS_SHA256_C=y
 
 # /mbedTLS
-
-# Avoids a register dump on panic.
-#
-# Not very pretty this one, either; can likely be worked upon.. (tbd. what's with the DWARF?)
-#   <<
-#       Backtrace: 0x00000000:0x40814430
-#       Backtrace ended abruptly: cannot find DWARF information for instruction at address 0x00000000
-#   <<
-#CONFIG_ESP_SYSTEM_USE_EH_FRAME=y
-# "not recommended to be used for production"
-
-# Another way for registry dump avoidance. NOTE: TRY WITH 'panic' deeper than from main.
-#CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
 
 #---
 # EXPERIMENTAL

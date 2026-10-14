@@ -1,6 +1,6 @@
 // Panic hook
 //
-// We have three requirements for the panic messages:
+// Requirements for the panic messages:
 //  - no restart loop
 //  - line number should be shown
 //  - proper message should be shown

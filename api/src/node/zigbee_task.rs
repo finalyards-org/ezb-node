@@ -3,7 +3,6 @@ use log;
 use std::{
     boxed::Box,
     collections::BTreeMap,
-    sync::atomic::AtomicBool
 };
 
 use embassy_sync::{
@@ -16,38 +15,16 @@ use embassy_sync::{
 };
 
 use ezb_node_raw::{
-    //esp_zigbee_config_t,
-    //esp_zigbee_init,
     esp_zigbee_launch_mainloop,
     esp_zigbee_start,
-    //ezb_af_create_device_desc,
-    //ezb_af_device_add_endpoint_desc,
-    //ezb_af_device_desc_register,
-    //ezb_af_device_desc_t,
-    //ezb_af_endpoint_get_cluster_desc,
     ezb_app_signal_add_handler,
     ezb_app_signal_get_params,
     ezb_app_signal_get_type,
     ezb_app_signal_t,
-    //ezb_aps_secur_enable_distributed_security,
-    //ezb_bdb_comm_mode_t,
-    ////ezb_bdb_is_factory_new,
-    //ezb_bdb_set_primary_channel_set,
-    //ezb_bdb_set_secondary_channel_set,
-    ////ezb_bdb_start_top_level_commissioning,
-    //ezb_nwk_get_current_channel,
-    //ezb_nwk_get_extended_panid,
-    //ezb_nwk_get_panid,
-    //ezb_nwk_get_short_address,
     ezb_secur_set_ic_required,
-    //ezb_zcl_basic_cluster_desc_add_attr,
-    //ezb_zcl_basic_server_attr_t,
-    //ezb_zcl_cluster_desc_t,
-    //ezb_zcl_cluster_id_e,
     ezb_zcl_core_action_callback_id_e,
     ezb_zcl_core_action_callback_id_t,
     ezb_zcl_core_action_handler_register,
-    //ezb_zha_create_color_dimmable_light,
 };
 
 use crate::{
@@ -72,46 +49,43 @@ use ezb_node_config::{ChannelMask, CommonFields, Endpoint};
 use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 
 const TASK_NAME: &str = "Zigbee_main";
-const TASK_STACK_SIZE: usize = 20 * 1024;   // note: C example uses 4k, Rust may need more
-
-static BEEN_THERE: AtomicBool = AtomicBool::new(false);
+//const TASK_STACK_SIZE: usize = 10 * 1024;   // note: C example uses 4k, Rust may need more
+    // Note: What if we omit this, just let the default (from 'sdkconfig.defaults'?) take effect.
 
 /**
 * Launch the separate, background FreeRTOS task for interacting with the 'esp_zigbee_lib' callbacks (C side).
 *
-* @note Initialization etc. is done within the new thread; this is _mainly_ to remain as close to the C examples
+* @note Initialization etc. is done within the new thread; this is to remain as close to the C examples
 *       as possible.
 */
 pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),std::io::Error> {
-
-    // We should ever be called just once.
-    if BEEN_THERE.swap(true, std::sync::atomic::Ordering::Relaxed) {
-        panic!("'zigbee_spawn' twice");
-    }
-
     let ca: ConfigAccess = cfg.into();
     let endpoint_cfg: EndpointCreator = cfg.into();
 
     let res = std::thread::Builder::new()
         .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
-        .stack_size(TASK_STACK_SIZE)
+        //.stack_size(TASK_STACK_SIZE)
         .spawn(move || {
             log::info!("Zigbee task running");
 
             // tbd. !! try calling these from outside of the 'spawn' - that way we get reasonable
-            //      chance of reacting to errors (here we don't).
+            //      chance of reacting to errors (unlike here).
             //
             let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
+            //panic!("ff");
 
+            log::trace!("ezb_zcl_core_action_handler_register");
             let () = unsafe {
                 ezb_zcl_core_action_handler_register(Some(crate::node::zigbee_task::zcl_action_handler));
             };
 
             ca.init() .unwrap();
+            //panic!("gg");
 
-            // It seems (based on discussion with google.ai; tbd. CONFIRM FROM THE 'esp_zigbee_lib'
-            // SOURCES!!) that having 'install_policy: false' (= allow open pairing: false) WOULD NOT
-            // by itself ban attempts to use a default install code.
+            // tbd. CONFIRM THIS:
+            //
+            // It seems (based on discussion with google.ai) that having 'install_policy: false'
+            // (= allow open pairing: false) WOULD NOT by itself ban attempts to use a default install code.
             //
             // This is weird. In the mean time, let's call this and see what happens.
             //
@@ -120,15 +94,16 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
             //
             #[cfg(feature = "coordinator")]
             {
+                log::trace!("ezb_secur_set_ic_required (true)");
                 // Should we call this? "Enable Trust Center to require install code for joining."
                 EzbError::wrap( unsafe {
                     ezb_secur_set_ic_required(true)
                 }) .unwrap();
             }
 
-
             //ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
 
+            log::trace!("ezb_app_signal_add_handler");
             EzbError::wrap(unsafe {
                 ezb_app_signal_add_handler(Some(app_signal_handler))
             }) .unwrap();
@@ -136,7 +111,8 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
                 //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
 
             local_zigbee_run(auto_start) .unwrap();
-            loop {}
+
+            unreachable!()
         });
 
     Ok(())  // right after the thread is successfully spawned (app can start waiting on the channel)
