@@ -1,6 +1,10 @@
 //?? #![feature(never_type)]
     // applies to 'node/mod.rs'; needs to be declared here.
 
+#![feature(adt_const_params)]
+#![feature(unsized_const_params)]
+    // enables use of '&'static str' in const generics
+
 mod config_views;
 pub use config_views::*;
     // DeviceDescriptorView,

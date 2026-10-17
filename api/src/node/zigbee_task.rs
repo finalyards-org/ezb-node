@@ -49,8 +49,12 @@ use ezb_node_config::{ChannelMask, CommonFields, Endpoint};
 use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 
 const TASK_NAME: &str = "Zigbee_main";
+
 //const TASK_STACK_SIZE: usize = 10 * 1024;   // note: C example uses 4k, Rust may need more
     // Note: What if we omit this, just let the default (from 'sdkconfig.defaults'?) take effect.
+
+// 'true' for now, to keep similarity with C examples.
+const AUTO_START: bool = true;
 
 /**
 * Launch the separate, background FreeRTOS task for interacting with the 'esp_zigbee_lib' callbacks (C side).
@@ -58,7 +62,7 @@ const TASK_NAME: &str = "Zigbee_main";
 * @note Initialization etc. is done within the new thread; this is to remain as close to the C examples
 *       as possible.
 */
-pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),std::io::Error> {
+pub(crate) fn zigbee_spawn(cfg: &'static Config) -> Result<(),std::io::Error> {
     let ca: ConfigAccess = cfg.into();
     let endpoint_cfg: EndpointCreator = cfg.into();
 
@@ -67,20 +71,22 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
         //.stack_size(TASK_STACK_SIZE)
         .spawn(move || {
             log::info!("Zigbee task running");
+            log::debug!("TESTING DEBUG");
+            log::trace!("TESTING TRACE");
 
             // tbd. !! try calling these from outside of the 'spawn' - that way we get reasonable
             //      chance of reacting to errors (unlike here).
             //
             let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
-            //panic!("ff");
 
             log::trace!("ezb_zcl_core_action_handler_register");
             let () = unsafe {
                 ezb_zcl_core_action_handler_register(Some(crate::node::zigbee_task::zcl_action_handler));
             };
 
+            log::trace!("ennen 'ca.init()'");
             ca.init() .unwrap();
-            //panic!("gg");
+            log::trace!("jälkeen 'ca.init()'");
 
             // tbd. CONFIRM THIS:
             //
@@ -88,9 +94,6 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
             // (= allow open pairing: false) WOULD NOT by itself ban attempts to use a default install code.
             //
             // This is weird. In the mean time, let's call this and see what happens.
-            //
-            // NOTE: 'allow_open_pairing: false' and _not_ having any pre-configured devices feels
-            //      like a configuration mismatch. Check whether that is so and catch in 'config'. #tbd.
             //
             #[cfg(feature = "coordinator")]
             {
@@ -110,7 +113,7 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
                 // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
                 //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
 
-            local_zigbee_run(auto_start) .unwrap();
+            local_zigbee_run(AUTO_START) .unwrap();
 
             unreachable!()
         });
@@ -130,15 +133,20 @@ pub(crate) fn zigbee_spawn(cfg: &'static Config, auto_start: bool) -> Result<(),
 //
 // tbd. Could merge this whole function to the place where it's called.
 fn local_zigbee_run(auto_start: bool) -> Result<!,EspError> {
+    log::trace!("esp_zigbee_start");
     EspError::wrap( unsafe {
         esp_zigbee_start(auto_start)
     })?;
 
+    log::trace!("esp_zigbee_launch_mainloop");
     EspError::wrap( unsafe {
         esp_zigbee_launch_mainloop()
     })?;
 
-    unreachable!();     // C code continues with the below; do we ever get here?
+    unreachable!();
+
+    // C code continues with the below; one can imagine this were to happen if the main loop
+    // is cancelled from application logic, but... the demo does not do it (right?). #feedback
 
     //esp_zigbee_deinit();
     //vTaskDelete(NULL);
@@ -191,14 +199,10 @@ extern "C" fn zcl_action_handler(action_id: ezb_zcl_core_action_callback_id_t /*
 
     let tx = super::CHANNEL.sender();
 
-    // tbd. How are errors processed? Why do we pass 'Ok(ev)', below???
-
-    if let Err(err) = tx.try_send(super::Payload::ZclEvent(Ok(ev))) {
-        log::error!("[internal] Failure in channel, likely full ('ZclEvent' skipped!!): {:?}", err);
+    if let Err(err) = tx.try_send(super::Payload::ZclEvent(ev)) {
+        log::error!("[internal] Failure in channel; 'ZclEvent' skipped: {:?}", err);
         return;
     }
-
-    ()
 }
 
 /// Helper function (for debugging).

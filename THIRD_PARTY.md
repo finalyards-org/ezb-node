@@ -1,4 +1,4 @@
-# Upstream
+# 3rd party
 
 *Things to eventually report to upstream projects.*
 
@@ -103,4 +103,26 @@ Within `zcl_type.h`, this line has two typos of the same word:
 
 While some fields are obviously shortened (`UNSUP`), this seems like something to fix.
 
+
+## `esp-zigbee-sdk`: could have third party examples
+
+All the [examples](https://github.com/espressif/esp-zigbee-sdk/tree/main/examples) are between two ESP32 devices.
+
+This is good for the point that no outside hardware is needed, but
+
+..wouldn't it be greater to have at least one example binding with a commercial device?
+
+Such a device can be "anything" (relatively common, well available globally, e.g. Sonoff). The point is to *expose the code* needed on the ESP32 side to tie with a commercial end device.
+
+
+## `esp-zigbee-sdk`: observations on doc comments
+
+```
+// @return ESP_OK on success, error code otherwise.`
+esp_zigbee_launch_mainloop
+```
+
+This function never returns, right?  Therefore, it would never give `ESP_OK`, nor is there a "success".
+
+Or.. is that the code if the loop is terminated from outside; the comment could be improved.
 

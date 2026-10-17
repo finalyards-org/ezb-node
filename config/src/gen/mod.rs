@@ -352,7 +352,6 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         };
 
         use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
-        pub use ezb_node::config::Config;
 
         #q_helpers
 

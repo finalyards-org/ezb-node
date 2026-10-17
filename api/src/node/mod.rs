@@ -1,15 +1,11 @@
 /*
 * Design:
 *   - Singleton; there's only one Node in a running system
-*   - Methods, not globals. Helps e.g. in IDE auto-completion (and generally not being able to see weird stuff
-*       outside their context). In comparison, C API has everything as global functions, which is overwhelming.
-*   - Application task does not (need to) know about the underlying Zigbee task; it's an Embassy application
-*     and can use 'async' for its own concurrency.
-*
-* Note:
-*   - Native mode only; no RCP (radio co-processor) implementation. C API has both.
+*   - Methods, not globals. Helps e.g. in IDE auto-completion: seeing only meaningful methods, based on context.
+*       In comparison, C API has everything as global functions, which is overwhelming.
+*   - Application RTOS task does not know about the underlying Zigbee task. The application is based
+*       on Embassy's 'async' for its own concurrency.
 */
-
 mod zigbee_task;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -57,72 +53,70 @@ use crate::{
 //
 pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channel::new();
     // tx: in 'zigbee_task'
-    // rx: us, passing to the application (application task)
+    // rx: us, application task
 
 #[derive(Debug, Clone)]
 enum Payload {
     AppSignal(AppSignal),
-    ZclEvent(Result<ZclEvent,ZclError>)
+    ZclEvent(ZclEvent)
+    //r was: ZclEvent(Result<ZclEvent,ZclError>)    -- if needed, make it 'ZclError'
 }
 
 /**
-* Provides access to the radio. The application struct implementing this decides the role (Coordinator/Router/EndDevice)
+* Provides access to the radio. The struct implementing this decides the role (Coordinator/Router/EndDevice)
 * that this has.
+*
+* tbd. We can provide 'Coordinator: Node' etc. traits, later, as a building block for custom nodes.
 *
 * A **singleton** - you can create only one and it has "endless" (static) lifespan.
 *
-* @thread Call from application RTOS thread.
+* @thread Application RTOS thread, throughout.
 */
 pub trait Node {
+    // Provided by the upper trait:
+    async fn on_app_signal(&mut self, app_signal: AppSignal);
+    fn on_zcl_event(&mut self, zcl_event: ZclEvent);
+
     /**
     * Initialize the Zigbee side of things.
     *
-    * This launches the task that receives Zigbee events, converts them to Rust-friendly structs, and sends them over
-    * to the application task.
+    * Launches the task that receives Zigbee events, converts them to Rust-friendly structs, and
+    * sends them over to us, the application task.
     */
-    // 'auto_start': we might get rid of this parameter. It has to do with the application initialization logic.
-    //      C example uses delayed hardware init. If the value is 'true', the Zigbee network needs to be later
-    //      activated by a call to '...'.
-    //
-    fn init(cfg: &'static Config, auto_start: bool) -> Result<(), crate::Error> where Self: Sized {
-        zigbee_spawn(cfg, auto_start)
+    fn init(cfg: &'static Config) -> Result<(), crate::Error> where Self: Sized {
+        zigbee_spawn(cfg)
             .map_err(|e| { Error::SpawnFailed(e) })
     }
 
     /**
-    * Run the event loop, passing Zigbee events to the application task (that calls us).
-    *
-    * @note 'on_app_signal' is an 'async' callback, allowing one to use async waits within it (very handy!).
+    * Run the event loop, passing Zigbee events from the channel (an implementation detail) to the
+    * application's methods.
     */
-    async fn run<T,F1,F2>(this: T, on_app_signal: F1, on_zcl_event: F2) -> !
-    where
-        T: Node + 'static,
-        F1: Fn(&'static T, AppSignal) -> core::pin::Pin<Box<dyn Future<Output = ()>>>,
-            // Rust note:
-            //      'Pin<Box<...>>' is used to assist the Rust compiler with type erasure and to
-            //      ensure the future's internal state remains safe and stable across await boundaries.
-            //
-        F2: Fn(&'static T, Result<ZclEvent, ZclError>),
-        Self: Sized
-    {
-        // Leak 'T' once, to make it 'static.
-        let this: &'static T = Box::leak(Box::new(this));
+    async fn run_loop(mut self) -> ! where Self: Sized {
+        //r Leak 'T' once, to make it 'static.
+        //r let this: &'static T = Box::leak(Box::new(this));
 
         let rx = CHANNEL.receiver();
 
         loop {
             let x = rx.receive().await;
             match x {
-                Payload::AppSignal(x) => on_app_signal(this, x) .await,
-                Payload::ZclEvent(x) => on_zcl_event(this, x)
+                Payload::AppSignal(x) =>  self.on_app_signal(x) .await,
+                Payload::ZclEvent(x) => self.on_zcl_event(x)
             }
         }
     }
+}
 
-    //---
-    // The rest of the methods are for the application task to call the Zigbee C API.
-    // They _must_ all have the guarding mechanism in place!!!
-
+/// Access to methods of the 'esp_zigbee_lib' from a context (application RTOS thread) that
+/// requires locking.
+///
+/// @design
+///     We could provide a '.guarded(|x| { x.aaa(); x.bbb() } )' interface that has the benefit
+///     of allowing multiple calls per one lock. Currently, we don't. Everything is guarded,
+///     but the application developer _does not need_ to know about it.
+///
+pub trait NodeApi {
     /**
     * Get the PAN ID of the network.
     */
@@ -185,6 +179,9 @@ pub trait Node {
     *       role).
     *
     * Note: Modes are bit patterns.
+    *
+    * @note It's a little bit strange that the C library only lists 'EZB_ERR_NONE' as a return value.
+    *       Does it always succeed? Is this a claim that future version might give errors? #feedback
     */
     fn start_top_level_commissioning(&self, mask: BdbMode) -> Result<(),EspError> {
         let _guard = ZigbeeGuard::acquire();
@@ -248,25 +245,30 @@ pub trait Node {
     }
 }
 
-#[must_use = "Please store the guard in a variable, e.g. '_guard = ...'; otherwise it drops right away."]
+/// Provide application level 'Node'-derivatives access to (parts of) the C level API.
+///
+impl<T: Node> NodeApi for T {}
+
+/// All 'Node' methods are outside of the 'esp_zigbee_lib' callbacks, since they operate in another
+/// RTOS thread and received the information via a channel. Thus, they need locks when accessing the
+/// 'esp_zigbee_lib' API.
+///
+#[must_use = "Please store the guard in a variable, e.g. '_guard = ...'"]
 struct ZigbeeGuard;
 
 // Just a safety check to see if anyone tries to guard repeatedly.
 static GUARDED: AtomicBool = AtomicBool::new(false);
 
 impl ZigbeeGuard {
-    /**
-    * It's mandatory to acquire the lock before calling any Zigbee SDK APIs, except that the call site is in Zigbee
-    * callbacks.
-    */
     fn acquire() -> Self {
-        if GUARDED.swap(true, Ordering::Relaxed) {
-            panic!("Guard entered twice");  // could be a warning, but we don't need to be re-entrant.
-        }
+        let claimed = GUARDED.swap(true, Ordering::Relaxed);
+        assert!(!claimed, "INTERNAL: Guard re-entered"); // if we coded correctly, a double claim won't happen. Application cannot cause it.
 
         unsafe {
-            let got_it = esp_zigbee_lock_acquire(99999);
-            assert!(got_it, "lock not acquired");
+            let got_it = esp_zigbee_lock_acquire(99999);    // tbd. change to a tick count matching, say, 9s
+
+            // Note: 'got_it' being 'false' is technically possible: it means our huge window timed out.
+            if !got_it { panic!("Timed out waiting for Zigbee lock") };
         };
         Self
     }
@@ -274,9 +276,8 @@ impl ZigbeeGuard {
 
 impl Drop for ZigbeeGuard {
     fn drop(&mut self) {
-        if GUARDED.swap(false, Ordering::Relaxed) == false {
-            panic!("Guard already dropped!");
-        }
+        let claimed= GUARDED.swap(false, Ordering::Relaxed);
+        assert!(claimed, "INTERNAL: Guard already dropped!");
 
         unsafe {
             esp_zigbee_lock_release();

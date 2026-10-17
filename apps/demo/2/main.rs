@@ -27,7 +27,8 @@ async fn main(_spawner: Spawner) {
 
     esp_idf_svc::log::EspIdfLogger::initialize_default();
 
-    // Separate Rust logging level from C (steered in 'sdkconfig.defaults').
+    // Separate Rust logging level from C (steered by 'RUST_LOG' env.var).
+    #[cfg(false)]   // consider undone!
     {
         let lev = match env!("RUST_LOG_LEVEL") {
             "trace" => log::LevelFilter::Trace,
@@ -39,7 +40,7 @@ async fn main(_spawner: Spawner) {
         log::set_max_level(lev);
     }
 
-    // Initialize the flash. Here we use default "nvs" partition for Zigbee.
+    // Initialize the flash.
     {
         let partition = EspDefaultNvsPartition::take()
             .unwrap_or_else(|e| panic!("Initialization of flash failed: {:?}", e));
@@ -50,5 +51,5 @@ async fn main(_spawner: Spawner) {
     let zb_node = IasCoordinator::new()
         .unwrap_or_else(|e| panic!("Initialization of Zigbee failed: {:?}", e));
 
-    zb_node.run() .await;
+    zb_node.run() .await; unreachable!()
 }

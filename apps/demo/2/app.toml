@@ -20,7 +20,7 @@ max_children = 5
 
 [endpoint.defaults]
 manufacturer_name = "Espressif"
-model_identifier = "ESP32-C6 gateway"
+model_identifier = "demo 2"
 
 [endpoint.1]
 device_type = "HA::ias_cie"

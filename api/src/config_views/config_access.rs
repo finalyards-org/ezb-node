@@ -1,4 +1,3 @@
-
 use ezb_node_config::{
     ChannelMask,
     Config,
@@ -27,10 +26,9 @@ use crate::{
 };
 
 /**
-* An object to bridge the TOML sections '[network]', '[platform]' and '[node]' with 'esp_zigbee_lib'
-* APIs.
+* An object to bridge the TOML sections '[network]' and '[node]' with 'esp_zigbee_lib' APIs.
 */
-pub(crate) struct ConfigAccess{
+pub(crate) struct ConfigAccess<const PARTITION_NAME: &'static str = "nvs">{
     /// Data structure needed for 'ezb_init()'
     c_config: esp_zigbee_config_t,
     channel_masks: [ChannelMask; 2],
@@ -39,12 +37,12 @@ pub(crate) struct ConfigAccess{
     pre_configurers: Vec<PreConfigurer>,
 }
 
-impl ConfigAccess {
+impl<const PARTITION_NAME: &'static str> ConfigAccess<PARTITION_NAME> {
 
     /// Form a *data structure* that leans towards the 'esp_zigbee_lib' usage, but *does not run
     /// any initializations*, yet.
     ///
-    fn new(cfg: &'static Config, storage_partition_name: &'static str) -> Self {
+    fn new(cfg: &'static Config) -> Self {
         let Config {
             primary_channels,
             secondary_channels,
@@ -115,7 +113,7 @@ impl ConfigAccess {
         /// A data structure, one used by C level.
         ///
         let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
-            storage_partition_name
+            PARTITION_NAME
         );
 
         /// Data we retain for the later '.init()'
@@ -166,9 +164,9 @@ impl ConfigAccess {
 }
 
 // This allows an app to provide a static '&Config' where the needing party only needs a view.
-impl From<&'static Config> for ConfigAccess {
+impl<const PN: &'static str> From<&'static Config> for ConfigAccess<PN> {
     fn from(c: &'static Config) -> Self {
-        Self::new(c, "nvs")
+        Self::new(c)
     }
 }
 

@@ -18,7 +18,7 @@ publish = false
 [dependencies]
 ezb-node = { workspace = true, features = [] }   # "coordinator", "router"
 
-anyhow = { version = "1.0"}
+#? anyhow = { version = "1.0"}
 
 log.workspace = true
 

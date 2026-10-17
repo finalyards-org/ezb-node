@@ -96,6 +96,7 @@ fn main() -> Result<()> {
     }
 
     // Allow steering of logging by an env.var
+    #[cfg(false)]   // tbd. unfinished; how to best steer logging level for Rust side remains undone
     {
         if let Some(lev) = std::env::var("RUST_LOG") .ok() {
             // Pass it to the code

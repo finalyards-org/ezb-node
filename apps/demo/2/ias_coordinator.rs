@@ -17,8 +17,7 @@ mod cfg;
 // If you want to have state, use interior mutability (e.g., 'Mutex'), as the node (a singleton)
 // is accessed via immutable references.
 pub(crate) struct IasCoordinator
-where Self: Node {
-}
+where Self: Node {}
 
 impl Node for IasCoordinator {}
 
@@ -27,7 +26,7 @@ impl IasCoordinator {
         const AUTO_START: bool = false;
         // Note: This might disappear, see comment of 'Node::init()'.
 
-        let () = <Self as Node>::init(cfg::get(), AUTO_START)?;  // BUG: CRASHES HERE
+        let () = <Self as Node>::init(cfg::get(), AUTO_START)?;
         Ok(Self {})
     }
 
@@ -58,7 +57,7 @@ impl IasCoordinator {
             ZdoSignalSkipStartup => {
                 log::info!("Initialize Zigbee stack");
                 self.start_top_level_commissioning(BdbMode::Initialization)
-                    .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", ZdoSignalSkipStartup, e));
+                    .expect();
             },
 
             BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
@@ -66,13 +65,15 @@ impl IasCoordinator {
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
                     self.start_top_level_commissioning(BdbMode::NetworkFormation)
-                        .unwrap_or_else(|e| log::warn!("Failed handling '{}' (new): {}", sig, e));
+                        .expect();
+                        //r .unwrap_or_else(|e| log::warn!("Failed handling '{}' (new): {}", sig, e));
                 } else {
                     log::info!("Device rebooted. Opening network for existing devices.");
 
                     // Open for pairing for a moment.
                     self.start_top_level_commissioning(BdbMode::NetworkSteering)
-                        .unwrap_or_else(|e| log::warn!("Failed handling '{}' (NOT new): {}", sig, e));
+                        .expect();
+                        //r .unwrap_or_else(|e| log::warn!("Failed handling '{}' (NOT new): {}", sig, e));
                 }
             },
             BdbSignalDeviceFirstStart(_st) | BdbSignalDeviceReboot(_st) => {
@@ -80,7 +81,8 @@ impl IasCoordinator {
 
                 embassy_time::Timer::after_secs(1).await;
                 self.start_top_level_commissioning(BdbMode::Initialization)
-                    .unwrap_or_else(|e| log::warn!("Failed handling {}: {}", sig, e));
+                    .expect();
+                    //r .unwrap_or_else(|e| log::warn!("Failed handling {}: {}", sig, e));
             },
 
             BdbSignalFormation(BdbStatus::Success) => {
@@ -92,14 +94,16 @@ impl IasCoordinator {
                 );
                 // Allow devices to join.
                 self.start_top_level_commissioning(BdbMode::NetworkSteering)
-                    .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
+                    .expect();
+                    //r .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
             },
             BdbSignalFormation(st) => {
                 log::info!("Failed to form network: {}, st = {}", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
                 self.start_top_level_commissioning(BdbMode::NetworkFormation)
-                    .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
+                    .expect();
+                    //.unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
             },
 
             BdbSignalSteering(BdbStatus::Success) => {
@@ -118,7 +122,8 @@ impl IasCoordinator {
 
                 embassy_time::Timer::after_secs(1).await;
                 self.start_top_level_commissioning(BdbMode::NetworkSteering)
-                    .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
+                    .expect();
+                    //r .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
             }
 
             ZdoSignalDeviceAnnce { short_addr, device_addr, .. } => {

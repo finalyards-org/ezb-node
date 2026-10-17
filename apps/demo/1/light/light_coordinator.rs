@@ -1,39 +1,31 @@
-use embassy_sync::channel::{
-    DynamicReceiver
-};
-
 use ezb_node::{
     AppSignal,
     BdbMode,
     BdbStatus,
-    Config,
     Node,
+    NodeApi,    // all 'esp_zigbee_lib' access
     ZclEvent,
-    ZclError,
 };
 
-pub(crate) struct LightCoordinator
-where Self: Node {
-    // Use interior mutability (e.g., 'Mutex') if shared state is needed, as the node (a singleton) is accessed via
-    // immutable references.
-}
+#[path = ".conf.rs"]
+mod cfg;
 
-impl Node for LightCoordinator {}
+pub(crate) struct LightCoordinator;
 
 impl LightCoordinator {
-    pub fn new(c: &'static Config) -> Result<Self, ezb_node::Error> {
-        const AUTO_START: bool = false;
-        // Note: This might disappear, see comment of 'Node::init()'.
-
-        let () = <Self as Node>::init(c, AUTO_START)?;
+    pub fn new() -> Result<Self, ezb_node::Error> {
+        let () = <Self as Node>::init(cfg::get())?;
         Ok(Self {})
     }
+}
 
-    /**
+impl Node for LightCoordinator {
+    /**RRR
     * Behaviour of this particular node.
     *
     * @note: The closures provided to 'Node::run' are run in this application task.
     */
+    #[cfg(false)]
     pub async fn run(self) -> ! {
         <Self as Node>::run(self,
   |this, sig| Box::pin(this.on_app_signal(sig)),
@@ -43,14 +35,22 @@ impl LightCoordinator {
 
     /**
     * Run the received signal through our logic match.
+    *
+    * @note All access to 'self' is serialized by the 'ezb-node'.
     */
-    async fn on_app_signal(&self, sig: AppSignal) {
+    async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
+
+        // Used so much it warrants us to make
+        let enter_commission_mode = |mode: BdbMode| {
+            self.start_top_level_commissioning(mode)
+                .expect("Unable to commit the top level commissioning state");  // tbd. does this occur?
+        };
 
         match sig {
             ZdoSignalSkipStartup => {
                 log::info!("Initialize Zigbee stack");
-                self.start_top_level_commissioning(BdbMode::Initialization);
+                enter_commission_mode(BdbMode::Initialization)
             },
 
             BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
@@ -59,7 +59,7 @@ impl LightCoordinator {
                 let is_new = self.is_factory_new();
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
-                    self.start_top_level_commissioning(BdbMode::NetworkFormation);
+                    enter_commission_mode(BdbMode::NetworkFormation);
                 } else {
                     log::info!("Device rebooted");
                 }
@@ -68,7 +68,7 @@ impl LightCoordinator {
                 log::warn!("{} failed with status = {}; retrying...", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::Initialization);
+                enter_commission_mode(BdbMode::Initialization);
             },
 
             BdbSignalFormation(BdbStatus::Success) => {
@@ -78,13 +78,13 @@ impl LightCoordinator {
                     self.get_current_channel(),
                     self.get_short_address()
                 );
-                self.start_top_level_commissioning(BdbMode::NetworkSteering);
+                enter_commission_mode(BdbMode::NetworkSteering);
             },
             BdbSignalFormation(st) => {
                 log::info!("Failed to form network: {}, st = {}", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkFormation);
+                enter_commission_mode(BdbMode::NetworkFormation);
             },
 
             BdbSignalSteering(BdbStatus::Success) => {
@@ -94,7 +94,7 @@ impl LightCoordinator {
                 log::info!("Failed the network steering: st = {}", st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkSteering);
+                enter_commission_mode(BdbMode::NetworkSteering);
             }
 
             ZdoSignalDeviceAnnce { short_addr, .. } => {
@@ -124,19 +124,14 @@ impl LightCoordinator {
     /**
     * Run the received ZCL event through our logic.
     */
-    fn on_zcl_event(&self, ev_res: Result<ZclEvent, ZclError>) {
+    fn on_zcl_event(&mut self, ev: ZclEvent) {
         use ZclEvent::*;
 
-        // Note: It may be that we need to know more about the event, when errors arise. Let's, however, keep the
-        //      'ZclEvent' for successful ones, and curry the 'ZclError' with extra information ('CommonInfo'?) if
-        //      there is a need. All this information is available in the C level, but dividing it to success/fail
-        //      will make applications easier to read.
-
-        let Ok(ev) = ev_res else {
-            log::warn!("ZCL event error: {}", ev_res.err().unwrap());
-            return;
-        };
-
+        // Obs.!
+        //
+        //      We might want to know more about failed events. If so, the C side has 'CommonInfo'.
+        //      We can pass an 'Either' here (instead of 'Result', that gives wrong vibes).
+        //
         match ev {
             SetAttrValue { .. } => {
                 todo!();
