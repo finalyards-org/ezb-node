@@ -18,8 +18,6 @@ publish = false
 [dependencies]
 ezb-node = { workspace = true, features = [] }   # "coordinator", "router"
 
-#? anyhow = { version = "1.0"}
-
 log.workspace = true
 
 esp-idf-hal = { workspace = true }

@@ -1,0 +1,14 @@
+assert failed: core_globals_get core_globals.c:67 (core_globals_inited())
+Backtrace: 0x408085a0:0x4081ef90 0x40808554:0x4081efa0 0x408079e2:0x4081efb0 0x42022ade:0x4081f0e0
+0x408085a0 - panic_abort
+    at /home/lima/.espressif/esp-idf/v6.1/components/esp_system/panic.c:509
+0x40808554 - esp_system_abort
+    at /home/lima/.espressif/esp-idf/v6.1/components/esp_system/port/esp_system_chip.c:87
+0x408079e2 - __assert_func
+    at /home/lima/.espressif/esp-idf/v6.1/components/esp_libc/src/assert.c:81
+0x42022ade - core_globals_get
+    at ??:??
+Backtrace ended abruptly: cannot find DWARF information for instruction at address 0x42022ade
+0x42022ade - core_globals_get
+    at ??:??
+

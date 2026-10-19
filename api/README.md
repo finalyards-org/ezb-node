@@ -48,8 +48,7 @@ Builds the library.
     let zb_node = IasCoordinator::new()
         .unwrap_or_else(|e| panic!("Initialization of Zigbee failed: {:?}", e));
 
-    zb_node.run() .await; 
-    unreachable!()
+    zb_node.run() .await;
 ```
 
 See the samples at `apps/`. 

@@ -1,10 +1,11 @@
 # Name,     Type, SubType, Offset, Size, Flags
 nvs,        data, nvs,,     0x6000,
 phy_init,   data, phy,,     0x1000,
-factory,    app,  factory,, 1200K,
+factory,    app,  factory,, 1400K,
 zb_fct,     data, fat,,     1K,
 
 # factory:    application specific use (disable once using OTA, though they are not exclusive)
+#             Note: with 'opt-level' "s" (size), application fits below 1200K
 # ota*:       for Over-the-air (firmware) updates
 # zb_fct:     storing of manufacturing, device specific data, Zigbee 3.0 Install Code
 

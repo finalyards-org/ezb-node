@@ -16,6 +16,8 @@ use ezb_node_apps::{
     set_panic_hook,
 };
 
+use log::LevelFilter;
+
 mod light_coordinator;
 use light_coordinator::LightCoordinator;
 
@@ -32,8 +34,15 @@ async fn main(spawner: Spawner) {
 
     set_panic_hook();
 
-    // Use for tying log levels to ESP-IDF ('CONFIG_LOG_DEFAULT_LEVEL')
-    esp_idf_svc::log::EspIdfLogger::initialize_default();
+    // Logging
+    {
+        // Steer by 'RUST_LOG' env.var. (info is default)
+        esp_idf_svc::log::init_from_env();
+
+        log::info!("TESTING 1");
+        log::debug!("TESTING 2");
+        log::trace!("TESTING 3");
+    }
 
     // Initialize the flash.
     {

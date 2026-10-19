@@ -9,7 +9,7 @@
 mod zigbee_task;
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use zigbee_task::zigbee_spawn;
+use zigbee_task::zigbee_task;
 
 mod zigbee_dev;
 pub(crate) use zigbee_dev::ZigbeeDev;
@@ -55,11 +55,15 @@ pub(self) static CHANNEL: Channel<CriticalSectionRawMutex, Payload, 10> = Channe
     // tx: in 'zigbee_task'
     // rx: us, application task
 
+const ZIGBEE_TASK_NAME: &str = "Zigbee_main";
+
+//const ZIGBEE_TASK_STACK_SIZE: usize = 10 * 1024;   // note: C example uses 4k, Rust may need more
+//  Let's just use the default, unless there's a specific reason to be ...specific.
+
 #[derive(Debug, Clone)]
 enum Payload {
     AppSignal(AppSignal),
     ZclEvent(ZclEvent)
-    //r was: ZclEvent(Result<ZclEvent,ZclError>)    -- if needed, make it 'ZclError'
 }
 
 /**
@@ -84,22 +88,31 @@ pub trait Node {
     * sends them over to us, the application task.
     */
     fn init(cfg: &'static Config) -> Result<(), crate::Error> where Self: Sized {
-        zigbee_spawn(cfg)
-            .map_err(|e| { Error::SpawnFailed(e) })
+
+        let _handle = std::thread::Builder::new()
+            .name(ZIGBEE_TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
+            //.stack_size(ZIGBEE_TASK_STACK_SIZE)
+
+
+            .spawn(move || zigbee_task(cfg))
+            .map_err(|e| { Error::SpawnFailed(e) });
+
+        panic!("44"); // DEBUG
+        log::info!("Returning from 'Node::init()'");
     }
 
     /**
     * Run the event loop, passing Zigbee events from the channel (an implementation detail) to the
-    * application's methods.
+    * handlers.
     */
     async fn run_loop(mut self) -> ! where Self: Sized {
-        //r Leak 'T' once, to make it 'static.
-        //r let this: &'static T = Box::leak(Box::new(this));
-
         let rx = CHANNEL.receiver();
 
         loop {
             let x = rx.receive().await;
+            log::info!("Received: {:?}", &x);  // DEBUG
+            panic!("55"); // DEBUG
+
             match x {
                 Payload::AppSignal(x) =>  self.on_app_signal(x) .await,
                 Payload::ZclEvent(x) => self.on_zcl_event(x)
@@ -107,6 +120,10 @@ pub trait Node {
         }
     }
 }
+
+/// Provide applications' event handlers access to (parts of) the C level API.
+///
+impl<T: Node> NodeApi for T {}
 
 /// Access to methods of the 'esp_zigbee_lib' from a context (application RTOS thread) that
 /// requires locking.
@@ -122,6 +139,7 @@ pub trait NodeApi {
     */
     fn get_panid(&self) -> u16 {
         let _guard = ZigbeeGuard::acquire();
+        panic!("ezb_nwk_get_panid");    // DEBUG
         unsafe {
             ezb_nwk_get_panid()
         }
@@ -132,6 +150,7 @@ pub trait NodeApi {
     */
     fn get_extended_panid(&self) -> IeeeAddr {
         let _guard = ZigbeeGuard::acquire();
+        panic!("ezb_nwk_get_extended_panid");    // DEBUG
         let v = unsafe {
             ezb_nwk_get_extended_panid()
         };
@@ -143,6 +162,7 @@ pub trait NodeApi {
     */
     fn get_extended_address(&self) -> IeeeAddr {
         let _guard = ZigbeeGuard::acquire();
+        panic!("33");    // DEBUG
         let v = unsafe {
             ezb_nwk_get_extended_address()
         };
@@ -154,6 +174,7 @@ pub trait NodeApi {
     */
     fn get_short_address(&self) -> u16 {
         let _guard = ZigbeeGuard::acquire();
+        panic!("44");    // DEBUG
         unsafe {
             ezb_nwk_get_short_address()
         }
@@ -164,6 +185,7 @@ pub trait NodeApi {
     */
     fn get_current_channel(&self) -> u8 {
         let _guard = ZigbeeGuard::acquire();
+        panic!("55");    // DEBUG
         unsafe {
             ezb_nwk_get_current_channel()
         }
@@ -185,6 +207,7 @@ pub trait NodeApi {
     */
     fn start_top_level_commissioning(&self, mask: BdbMode) -> Result<(),EspError> {
         let _guard = ZigbeeGuard::acquire();
+        panic!("66");    // DEBUG
 
         EspError::wrap(unsafe {
             ezb_bdb_start_top_level_commissioning(mask.into())
@@ -201,6 +224,7 @@ pub trait NodeApi {
     */
     fn is_factory_new(&self) -> bool {
         let _guard = ZigbeeGuard::acquire();
+        panic!("77");    // DEBUG
         unsafe {
             ezb_bdb_is_factory_new()
         }
@@ -219,6 +243,7 @@ pub trait NodeApi {
         let secs: u8 = for_how_long.as_secs() as u8;
 
         let _guard = ZigbeeGuard::acquire();
+        panic!("99");    // DEBUG
         let err = unsafe {
             ezb_bdb_open_network(secs)
                 // docs don't care to mention the unit (2.0.4), but examples use seconds. #3rdparty
@@ -245,10 +270,6 @@ pub trait NodeApi {
     }
 }
 
-/// Provide application level 'Node'-derivatives access to (parts of) the C level API.
-///
-impl<T: Node> NodeApi for T {}
-
 /// All 'Node' methods are outside of the 'esp_zigbee_lib' callbacks, since they operate in another
 /// RTOS thread and received the information via a channel. Thus, they need locks when accessing the
 /// 'esp_zigbee_lib' API.
@@ -264,6 +285,7 @@ impl ZigbeeGuard {
         let claimed = GUARDED.swap(true, Ordering::Relaxed);
         assert!(!claimed, "INTERNAL: Guard re-entered"); // if we coded correctly, a double claim won't happen. Application cannot cause it.
 
+        panic!("111");  // DEBUG
         unsafe {
             let got_it = esp_zigbee_lock_acquire(99999);    // tbd. change to a tick count matching, say, 9s
 
@@ -279,6 +301,7 @@ impl Drop for ZigbeeGuard {
         let claimed= GUARDED.swap(false, Ordering::Relaxed);
         assert!(claimed, "INTERNAL: Guard already dropped!");
 
+        panic!("333");  // DEBUG
         unsafe {
             esp_zigbee_lock_release();
         }

@@ -20,19 +20,6 @@ impl LightCoordinator {
 }
 
 impl Node for LightCoordinator {
-    /**RRR
-    * Behaviour of this particular node.
-    *
-    * @note: The closures provided to 'Node::run' are run in this application task.
-    */
-    #[cfg(false)]
-    pub async fn run(self) -> ! {
-        <Self as Node>::run(self,
-  |this, sig| Box::pin(this.on_app_signal(sig)),
-  |this, ev| this.on_zcl_event(ev)
-        ).await
-    }
-
     /**
     * Run the received signal through our logic match.
     *
@@ -41,6 +28,7 @@ impl Node for LightCoordinator {
     async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
 
+        panic!("999"); // DEBUG
         // Used so much it warrants us to make
         let enter_commission_mode = |mode: BdbMode| {
             self.start_top_level_commissioning(mode)
@@ -126,6 +114,8 @@ impl Node for LightCoordinator {
     */
     fn on_zcl_event(&mut self, ev: ZclEvent) {
         use ZclEvent::*;
+
+        panic!("888"); // DEBUG
 
         // Obs.!
         //

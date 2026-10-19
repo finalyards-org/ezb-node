@@ -48,108 +48,90 @@ use crate::{
 use ezb_node_config::{ChannelMask, CommonFields, Endpoint};
 use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
 
-const TASK_NAME: &str = "Zigbee_main";
-
-//const TASK_STACK_SIZE: usize = 10 * 1024;   // note: C example uses 4k, Rust may need more
-    // Note: What if we omit this, just let the default (from 'sdkconfig.defaults'?) take effect.
-
 // 'true' for now, to keep similarity with C examples.
 const AUTO_START: bool = true;
 
 /**
-* Launch the separate, background FreeRTOS task for interacting with the 'esp_zigbee_lib' callbacks (C side).
+* Separate, background FreeRTOS task for interacting with the 'esp_zigbee_lib' callbacks (C side).
 *
-* @note Initialization etc. is done within the new thread; this is to remain as close to the C examples
-*       as possible.
+* @note Corresponds closely with C samples' 'esp_zigbee_stack_main_task'.
 */
-pub(crate) fn zigbee_spawn(cfg: &'static Config) -> Result<(),std::io::Error> {
+// tbd. !! try doing initialization outside of the Zigbee task (if that works, it allows better
+//      error management than here). e.g. a 'zigbee_spawn()' that runs within the application task.
+//
+pub(crate) fn zigbee_task(cfg: &'static Config) -> ! {
     let ca: ConfigAccess = cfg.into();
+
+    //    esp_zigbee_config_t config = ESP_ZIGBEE_DEFAULT_CONFIG();
+    // ^-- Creating '&'static Config' corresponds to this
+
+    log::info!("Zigbee task launched");
+    log::trace!("TESTING");
+    panic!("12");
+
+    //    ESP_ERROR_CHECK(esp_zigbee_init(&config));
+    //
+    // It's important this is the first call - 'esp_zigbee_init()' before any other calls.
+    //
+    log::info!("TRACE: ennen 'ca.init()'");
+    ca.init() .unwrap();
+    log::info!("TRACE: jälkeen 'ca.init()'");
+
+    // esp_zigbee_setup_commissioning():
+    //    ezb_aps_secur_enable_distributed_security(false);
+    //     ESP_ERROR_CHECK(ezb_bdb_set_primary_channel_set(ESP_ZIGBEE_PRIMARY_CHANNEL_MASK));
+    //     ESP_ERROR_CHECK(ezb_bdb_set_secondary_channel_set(ESP_ZIGBEE_SECONDARY_CHANNEL_MASK));
+    //     ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
+
     let endpoint_cfg: EndpointCreator = cfg.into();
 
-    let res = std::thread::Builder::new()
-        .name(TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
-        //.stack_size(TASK_STACK_SIZE)
-        .spawn(move || {
-            log::info!("Zigbee task running");
-            log::debug!("TESTING DEBUG");
-            log::trace!("TESTING TRACE");
+    //      ESP_ERROR_CHECK(esp_zigbee_create_zha_color_dimmable_light_device());
+    //
+    let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
 
-            // tbd. !! try calling these from outside of the 'spawn' - that way we get reasonable
-            //      chance of reacting to errors (unlike here).
-            //
-            let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
+    log::info!("TRACE: ezb_zcl_core_action_handler_register");
+    let () = unsafe {
+        ezb_zcl_core_action_handler_register(Some(crate::node::zigbee_task::zcl_action_handler));
+    };
 
-            log::trace!("ezb_zcl_core_action_handler_register");
-            let () = unsafe {
-                ezb_zcl_core_action_handler_register(Some(crate::node::zigbee_task::zcl_action_handler));
-            };
+    // tbd. CONFIRM THIS:
+    //
+    // It seems (based on discussion with google.ai) that having 'install_policy: false'
+    // (= allow open pairing: false) WOULD NOT by itself ban attempts to use a default install code.
+    //
+    // This is weird. In the mean time, let's call this and see what happens.
+    //
+    // THE C SAMPLES ARE OF NO USE since they have the loose security (allowing open keys).
+    #[cfg(feature = "coordinator")]
+    {
+        log::info!("TRACE: ezb_secur_set_ic_required (true)");
+        // Should we call this? "Enable Trust Center to require install code for joining."
+        EzbError::wrap( unsafe {
+            ezb_secur_set_ic_required(true)
+        }) .unwrap();
+    }
 
-            log::trace!("ennen 'ca.init()'");
-            ca.init() .unwrap();
-            log::trace!("jälkeen 'ca.init()'");
+    //ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
 
-            // tbd. CONFIRM THIS:
-            //
-            // It seems (based on discussion with google.ai) that having 'install_policy: false'
-            // (= allow open pairing: false) WOULD NOT by itself ban attempts to use a default install code.
-            //
-            // This is weird. In the mean time, let's call this and see what happens.
-            //
-            #[cfg(feature = "coordinator")]
-            {
-                log::trace!("ezb_secur_set_ic_required (true)");
-                // Should we call this? "Enable Trust Center to require install code for joining."
-                EzbError::wrap( unsafe {
-                    ezb_secur_set_ic_required(true)
-                }) .unwrap();
-            }
+    log::info!("TRACE: ezb_app_signal_add_handler");
+    EzbError::wrap(unsafe {
+        ezb_app_signal_add_handler(Some(app_signal_handler))
+    }) .unwrap();
+        // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
+        //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
 
-            //ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
+    //    ESP_ERROR_CHECK(esp_zigbee_start(false));
+    {
+        EspError::wrap( unsafe {
+            esp_zigbee_start(AUTO_START)
+        }) .unwrap();
 
-            log::trace!("ezb_app_signal_add_handler");
-            EzbError::wrap(unsafe {
-                ezb_app_signal_add_handler(Some(app_signal_handler))
-            }) .unwrap();
-                // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
-                //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
-
-            local_zigbee_run(AUTO_START) .unwrap();
-
-            unreachable!()
-        });
-
-    Ok(())  // right after the thread is successfully spawned (app can start waiting on the channel)
-}
-
-/**
-* Run the Zigbee task.
-*
-* @param auto_start
-*   'true' for automatic start of the Zigbee stack
-*   'false' for delayed start, needing a call to '.start_top_level_commissioning()' at a later stage.
-*/
-//ESP_ERROR_CHECK(esp_zigbee_start(false));
-//esp_zigbee_launch_mainloop();
-//
-// tbd. Could merge this whole function to the place where it's called.
-fn local_zigbee_run(auto_start: bool) -> Result<!,EspError> {
-    log::trace!("esp_zigbee_start");
-    EspError::wrap( unsafe {
-        esp_zigbee_start(auto_start)
-    })?;
-
-    log::trace!("esp_zigbee_launch_mainloop");
-    EspError::wrap( unsafe {
-        esp_zigbee_launch_mainloop()
-    })?;
-
-    unreachable!();
-
-    // C code continues with the below; one can imagine this were to happen if the main loop
-    // is cancelled from application logic, but... the demo does not do it (right?). #feedback
-
-    //esp_zigbee_deinit();
-    //vTaskDelete(NULL);
+        log::trace!("esp_zigbee_launch_mainloop");
+        EspError::wrap( unsafe {
+            esp_zigbee_launch_mainloop()
+        }) .unwrap();
+    }
+    unreachable!()
 }
 
 /**

@@ -285,6 +285,39 @@ You can wipe the folder (it's a kind of cache):
 $ rm -rf ~/.espressif
 ```
 
+### Abort dumps
+
+We take measures to:
+
+a. not end in a reset-loop if there's a panic in your node's initialization.<br />
+b. provide a detailed stack trace
+
+However, an error within a C library cannot back-trace its caller over the C/Rust interface:
+
+```
+assert failed: core_globals_get core_globals.c:67 (core_globals_inited())
+Backtrace: 0x408085a0:0x4081f040 0x40808554:0x4081f050 0x408079e2:0x4081f060 0x42023f2a:0x4081f190
+0x408085a0 - panic_abort
+    at /home/lima/.espressif/esp-idf/v6.1/components/esp_system/panic.c:509
+0x40808554 - esp_system_abort
+    at /home/lima/.espressif/esp-idf/v6.1/components/esp_system/port/esp_system_chip.c:87
+0x408079e2 - __assert_func
+    at /home/lima/.espressif/esp-idf/v6.1/components/esp_libc/src/assert.c:81
+0x42023f2a - core_globals_get
+    at ??:??
+Backtrace ended abruptly: cannot find DWARF information for instruction at address 0x42023f2a
+0x42023f2a - core_globals_get
+    at ??:??
+```
+
+Note the `"Backtrace ended abruptly: "`. We never get to know why `core_globals_get` was called.
+
+**What can be done?**
+
+*tbd.*
+
+
+
 ## References
 
 - [Espressif Zigbee SDK 2.x](https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32c6/introduction.html) (Espressif docs)
