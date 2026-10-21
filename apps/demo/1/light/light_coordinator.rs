@@ -28,7 +28,6 @@ impl Node for LightCoordinator {
     async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
 
-        panic!("999"); // DEBUG
         // Used so much it warrants us to make
         let enter_commission_mode = |mode: BdbMode| {
             self.start_top_level_commissioning(mode)
@@ -114,8 +113,6 @@ impl Node for LightCoordinator {
     */
     fn on_zcl_event(&mut self, ev: ZclEvent) {
         use ZclEvent::*;
-
-        panic!("888"); // DEBUG
 
         // Obs.!
         //

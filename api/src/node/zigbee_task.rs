@@ -21,10 +21,11 @@ use ezb_node_raw::{
     ezb_app_signal_get_params,
     ezb_app_signal_get_type,
     ezb_app_signal_t,
-    ezb_secur_set_ic_required,
+    //r ezb_secur_set_ic_required,
     ezb_zcl_core_action_callback_id_e,
     ezb_zcl_core_action_callback_id_t,
     ezb_zcl_core_action_handler_register,
+    ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
 };
 
 use crate::{
@@ -45,11 +46,10 @@ use crate::{
     ZigbeeDev,
 };
 
-use ezb_node_config::{ChannelMask, CommonFields, Endpoint};
-use ezb_node_raw::ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID;
+use ezb_node_config::{ChannelMask, CommonFields, Endpoint, NodeType};
 
-// 'true' for now, to keep similarity with C examples.
-const AUTO_START: bool = true;
+// 'false' for now, to keep similarity with C examples.
+const AUTO_START: bool = false;
 
 /**
 * Separate, background FreeRTOS task for interacting with the 'esp_zigbee_lib' callbacks (C side).
@@ -60,68 +60,70 @@ const AUTO_START: bool = true;
 //      error management than here). e.g. a 'zigbee_spawn()' that runs within the application task.
 //
 pub(crate) fn zigbee_task(cfg: &'static Config) -> ! {
-    let ca: ConfigAccess = cfg.into();
-
     //    esp_zigbee_config_t config = ESP_ZIGBEE_DEFAULT_CONFIG();
     // ^-- Creating '&'static Config' corresponds to this
 
     log::info!("Zigbee task launched");
-    log::trace!("TESTING");
-    panic!("12");
 
     //    ESP_ERROR_CHECK(esp_zigbee_init(&config));
     //
-    // It's important this is the first call - 'esp_zigbee_init()' before any other calls.
-    //
-    log::info!("TRACE: ennen 'ca.init()'");
-    ca.init() .unwrap();
-    log::info!("TRACE: jälkeen 'ca.init()'");
-
-    // esp_zigbee_setup_commissioning():
-    //    ezb_aps_secur_enable_distributed_security(false);
-    //     ESP_ERROR_CHECK(ezb_bdb_set_primary_channel_set(ESP_ZIGBEE_PRIMARY_CHANNEL_MASK));
-    //     ESP_ERROR_CHECK(ezb_bdb_set_secondary_channel_set(ESP_ZIGBEE_SECONDARY_CHANNEL_MASK));
-    //     ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
-
-    let endpoint_cfg: EndpointCreator = cfg.into();
-
-    //      ESP_ERROR_CHECK(esp_zigbee_create_zha_color_dimmable_light_device());
-    //
-    let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
-
-    log::info!("TRACE: ezb_zcl_core_action_handler_register");
-    let () = unsafe {
-        ezb_zcl_core_action_handler_register(Some(crate::node::zigbee_task::zcl_action_handler));
-    };
-
-    // tbd. CONFIRM THIS:
-    //
-    // It seems (based on discussion with google.ai) that having 'install_policy: false'
-    // (= allow open pairing: false) WOULD NOT by itself ban attempts to use a default install code.
-    //
-    // This is weird. In the mean time, let's call this and see what happens.
-    //
-    // THE C SAMPLES ARE OF NO USE since they have the loose security (allowing open keys).
-    #[cfg(feature = "coordinator")]
+    //    esp_zigbee_setup_commissioning()
+    //      ...
+    //      ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
     {
-        log::info!("TRACE: ezb_secur_set_ic_required (true)");
-        // Should we call this? "Enable Trust Center to require install code for joining."
-        EzbError::wrap( unsafe {
-            ezb_secur_set_ic_required(true)
+        let ca: ConfigAccess = cfg.into();
+        ca.init() .unwrap();
+
+        log::trace!("ezb_app_signal_add_handler");
+        EzbError::wrap(unsafe {
+            ezb_app_signal_add_handler( Some(app_signal_handler) )
         }) .unwrap();
+            // Rust note: Rust has a strict "never-null" rule for function pointers. This causes FFI
+            //      (the Rust/C interface) to require use of 'Option<&fn>'.
     }
 
-    //ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
+    log::info!("Going to set up the device and {} endpoint(s)", cfg.endpoints.len());
 
-    log::info!("TRACE: ezb_app_signal_add_handler");
-    EzbError::wrap(unsafe {
-        ezb_app_signal_add_handler(Some(app_signal_handler))
-    }) .unwrap();
-        // Rust FFI note: 'Option<&fn>' is Rust FFI's way to present a function pointer, heading to a C interface.
-        //      Rust has a strict "never-null" rule for function pointers; this jumps around that.
+    // ESP_ERROR_CHECK(esp_zigbee_create_zha_color_dimmable_light_device());
+    //      // just a sample what C does. Below code does more, because it's general in nature.
+    {
+        let endpoint_cfg: EndpointCreator = cfg.into();
+
+        // Create all the endpoints, and the device descriptor. Register the descriptor.
+        //
+        let _dev = ZigbeeDev::new(endpoint_cfg) .unwrap();
+
+        // C 'esp_zigbee_create_zha_color_dimmable_light_device()' also ties the ZCL handler:
+        //
+        // ezb_zcl_core_action_handler_register(esp_zigbee_zcl_core_action_handler);
+        //
+        let () = unsafe {
+            ezb_zcl_core_action_handler_register( Some(crate::node::zigbee_task::zcl_action_handler) );
+        };
+    }
+
+    // THIS BLOCK CAN LIKELY BE DISMISSED.
+    //
+    // Note: IF such call were to be needed, this is probably a good place to have it.
+    //
+    #[cfg(feature = "coordinator")]
+    #[cfg(false)]
+    {
+        let NodeType::CoordinatorConfig { ref pre_configured_devices, .. } = cfg.node;
+
+        if ! pre_configured_devices.is_empty() {
+            // Should we call this? "Enable Trust Center to require install code for joining."
+            EzbError::wrap( unsafe {
+                ezb_secur_set_ic_required(true)
+            }) .unwrap();
+        }
+    }
 
     //    ESP_ERROR_CHECK(esp_zigbee_start(false));
+    //    esp_zigbee_launch_mainloop();
     {
+        // tbd. When exactly should we use auto-start 'true'/'false'?  Now keeping as-is in C examples (color-dimmable-light).
+        //
         EspError::wrap( unsafe {
             esp_zigbee_start(AUTO_START)
         }) .unwrap();
@@ -132,6 +134,10 @@ pub(crate) fn zigbee_task(cfg: &'static Config) -> ! {
         }) .unwrap();
     }
     unreachable!()
+
+    //    esp_zigbee_deinit();
+    //
+    //     vTaskDelete(NULL);
 }
 
 /**

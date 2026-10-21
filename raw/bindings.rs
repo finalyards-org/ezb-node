@@ -132,7 +132,7 @@ impl esp_zigbee_device_config_t {
 }
 
 impl esp_zigbee_platform_config_t {
-    pub fn for_native_mode(storage_partition_name: &'static str) -> Self {
+    pub fn for_native_mode(storage_partition_name: &'static core::ffi::CStr) -> Self {
         esp_zigbee_platform_config_t {
             storage_partition_name: storage_partition_name.as_ptr(),
             radio_config: esp_zigbee_radio_config_t {

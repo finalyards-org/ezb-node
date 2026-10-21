@@ -43,13 +43,7 @@ debug = true
 strip = false
 opt-level = "s"
 
-## EXPERIMENTAL
-# Was not beneficial; makes a larger ELF but still fails to bridge Rust/C call stack on C-side assert.
-#[profile.dev]
-#debug = true
-#opt-level = 0
-
-# Take latest git versions.
+# Take latest/specific git versions.
 #
 #|[patch.crates-io]
 #|esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf", rev = "e6899ae" }

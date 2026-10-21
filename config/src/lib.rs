@@ -70,7 +70,6 @@ impl non_gen::InvariantCheck for Config {
 pub enum NodeType {
     #[cfg(feature = "coordinator")]
     CoordinatorConfig {
-        //r install_code_policy: bool,
         max_children: u8,
 
         /// MAC address, install code combinations that the coordinator will let join the network.
@@ -129,7 +128,7 @@ pub enum DeviceType {
 
     // It's possible to build a Router node with no end points (no device types). In such cases,
     // this takes care of not creating an "empty enum" that complicates API layer coding.
-    _Dummy,
+    //r: still considering the approach. _Dummy,
 }
 
 #[derive(Debug, Copy, Clone)]

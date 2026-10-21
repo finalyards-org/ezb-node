@@ -17,6 +17,7 @@ use ezb_node_raw::{
     esp_zigbee_init,
     ezb_secur_ic_add,
     ezb_secur_ic_type_e,
+    ezb_aps_secur_enable_distributed_security,
 };
 
 use crate::{
@@ -112,9 +113,13 @@ impl<const PARTITION_NAME: &'static str> ConfigAccess<PARTITION_NAME> {
         //
         /// A data structure, one used by C level.
         ///
-        let platform_cfg = esp_zigbee_platform_config_t::for_native_mode(
-            PARTITION_NAME
-        );
+        let platform_cfg = {
+            // Create a CStr version of the partition name
+            let cs = std::ffi::CString::new(PARTITION_NAME).unwrap();
+            let leaked_cs: &'static std::ffi::CStr = Box::leak(cs.into_boxed_c_str());
+
+            esp_zigbee_platform_config_t::for_native_mode(leaked_cs)
+        };
 
         /// Data we retain for the later '.init()'
         ///
@@ -136,17 +141,31 @@ impl<const PARTITION_NAME: &'static str> ConfigAccess<PARTITION_NAME> {
 
     /// Initialize the node, in C library.
     ///
+    //ESP_ERROR_CHECK(esp_zigbee_init(&config));
+    //
+    // esp_zigbee_setup_commissioning:
+    //      ezb_aps_secur_enable_distributed_security(false);
+    //      ESP_ERROR_CHECK(ezb_bdb_set_primary_channel_set(ESP_ZIGBEE_PRIMARY_CHANNEL_MASK));
+    //      ESP_ERROR_CHECK(ezb_bdb_set_secondary_channel_set(ESP_ZIGBEE_SECONDARY_CHANNEL_MASK));
+    //      ESP_ERROR_CHECK(ezb_app_signal_add_handler(esp_zigbee_app_signal_handler));
+    //
     pub(crate) fn init(self) -> Result<(), EzbEspError> {
-        //ESP_ERROR_CHECK(esp_zigbee_init(&config));
-
-        // Note: By boxing and 'Box::leak' we ensure that the C-level data structure ('.c_config')
-        //      remains valid throughout the process lifespan.
+        // Note: Leaking ensures that the C-level data structure remains valid throughout the
+        // process lifespan.
         //
         let x = Box::leak(Box::new(self.c_config));
 
         EzbError::wrap( unsafe {
             esp_zigbee_init(x)
         })?;
+
+        // We only support centralized trust, i.e. the coordinator (not a router) decides, which
+        // devices are let to enter.
+        {
+            let () = unsafe {
+                ezb_aps_secur_enable_distributed_security(false)
+            };
+        }
 
         // Set the channels
         set_channels(self.channel_masks)?;
@@ -181,7 +200,6 @@ impl<const PN: &'static str> From<&'static Config> for ConfigAccess<PN> {
 */
 //ESP_ERROR_CHECK(ezb_bdb_set_primary_channel_set(ESP_ZIGBEE_PRIMARY_CHANNEL_MASK));
 //ESP_ERROR_CHECK(ezb_bdb_set_secondary_channel_set(ESP_ZIGBEE_SECONDARY_CHANNEL_MASK));
-//return ESP_OK;
 //
 fn set_channels(channel_masks: [ChannelMask;2]) -> Result<(), EzbError> {
 
@@ -236,7 +254,6 @@ impl PreConfigurer {
         EzbError::wrap( unsafe {
             ezb_secur_ic_add(mac_address, Self::IC_TYPE as u8, install_code)
         })?;
-        //.with_context(|| "ezb_secur_ic_add() failed")?;
 
         Ok(())
     }

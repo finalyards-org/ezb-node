@@ -41,7 +41,7 @@ use crate::{
     BdbMode,
     Config,
     Error,
-    EspError,
+    EzbError,
     IeeeAddr,
     ZclError,
     ZclEvent,
@@ -76,6 +76,7 @@ enum Payload {
 *
 * @thread Application RTOS thread, throughout.
 */
+#[allow(async_fn_in_trait)]
 pub trait Node {
     // Provided by the upper trait:
     async fn on_app_signal(&mut self, app_signal: AppSignal);
@@ -93,12 +94,10 @@ pub trait Node {
             .name(ZIGBEE_TASK_NAME.to_string())    // visible e.g. in FreeRTOS monitoring
             //.stack_size(ZIGBEE_TASK_STACK_SIZE)
 
-
             .spawn(move || zigbee_task(cfg))
-            .map_err(|e| { Error::SpawnFailed(e) });
+            .map_err(|e| { Error::SpawnFailed(e) })?;
 
-        panic!("44"); // DEBUG
-        log::info!("Returning from 'Node::init()'");
+        Ok(())
     }
 
     /**
@@ -111,7 +110,6 @@ pub trait Node {
         loop {
             let x = rx.receive().await;
             log::info!("Received: {:?}", &x);  // DEBUG
-            panic!("55"); // DEBUG
 
             match x {
                 Payload::AppSignal(x) =>  self.on_app_signal(x) .await,
@@ -139,7 +137,6 @@ pub trait NodeApi {
     */
     fn get_panid(&self) -> u16 {
         let _guard = ZigbeeGuard::acquire();
-        panic!("ezb_nwk_get_panid");    // DEBUG
         unsafe {
             ezb_nwk_get_panid()
         }
@@ -150,7 +147,6 @@ pub trait NodeApi {
     */
     fn get_extended_panid(&self) -> IeeeAddr {
         let _guard = ZigbeeGuard::acquire();
-        panic!("ezb_nwk_get_extended_panid");    // DEBUG
         let v = unsafe {
             ezb_nwk_get_extended_panid()
         };
@@ -162,7 +158,6 @@ pub trait NodeApi {
     */
     fn get_extended_address(&self) -> IeeeAddr {
         let _guard = ZigbeeGuard::acquire();
-        panic!("33");    // DEBUG
         let v = unsafe {
             ezb_nwk_get_extended_address()
         };
@@ -174,7 +169,6 @@ pub trait NodeApi {
     */
     fn get_short_address(&self) -> u16 {
         let _guard = ZigbeeGuard::acquire();
-        panic!("44");    // DEBUG
         unsafe {
             ezb_nwk_get_short_address()
         }
@@ -185,7 +179,6 @@ pub trait NodeApi {
     */
     fn get_current_channel(&self) -> u8 {
         let _guard = ZigbeeGuard::acquire();
-        panic!("55");    // DEBUG
         unsafe {
             ezb_nwk_get_current_channel()
         }
@@ -205,11 +198,10 @@ pub trait NodeApi {
     * @note It's a little bit strange that the C library only lists 'EZB_ERR_NONE' as a return value.
     *       Does it always succeed? Is this a claim that future version might give errors? #feedback
     */
-    fn start_top_level_commissioning(&self, mask: BdbMode) -> Result<(),EspError> {
+    fn start_top_level_commissioning(&self, mask: BdbMode) -> Result<(),EzbError> {
         let _guard = ZigbeeGuard::acquire();
-        panic!("66");    // DEBUG
 
-        EspError::wrap(unsafe {
+        EzbError::wrap(unsafe {
             ezb_bdb_start_top_level_commissioning(mask.into())
         })
     }
@@ -224,7 +216,6 @@ pub trait NodeApi {
     */
     fn is_factory_new(&self) -> bool {
         let _guard = ZigbeeGuard::acquire();
-        panic!("77");    // DEBUG
         unsafe {
             ezb_bdb_is_factory_new()
         }
@@ -237,24 +228,19 @@ pub trait NodeApi {
     *
     * @note Since the call is synchronous (it only starts the join), error situations are not
     *       well understood: the C side can err on "not memory" (panic might be justified?) and
-    *       "on failed" - which is _highly_ inappropriately vague (again, let's just panic!).
+    *       "on failed" - which is inappropriately vague (again, panic).
     */
     fn open_network(&self, for_how_long: embassy_time::Duration) -> () {
         let secs: u8 = for_how_long.as_secs() as u8;
 
         let _guard = ZigbeeGuard::acquire();
-        panic!("99");    // DEBUG
-        let err = unsafe {
+        EzbError::wrap( unsafe {
             ezb_bdb_open_network(secs)
-                // docs don't care to mention the unit (2.0.4), but examples use seconds. #3rdparty
-        };
+                // docs don't care to mention the unit (2.0.5), but examples use seconds. #feedback
 
-        // - EZB_ERR_NONE: on success
-        // - EZB_ERR_NO_MEM: not memory
-        // - EZB_ERR_FAILED: on failed
-        if err != 0 {
-            panic!("'ezb_bdb_open_network' failed with: {}", err);
-        }
+        }).unwrap_or_else(|e| {
+            panic!("'ezb_bdb_open_network' failed with: {}", e);
+        });
     }
 
     /**
@@ -285,7 +271,6 @@ impl ZigbeeGuard {
         let claimed = GUARDED.swap(true, Ordering::Relaxed);
         assert!(!claimed, "INTERNAL: Guard re-entered"); // if we coded correctly, a double claim won't happen. Application cannot cause it.
 
-        panic!("111");  // DEBUG
         unsafe {
             let got_it = esp_zigbee_lock_acquire(99999);    // tbd. change to a tick count matching, say, 9s
 
@@ -301,7 +286,6 @@ impl Drop for ZigbeeGuard {
         let claimed= GUARDED.swap(false, Ordering::Relaxed);
         assert!(claimed, "INTERNAL: Guard already dropped!");
 
-        panic!("333");  // DEBUG
         unsafe {
             esp_zigbee_lock_release();
         }

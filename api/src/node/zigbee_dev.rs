@@ -1,3 +1,6 @@
+//
+// Task: Zigbee task
+//
 use ezb_node_config::{
     NodeType::*,
 };
@@ -22,37 +25,33 @@ use crate::config_views::EndpointCreator;
 pub(crate) struct ZigbeeDev(ezb_af_device_desc_t);
 
 impl ZigbeeDev {
-    /// Creates the device with configured endpoints.
-    /// Registers the device for C library.
-    /// Initialize the endpoints.
+    /// Creates the device descriptor (C library term) and initializes its endpoints.
+    ///
+    /// @note In the C examples, this corresponds with 'esp_zigbee_create_zha_{...}_device()'.
     ///
     pub(crate) fn new(ep_cfg: EndpointCreator) -> Result<Self, EzbEspError> {
         // ezb_af_device_desc_t dev_desc  = ezb_af_create_device_desc();
+        // ...
+        //      bunch of endpoint creation, see within 'EndpointCreator::create_all'
+        // ...
         // ESP_ERROR_CHECK(ezb_af_device_desc_register(dev_desc));
 
-        let desc: ezb_af_device_desc_t = unsafe { ezb_af_create_device_desc() };
+        let dev_desc: ezb_af_device_desc_t = unsafe { ezb_af_create_device_desc() };
 
         // Add the endpoints to the stated device descriptor.
-        ep_cfg.create_all(desc)?;
+        ep_cfg.create_all_c(dev_desc)?;
 
-        // Register the device with Zigbee
         EzbError::wrap( unsafe {
-            ezb_af_device_desc_register(desc)
+            ezb_af_device_desc_register(dev_desc)
         })?;
 
-        // We only support centralized trust, i.e. the coordinator (not a router) decides, which devices are let to enter.
-        //
-        // NOTE!:
-        //      - Unknown whether the default is 'false'. Setting because the C examples do.
-        //      - tbd. IS THIS IN THE RIGHT PLACE, with regard to device registration etc.?
-        //          (in C, it's right before calling 'ezb_bdb_set_primary_channel_set')
-        //
-        log::trace!("ezb_aps_secur_enable_distributed_security");   // TEMP
-        let () = unsafe { ezb_aps_secur_enable_distributed_security(false) };
-
         // Only now, initialize the endpoints.
-        ep_cfg.init_all();
+        //
+        // Note: If this can be called prior to registering the device, we should merge it to the
+        //      '.create_all_c()' above. tbd. #ask
+        //
+        ep_cfg.init_additional_clusters_c();
 
-        Ok(Self(desc))
+        Ok(Self(dev_desc))
     }
 }
