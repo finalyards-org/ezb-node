@@ -1,5 +1,5 @@
 
-use std::sync::LazyLock;
+use core::sync::LazyLock;
 
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
@@ -17,7 +17,7 @@ pub enum ButtonEvent {
     Depressed,
 }
 
-// Using 'CriticalSectionRawMutexia' is a must. It grants 'Sync'.
+// Using 'CriticalSectionRawMutex' is a must. It grants 'Sync'.
 static BUTTON_CHANNEL: Channel<CriticalSectionRawMutex, ButtonEvent, 4> = Channel::new();
 
 /**

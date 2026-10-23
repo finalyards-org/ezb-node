@@ -1,25 +1,22 @@
 
 use core::{
-    ffi::c_void,
     fmt,
     ptr::NonNull,
 };
-use strum;
 
 use ezb_node_raw::{
     ezb_zcl_core_action_callback_id_e,
-    ezb_zcl_status_e,
-    ezb_zcl_attribute_s,
-    ezb_zcl_cmd_hdr_t,
-    ezb_zcl_read_attr_rsp_variable_t,
-    ezb_app_signal_type_e,
+    //ezb_zcl_status_e,
+    //ezb_zcl_attribute_s,
+    //ezb_zcl_cmd_hdr_t,
+    //ezb_zcl_core_action_callback_id_e::EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID,
+    //ezb_zcl_read_attr_rsp_variable_t,
+    //ezb_app_signal_type_e,
     ezb_zcl_set_attr_value_message_t,
     ezb_zcl_cmd_default_rsp_message_t,
     ezb_zcl_message_info_s,
     ezb_zcl_cmd_read_attr_rsp_message_t,
     ezb_zcl_cmd_write_attr_rsp_message_t,
-    RspVariableEntry,
-    RspVariableIter,
 };
 
 use crate::types::{
@@ -31,14 +28,6 @@ use crate::types::{
     ZclAttrWriteResp,
     ZclError,
 };
-
-#[cfg(false)]   // feature = "touchlink"
-use ezb_node_raw::{
-    esp_zb_bdb_signal_touchlink_nwk_started_params_t,
-    esp_zb_bdb_signal_touchlink_nwk_joined_router_t,
-    esp_zb_bdb_signal_touchlink_nwk_started_params_t,
-};
-use ezb_node_raw::ezb_zcl_core_action_callback_id_e::EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID;
 
 /**
 * Enumeration of Zigbee Cluster Library (ZCL) "core action callback identifiers" (C term) and their data.
@@ -445,13 +434,13 @@ impl fmt::Display for ZclEvent {
 #[derive(Debug, Clone)]
 pub struct CommonInfo {
     #[allow(non_snake_case)]
-    ///< Status of the message processing. 'None' for success; 'Some' for errors.
+    /// Status of the message processing. 'None' for success; 'Some' for errors.
     pub err: Option<ZclError>, // status: ezb_zcl_status_e
-    ///< The destination endpoint ID of the ZCL indication.
+    /// The destination endpoint ID of the ZCL indication.
     pub dst_ep: u8,
-    ///< The cluster ID of the ZCL indication.
+    /// The cluster ID of the ZCL indication.
     pub cluster_id: ClusterId, // u16
-    ///< The role of cluster
+    /// The role of cluster
     pub cluster_role: ClusterRole,
 }
 
@@ -550,12 +539,12 @@ struct ConfigReportRespM {
 }
 
 /**
-* Re-interpret a void pointer, as a message of a certain type.
+* Re-interpret a void pointer as a message of a certain type.
 *
 * @note #safety:
 *       'esp_zigbee_lib' (2.0.1) uses '#[repr(packed)]' for the 'ezb_eui64_s' type (IEEE / Extended PAN addresses).
 *       You CAN use this function with messages that contain such an address. Just DO NOT USE that resulting reference
-*       to it. Instead, value-read the IEEE field with 'std::ptr::read_unaligned()'.
+*       to it. Instead, value-read the IEEE field with 'core::ptr::read_unaligned()'.
 *
 *       Alternatively, we can make this function return 'T' (by value), and use '::read_unaligned'.
 */

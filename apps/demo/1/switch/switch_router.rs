@@ -1,5 +1,5 @@
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicU8, Ordering};
 
 use embassy_sync::channel::{
     DynamicReceiver
@@ -12,19 +12,10 @@ use futures_util::{
     StreamExt
 };
 
-use ezb_node::{
-    Accessor,
-    AccessColorDimmableLight,
-    AppSignal,
-    BdbMode,
-    BdbStatus,
-    Config,
-    MatchColorDimmableLights,
-    MatchEvent,
-    Node,
-    ZclEvent,
-    ZclError,
-};
+use ezb_node::{Accessor, AccessColorDimmableLight, AppSignal, BdbMode, BdbStatus, Config, MatchColorDimmableLights, MatchEvent, Node, ZclEvent, ZclError, NodeApi};
+
+#[path = ".conf.rs"]
+mod cfg;
 
 use crate::button_task::{
     receive as btn_receive,
@@ -33,51 +24,42 @@ use crate::button_task::{
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
-// #hack: How does this go: 'Config' has many endpoints; we need one for the Zigbee comms...
-const SRC_EP: u8 = 1;
+// #fix #hack: How does this go: 'Config' has many endpoints; we need one for the Zigbee comms...
+//const SRC_EP: u8 = 1;
 
-pub(crate) struct LightSwitchRouter
-where Self: Node {
-    src_ep: u8,  // #later this will not be needed once Accessors are based on endpoint
-    count: AtomicU8,      // internally mutable state for steering the remote light
+pub(crate) struct SwitchRouter {
+    //src_ep: u8,  // #later this will not be needed once Accessors are based on endpoint
+    //r count: AtomicU8,      // internally mutable state for steering the remote light
+    count: u8,
 }
 
-impl Node for LightSwitchRouter {}
-
-impl MatchColorDimmableLights for LightSwitchRouter {}
-
-impl LightSwitchRouter {
-    pub fn new(cfg: &'static Config) -> Result<Self, ezb_node::Error> {
-        const AUTO_START: bool = false;
-        // Note: This might disappear, see comment of 'Node::init()'.
-
-        let () = <Self as Node>::init(cfg, AUTO_START)?;
-
-        Ok(Self { src_ep: SRC_EP, count: AtomicU8::new(0) })
+impl SwitchRouter {
+    pub fn new() -> Result<Self, ezb_node::Error> {
+        let () = <Self as Node>::init(cfg::get())?;
+        Ok(Self { count: 0 })
     }
+}
 
-    /**
-    * Behaviour of this particular node.
-    *
-    * @note: The closures provided to 'Node::run' are run in this application task.
-    */
-    pub async fn run(mut self) -> ! {
-        <Self as Node>::run(self,
-            |this: &'static Self, sig| Box::pin(this.on_app_signal(sig)),
-            |this: &'static Self, ev| { unimplemented!() }
-        ).await
-    }
+// tbd. move
+impl MatchColorDimmableLights for SwitchRouter {}
 
+impl Node for SwitchRouter {
     /**
     * Run the received signal through our logic match.
     */
-    async fn on_app_signal(&'static self, sig: AppSignal) {
+    async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
+
+        // Used so much it warrants us to make it a closure.
+        let enter_commission_mode = |mode: BdbMode| {
+            self.start_top_level_commissioning(mode)
+                .expect("Unable to commit the top level commissioning state");  // tbd. does this occur?
+        };
 
         match sig {
             ZdoSignalSkipStartup => {
                 log::info!("Initialize Zigbee stack");
-                self.start_top_level_commissioning(BdbMode::Initialization);
+                enter_commission_mode(BdbMode::Initialization);
             },
 
             BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
@@ -86,18 +68,19 @@ impl LightSwitchRouter {
                 let is_new = self.is_factory_new();
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
-                    self.start_top_level_commissioning(BdbMode::NetworkSteering);   // router: steering
+                    enter_commission_mode(BdbMode::NetworkSteering);   // router: steering (coordinator: formation)!!!
                 } else {
-                    log::info!("Device rebooted");
+                    log::info!("Device reboot");
                 }
             },
             BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
                 log::warn!("{} failed with status = {}; retrying...", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::Initialization);
+                enter_commission_mode(BdbMode::Initialization);
             },
 
+            // Note: 'Steering' for router ('Formation' for coordinator)!
             BdbSignalSteering(BdbStatus::Success) => {
                 log::info!("Joined network successfully: Extended PAN ID: {}, PAN ID: {}, Channel:{}, Short Address: {:#06x}",
                     self.get_extended_panid(),
@@ -110,10 +93,10 @@ impl LightSwitchRouter {
                 pin_mut!(match_stream); // pins to stack
 
                 let first_light = loop {
-                    match match_stream.next().await {
+                    match match_stream.next() .await {
                         Some(MatchEvent::Bound(light)) => {
                             log::info!("Bound with color dimmable light device: 0x{:04X}:{}", light.get().dst_addr, light.get().dst_ep);
-                            break light;    // start using it!
+                            break light;    // start using it
                         },
                         Some(MatchEvent::Error(err)) => {
                             log::error!("Failed during color dimmable light search (from remote device): {}", err);
@@ -124,9 +107,9 @@ impl LightSwitchRouter {
                         }
                     }
                 };
-
                 // 'match_stream' drops; search phase is over.
 
+                // tbd. move to application task???  ('first_light' as a member?)
                 log::info!("Listening to button presses...");
                 loop {
                     match btn_receive().await {
@@ -137,14 +120,15 @@ impl LightSwitchRouter {
                     }
                 }
             },
+            // Note: 'Steering' for router ('Formation' for coordinator)
             BdbSignalSteering(st) => {
-                log::info!("Failed to join network: {}, st = {}", sig, st);
+                log::info!("Failed to join network: {}, st = {}", sig, st);  // differs, router vs. coordinator
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkSteering);
+                enter_commission_mode(BdbMode::NetworkSteering);    // router: Steering (coordinator: Formation)
             },
 
-            ZdoSignalLeave { leave_type_X } => {    // tbd. make a proper enum (drop '_X')
+            ZdoSignalLeave { leave_type_X } => {
                 log::info!("Left network successfully with type: {}", leave_type_X);
             },
 
@@ -166,18 +150,17 @@ impl LightSwitchRouter {
 }
 
 /**
-* Steer the remove light, similar to the C example.
+* Steer the remote light, similar to the C example.
 */
-// Note: state of 'LightSwitchRouter' needs to be internally mutable, because the structure is passed around as shared pointers.
-//
-fn handle_button_press(light: &AccessColorDimmableLight, count_ref: &AtomicU8) {
-    let count = count_ref.fetch_add(1, Ordering::Relaxed);  // increment, return the previous value
+fn handle_button_press(light: &AccessColorDimmableLight, count_ref: &mut u8) {
+    let count = *count_ref;
+    *count_ref += 1;
 
     if count % 2 == 0 {
         // Even -> steer the level
         // (In the C code, levels raise 32 -> 64 -> 96 -> ...)
         let next_level = ((count / 2) % 4 + 1) * 32;
-        log::info!("Move the level of HA dimmable light to {}", next_level);
+        log::info!("Set the level of HA dimmable light to: {}", next_level);
 
         light.set_level(next_level);
     } else {
@@ -185,8 +168,8 @@ fn handle_button_press(light: &AccessColorDimmableLight, count_ref: &AtomicU8) {
         // (From C code):
         let color_x = 0x0400 * ((count as u16 / 2) % 2 + 1);
         let color_y = 0x0400 * ((count as u16 / 2) % 2 + 1);
+        log::info!("Set the color of HA dimmable light: {}, {}", color_x, color_y);
 
-        log::info!("Move the color of HA dimmable light");
         light.set_color_xy(color_x, color_y);
     }
 }

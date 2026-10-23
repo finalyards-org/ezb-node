@@ -41,6 +41,9 @@ dt_ias_cie = ["ezb-node-config/dt_ias_cie"]
 # Note: We do differentiate between what-you-want-to-bind-with here, but not in the code. Experimenting.
 #
 _remote_any = ["dep:async-stream", "dep:futures-util"]
+_remote_all = ["remote_dt_color_dimmable_light", "remote_cl_power_config"]
+    # for Justfile
+
 remote_dt_color_dimmable_light = ["_remote_any"]
 remote_cl_power_config = ["_remote_any"]
 

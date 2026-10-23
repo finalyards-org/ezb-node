@@ -72,10 +72,10 @@ CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
 # Was on by default (ESP-IDF 6.1)
 CONFIG_ESP_WIFI_REMOTE_ENABLED=n
 
-# Was on by default (ESP-IDF 6.1)
+# Is on by default (ESP-IDF 6.1)
 # NOTE: THIS DOES NOT STEER IT!! RESEARCH NEEDED.
+#   Is it that 'esp-idf-svc' building "std" causes these in, and we cannot counteract that? #help #esp-idf-sys
 CONFIG_ESP_WIFI_ENABLED=n
-CONFIG_ESP32_WIFI_ENABLED=n
 
 # Switch off coexistence support with Wifi
 CONFIG_ESP_COEX_SW_COEXIST_ENABLE=n

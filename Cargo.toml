@@ -46,6 +46,6 @@ opt-level = "s"
 # Take latest/specific git versions.
 #
 #|[patch.crates-io]
-#|esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf", rev = "e6899ae" }
-#|esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf", rev = "e6899ae" }
-#|esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf", rev = "e6899ae" }
+#|esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf" } #, rev = "..."
+#|esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf" }
+#|esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf" }

@@ -8,17 +8,23 @@ default:
 nightly := ""
 
 alias b:= build
+alias bc:= build-coordinator
 alias br:= build-router
 
-build:
+build: build-coordinator
+
+build-all: build-coordinator build-router
+
+build-coordinator:
 	cargo {{nightly}} build --release -vv \
 		--jobs 1 \
 		--features coordinator,_dt_all
 
+# Handling remotes is specific to the router.
 build-router:
 	cargo {{nightly}} build --release -vv \
 		--jobs 1 \
-		--features router,_dt_all
+		--features router,_dt_all,_remote_all
 
 # It is possible to also make a coordinator without any endpoint profiles.
 build-coordinator-bare:

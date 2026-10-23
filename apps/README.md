@@ -21,10 +21,12 @@ Runnable programs to showcase the `ezb-node`.
 
 ## Requirements
 
-||ESP32&#8209;C6 devkits|Zigbee devices used|
-|---|---|---|
-|**Demo 1** - light and switch|2 pc|none|
-|**Demo 2** - door/window sensor|1 pc|Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html) |
+||ESP32&#8209;C6 devkits|Zigbee devices used|key policy&nbsp;<sup>`*`</sup>|
+|---|---|---|---|
+|**Demo 1** - light and switch|2 pc|none|open|
+|**Demo 2** - door/window sensor|1 pc|Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html) |closed|
+
+<small>`|*|`: By "closed" key policy, we mean the coordinator carries a list of allowed devices. This corresponds to `install_code_policy: true` in the C SDK. Likewise, "open" means known keys (`"Zigbee09Alliance"`) are enough to join a network.</small>
 
 >📜 For detailed information about each of the demos, see their respective READMEs.
 

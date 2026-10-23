@@ -3,7 +3,7 @@
 *   - "Color dimmer switch" example of 'esp-zigbee-sdk' v.2.0
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmer_switch
 */
-//#![feature(never_type)]
+//r #![feature(never_type)]
 
 mod switch_router;
 use switch_router::LightSwitchRouter;
@@ -24,7 +24,7 @@ use esp_idf_hal::{
 use esp_idf_svc::{
     sys::{link_patches},
 };
-
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use ezb_node::{
     Config,
 };
@@ -33,12 +33,13 @@ use ezb_node_apps::{
     init_nvs,
     set_panic_hook,
 };
+use crate::switch_router::SwitchRouter;
 
 /**
 * The entry point.
 *
-* The main thread runs the application. Part/most of it happens within the 'LightSwitchRouter' methods, which are
-* called within the application (main) thread.
+* The main thread runs the application. Part/most of it happens within the '[...]Router' methods,
+* which are called within the application (main) thread.
 */
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -47,8 +48,15 @@ async fn main(spawner: Spawner) {
 
     set_panic_hook();
 
-    // Recommended logging, level steered by 'sdkconfig.defaults'. Guarantees C and Rust sides observe same logging.
-    esp_idf_svc::log::EspIdfLogger::initialize_default();
+    // Logging
+    {
+        // Steer by 'RUST_LOG' env.var. (info is default)
+        esp_idf_svc::log::init_from_env();
+
+        log::info!("TESTING 1");
+        log::debug!("TESTING 2");
+        log::trace!("TESTING 3");
+    }
 
     let peripherals = Peripherals::take().unwrap();
     {
@@ -58,25 +66,28 @@ async fn main(spawner: Spawner) {
         spawner.spawn( button_task(btn_pin).unwrap() );
     }
 
-    // --- Zigbee ---
-    //
-    static CFG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
-        include!(concat!(env!("OUT_DIR"), "/1-switch_conf.in"))
-    });
+    // Initialize the flash.
+    {
+        let part = EspDefaultNvsPartition::take()
+            .unwrap_or_else(|e| panic!("Initialization of flash failed: {:?}", e));
 
-    let (_keep, lc) = (|| -> anyhow::Result<(_,LightSwitchRouter)> {    // scope the '?' by an anonymous closure
-        let nvs_res = init_nvs(CFG.storage_partition_name)
-            .context("Failed to initialize NVS")?;
+        core::mem::forget(part);
+    }
 
-        let tmp = LightSwitchRouter::new(&CFG)
-            .context("Failed to initialize the Zigbee node")?;
+    spawner.spawn( node_task() .unwrap_or_else(|e| panic!("spawn failed: {:?}", e)) );
 
-        Ok((nvs_res, tmp))
-    })()
-    .unwrap_or_else(|e| {
-        panic!("Initialization failed: {:?}", e);
-    });
-
-    lc.run() .await;
+    // Processing happens in the background.
+    loop {
+        embassy_time::Timer::after_secs(1).await;
+    }
 }
 
+#[embassy_executor::task]
+async fn node_task() -> ! {
+    let zb_node = SwitchRouter::new()
+        .unwrap_or_else(|e| panic!("Failed to initialize the Zigbee node: {:?}", e));
+
+    log::debug!("Starting zigbee node");
+
+    zb_node.run_loop() .await;
+}

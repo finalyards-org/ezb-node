@@ -37,6 +37,7 @@ pub use a::*;
     // Note: This only exposes the C bindings to 'lib.rs', not dependent crates.
     //      Some values, e.g. 'EZB_ZCL_CLUSTER_{SERVER|CLIENT}' are not going to be further exposed.
 
+#[allow(unused_imports)]
 use log::warn;
 use crate::ezb_nwk_device_type_t::{
     EZB_NWK_DEVICE_TYPE_COORDINATOR,

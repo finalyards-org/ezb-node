@@ -35,12 +35,12 @@ light-run:
 # 1-switch
 [group('switch')]
 switch-build:
-	cargo {{nightly}} build --release -vv --bin 1-switch --features esp32c6,ezb-node/router,ezb-node/dt_color_dimmer_switch,ezb-node/remote_dt_color_dimmable_light \
+	cargo {{nightly}} build --release -vv --bin 1-switch --features esp32c6,futures-util,ezb-node/router,ezb-node/dt_color_dimmer_switch,ezb-node/remote_dt_color_dimmable_light \
 		--jobs 1
 
 [group('switch')]
 switch-run:
-	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,ezb-node/router,ezb-node/dt_color_dimmer_switch,ezb-node/remote_dt_color_dimmable_light
+	cargo {{nightly}} run --release -vv --bin 1-switch --features esp32c6,futures-util,ezb-node/router,ezb-node/dt_color_dimmer_switch,ezb-node/remote_dt_color_dimmable_light
 
 # 2-door
 [group('door')]
@@ -63,6 +63,17 @@ sdkconfig-path:
 	out=$(find {{target_dir}} -name sdkconfig -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
 	if [ -z "$out" ]; then \
 		printf >&2 "Error: No 'sdkconfig' found in {{target_dir}}\n"; \
+		false; \
+	fi; \
+	echo "$out"
+
+# List the *last* 'project_description.json'
+project_description-path:
+	@\
+	file=project_description.json; \
+	out=$(find {{target_dir}} -name $file -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
+	if [ -z "$out" ]; then \
+		printf >&2 "Error: No '$file' found in {{target_dir}}\n"; \
 		false; \
 	fi; \
 	echo "$out"

@@ -28,7 +28,7 @@ impl Node for LightCoordinator {
     async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
 
-        // Used so much it warrants us to make
+        // Used so much it warrants us to make it a closure.
         let enter_commission_mode = |mode: BdbMode| {
             self.start_top_level_commissioning(mode)
                 .expect("Unable to commit the top level commissioning state");  // tbd. does this occur?
@@ -48,7 +48,7 @@ impl Node for LightCoordinator {
                 if is_new {
                     enter_commission_mode(BdbMode::NetworkFormation);
                 } else {
-                    log::info!("Device rebooted");
+                    log::info!("Device reboot");
                 }
             },
             BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
