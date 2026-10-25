@@ -1,18 +1,15 @@
 //use bitflags::bitflags;
-use log;
-use std::{
-    boxed::Box,
-    collections::BTreeMap,
-};
 
-use embassy_sync::{
+use log;
+
+/*r use embassy_sync::{
     blocking_mutex::ThreadModeMutex,
     channel::{
         Channel,
         DynamicReceiver,
         DynamicSender,
     }
-};
+};*/
 
 use ezb_node_raw::{
     esp_zigbee_launch_mainloop,
@@ -21,32 +18,32 @@ use ezb_node_raw::{
     ezb_app_signal_get_params,
     ezb_app_signal_get_type,
     ezb_app_signal_t,
-    //r ezb_secur_set_ic_required,
     ezb_zcl_core_action_callback_id_e,
     ezb_zcl_core_action_callback_id_t,
     ezb_zcl_core_action_handler_register,
-    ezb_zcl_basic_server_attr_t::EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
 };
 
 use crate::{
+    config_views::{
+        ConfigAccess,
+        EndpointCreator,
+    },
     AppSignal,
     Config,
-    EndpointCreator,
-    Error::{
+    /*r Error::{
         self,
         AlreadyInUse,
         InitializationFailed
-    },
+    },*/
     EspError,
     EzbError,
-    IeeeAddr,
+    //r IeeeAddr,
     ZclEvent,
-    config_views::ConfigAccess,
-    utils::PascalString,
+    //r utils::PascalString,
     ZigbeeDev,
 };
 
-use ezb_node_config::{ChannelMask, CommonFields, Endpoint, NodeType};
+//use ezb_node_config::{ChannelMask, CommonFields, Endpoint, NodeType};
 
 // 'false' for now, to keep similarity with C examples.
 const AUTO_START: bool = false;

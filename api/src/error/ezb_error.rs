@@ -5,10 +5,6 @@
 *   The raw level prepares 'ezb_err_e' for us, which is a Strum-enabled enum carrying all known
 *   values.
 */
-use core::fmt::{
-    Display,
-    Formatter,
-};
 use log::warn;
 use ezb_node_raw::{
     ezb_err_e,

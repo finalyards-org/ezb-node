@@ -14,6 +14,7 @@ use ezb_node_raw::{
 use crate::{
     utils::c_zeroed,
     AddrMode,
+    EzbError,
 };
 
 use super::{
@@ -62,25 +63,18 @@ impl AccessColorDimmableLight {
             }
         };
 
-        let err = self.ctx.guarded(|_node| {
+        EzbError::wrap( self.ctx.guarded(|_node| {
             unsafe { ezb_zcl_color_control_move_to_color_cmd_req(&req) }
+        })).unwrap_or_else(|e| {
+
+            // Note: Study how much we get these, and what's the right way to inform (or not) the application
+            //      about it. #later
+            //
+            //      If needing to pass errors to the application, do an enum and only carry those values we've
+            //      actually met, and whose circumstances are understood.
+            //
+            log::error!("'esp_zigbee_lib' error (ignored): {}", e);
         });
-        if err != 0 {
-            match ezb_err_e::parse(err) {
-                None => {
-                    log::error!("Unexpected 'esp_zigbee_lib' error (ignored): {:?}", err);
-                },
-                Some(e) => {
-                    // Note: Study how much we get these, and what's the right way to inform (or not) the application
-                    //      about it. #later
-                    //
-                    //      If needing to pass errors to the application, do an enum and only carry those values we've
-                    //      actually met, and whose circumstances are understood.
-                    //
-                    log::error!("'esp_zigbee_lib' error (ignored): {:?}", e);
-                }
-            }
-        }
     }
 
     /**

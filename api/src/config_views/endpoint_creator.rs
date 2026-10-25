@@ -1,5 +1,4 @@
 
-use core::ffi::c_void;
 use std::collections::BTreeMap;
 
 use ezb_node_config::{
@@ -7,7 +6,7 @@ use ezb_node_config::{
     Config,
     Endpoint,
     DeviceType,
-    NodeType::*,
+    //NodeType::*,
     Cluster,
 };
 
@@ -15,7 +14,7 @@ use ezb_node_raw::{
     ezb_af_device_add_endpoint_desc,
     ezb_af_device_desc_t,
     ezb_af_endpoint_get_cluster_desc,
-    ezb_nwk_device_type_t::*,
+    //ezb_nwk_device_type_t::*,
     ezb_zcl_basic_cluster_desc_add_attr,
     ezb_zcl_cluster_desc_t,
     ezb_zcl_basic_server_attr_t::{
@@ -23,21 +22,12 @@ use ezb_node_raw::{
         EZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
     },
     ezb_zcl_cluster_id_e::EZB_ZCL_CLUSTER_ID_BASIC,
-    ezb_af_profile_id_e,
-    ezb_zha_device_id_e,
     ezb_af_ep_desc_t,
-    ezb_zha_color_dimmer_switch_config_t,
-    ezb_zha_create_color_dimmer_switch,
     ezb_zcl_role_e::CLUSTER_SERVER,
-    ezb_af_ep_config_t,
-    ezb_af_create_endpoint_desc,
     ezb_zcl_power_config_create_cluster_desc,
     ezb_af_endpoint_add_cluster_desc,
     ezb_zcl_power_config_cluster_client_init,
     ezb_zcl_role_e::CLUSTER_CLIENT,
-    ezb_af_create_device_desc,
-    ezb_af_device_desc_register,
-    ezb_zcl_core_action_handler_register
 };
 
 use crate::{
@@ -115,7 +105,8 @@ impl From<&'static Config> for EndpointCreator {
 ///
 /// Add it to the device descriptor 'dev'.
 fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspError> {
-    use DeviceType::*;
+    //r use DeviceType::*;
+    use core::ffi::c_void;
 
     let Endpoint {
         common_fields,
@@ -149,8 +140,6 @@ fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspE
 
         #[cfg(feature = "dt_ias_cie")]
         DeviceType::IasCie => create_ias_cie(ep_id),
-
-        //r _Dummy => unreachable!()
     };
 
     // ezb_zcl_cluster_desc_t basic_desc = {0};
@@ -272,14 +261,17 @@ fn create_color_dimmer_switch(ep_id: u8) -> ezb_af_ep_desc_t {
 // This variant is based on advice at: https://github.com/espressif/esp-zigbee-sdk/issues/897
 #[cfg(feature = "dt_ias_cie")]
 fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
-    use ezb_af_profile_id_e::HA_PROFILE_ID;
-    use ezb_zha_device_id_e::IAS_CONTROL_INDICATING_EQUIPMENT_ID;
+    use core::ffi::c_void;
     use ezb_node_raw::{
+        ezb_af_create_endpoint_desc,
+        ezb_af_ep_config_t,
+        ezb_af_profile_id_e::HA_PROFILE_ID,
         ezb_zcl_ias_ace_create_cluster_desc,
         ezb_zcl_identify_create_cluster_desc,
         ezb_zcl_ias_zone_create_cluster_desc,
         ezb_zcl_ias_wd_create_cluster_desc,
         ezb_af_endpoint_add_cluster_desc,
+        ezb_zha_device_id_e::IAS_CONTROL_INDICATING_EQUIPMENT_ID,
     };
 
     let cfg = ezb_af_ep_config_t::new( ep_id,

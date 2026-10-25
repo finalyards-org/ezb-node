@@ -10,10 +10,15 @@ nightly := ""
 alias b:= build
 alias bc:= build-coordinator
 alias br:= build-router
+#
+alias ba:= build-all
 
 build: build-coordinator
 
-build-all: build-coordinator build-router
+# Note: To check that "code builds", please use this. Because of conditional compilation,
+#	all node types need to be addressed.
+build-all: build-coordinator build-router \
+	build-coordinator-bare
 
 build-coordinator:
 	cargo {{nightly}} build --release -vv \

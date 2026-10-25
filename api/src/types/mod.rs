@@ -9,7 +9,6 @@
 
 use ezb_node_raw::{
     ezb_bdb_comm_mode_e,
-    ezb_zcl_cluster_id_e
 };
 
 mod addr_mode;

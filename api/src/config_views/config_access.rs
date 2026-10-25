@@ -13,16 +13,19 @@ use ezb_node_raw::{
     esp_zigbee_platform_config_t,
     ezb_bdb_set_primary_channel_set,
     ezb_bdb_set_secondary_channel_set,
-    ezb_secur_ic_type_e::EZB_SECUR_IC_TYPE_128,
     esp_zigbee_init,
+    ezb_aps_secur_enable_distributed_security,
+};
+#[cfg(feature = "coordinator")]
+use ezb_node_raw::{
     ezb_secur_ic_add,
     ezb_secur_ic_type_e,
-    ezb_aps_secur_enable_distributed_security,
+    ezb_secur_ic_type_e::EZB_SECUR_IC_TYPE_128,
 };
 
 use crate::{
     EzbError,
-    EspError,
+    //EspError,
     EzbEspError,
 };
 
@@ -39,6 +42,8 @@ pub(crate) struct ConfigAccess<const PARTITION_NAME: &'static str = "nvs">{
 }
 
 impl<const PARTITION_NAME: &'static str> ConfigAccess<PARTITION_NAME> {
+    // We use them to differentiate short, actual comments from e.g. C-side code copies.
+    #[allow(unused_doc_comments)]
 
     /// Form a *data structure* that leans towards the 'esp_zigbee_lib' usage, but *does not run
     /// any initializations*, yet.

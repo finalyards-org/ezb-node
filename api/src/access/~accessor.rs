@@ -1,14 +1,19 @@
 #![cfg(feature = "_remote_any")]
 
-use crate::{node::ZigbeeGuard, Node, ShortAddr};
+use crate::{
+    node::ZigbeeGuard,
+    ShortAddr
+};
 
 /**
 * Access to the network for 'Access...' structs.
+*
+* @note We don't need access to the 'Node' struct (which would be difficult anyways, since it's not
+*       "dyn compatible".
 */
 #[derive(Copy, Clone)]
 pub struct AccessorCtx {
-    pub(super) node: &'static dyn Node,
-    pub(super) src_ep: u8,     // needed for Zigbee protocol, e.g. where the responses shall be routed
+    //pub(super) src_ep: u8,
 
     // Allow application access to these - at least for debug logging.
     pub dst_addr: ShortAddr,
@@ -16,8 +21,8 @@ pub struct AccessorCtx {
 }
 
 impl AccessorCtx {
-    pub(super) fn new(node: &'static dyn Node, src_ep: u8, dst_addr: ShortAddr, dst_ep: u8) -> Self {
-        Self { node, src_ep, dst_addr, dst_ep }
+    pub(super) fn new(/*src_ep: u8,*/ dst_addr: ShortAddr, dst_ep: u8) -> Self {
+        Self { /*src_ep,*/ dst_addr, dst_ep }
     }
 
     /**
@@ -27,14 +32,13 @@ impl AccessorCtx {
     */
     pub(super) fn guarded<F,T>(&self, f: F) -> T
     where
-        F: FnOnce(&'static dyn Node) -> T
-        //F: FnOnce(&dyn Node) -> T     // alternative; 'Node' valid just for the 'f' call
+        F: FnOnce() -> T
     {
         let _guard = ZigbeeGuard::acquire();
         f(self.node)
     }
 }
 
-pub trait Accessor: Copy + Clone {
-    fn get(&self) -> &AccessorCtx;
-}
+//pub trait Accessor: Copy + Clone {
+//    fn get(&self) -> &AccessorCtx;
+//}

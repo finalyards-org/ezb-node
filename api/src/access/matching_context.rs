@@ -6,7 +6,7 @@ use core::pin::Pin;
 
 use embassy_sync::{
     blocking_mutex::raw::ThreadModeRawMutex,
-    channel::{Channel, DynamicReceiver, DynamicSender, TrySendError},
+    channel::{Channel, DynamicReceiver, TrySendError},
 };
 
 use async_stream::stream;
@@ -19,7 +19,7 @@ use ezb_node_raw::{
     ezb_zdo_match_desc_req_s,
     ezb_zdp_match_desc_req_field_s,
     ezb_zdp_match_desc_rsp_field_s,
-    ezb_err_e,
+    //ezb_err_e,
 };
 
 use super::{
@@ -29,14 +29,13 @@ use super::{
 };
 
 use crate::{
+    error::EzbError,
     Node,
     ShortAddr,
-    ZclError,
     ZdpError
 };
-
-#[cfg(feature = "remote_dt_color_dimmable_light")]
-use crate::AccessColorDimmableLight;
+//r #[cfg(feature = "remote_dt_color_dimmable_light")]
+//r use crate::AccessColorDimmableLight;
 
 const CHANNEL_CAPACITY: usize = 8;
 
@@ -78,8 +77,9 @@ impl MatchingContext {
         //
         let channel: ChannelT = Channel::new();
 
-        let tx = channel.dyn_sender();
-        let rx = channel.dyn_receiver();
+        // tbd.? are these left-overs?
+        //let tx = channel.dyn_sender();
+        //let rx = channel.dyn_receiver();
 
         let clusters: Box<[u16]> = {
             let mut vec = Vec::with_capacity(in_clusters.len() + out_clusters.len());
@@ -154,7 +154,7 @@ impl MatchingContext {
             // Note: It matters to the lifetimes that things are done *within* the 'stream!' block. The inside lasts
             //      longer than the function body.
             //
-            let rx: DynamicReceiver<Option<MatchInnerEvent>> = ctx.channel.dyn_receiver();
+            let rx: DynamicReceiver<'_, Option<MatchInnerEvent>> = ctx.channel.dyn_receiver();
 
             // 'None' is a marker that the channel will terminate
             //
@@ -225,16 +225,19 @@ extern "C" fn match_c_callback(
     match res {
         // If a local error (or timeout), terminate the whole binding process.
         Err(e) => {
+            log::info!("Match callback received an error (local error or timeout) -> not observing more events: {}", e);
+
             // Embassy channel has no '.close()' - so we use a sentinel to stop the consumption.
             //
             if let Err(err) = tx.try_send(None) {
                 match err {
                     TrySendError::Full(_) => {
                         log::error!("Channel full; cannot close!");
-                    },
-                    _ => {
-                        log::error!("Unexpected error (did not close the channel): {:?}", err);
                     }
+                    // above "matches all the relevant values"
+                    //_ => {
+                    //    log::error!("Unexpected error (did not close the channel): {:?}", err);
+                    //}
                 }
             }
             return;
@@ -245,9 +248,10 @@ extern "C" fn match_c_callback(
                     TrySendError::Full(_) => {
                         log::error!("Channel full; capacity ({}) reached! (event lost)", ctx.channel.capacity());
                     },
-                    _ => {
-                        log::error!("Unexpected error (binding event lost): {:?}", err);
-                    }
+                    // above "matches all the relevant values"
+                    //_ => {
+                    //    log::error!("Unexpected error (binding event lost): {:?}", err);
+                    //}
                 }
             }
         }
@@ -267,31 +271,6 @@ pub(super) enum MatchInnerEvent {
     /// Zigbee Device Profile errors; response from another node.
     ZdpError(ZdpError),
 }
-
-/***r #later; once their role (as stated below) is confirmed!
-/// Local errors; timeout
-/// With these (the claim is; to-be-confirmed): the binding request has not left the source node,
-/// or it's about timeout.
-///
-Error(ezb_err_e)
-    // ezb_err_e::_ERR_NONE as u8,  // 0
-    // ezb_err_e::_ERR_FAIL as u8,  // -1 (0xff)
-    // ezb_err_e::_ERR_NO_MEM as u8,
-    // ezb_err_e::_ERR_INV_ARG as u8,
-    // ezb_err_e::_ERR_INV_STATE as u8,
-    // ezb_err_e::_ERR_INV_SIZE as u8,
-    // ezb_err_e::_ERR_NOT_FOUND as u8,
-    // ezb_err_e::_ERR_NOT_SUPPORTED as u8,
-    // ezb_err_e::_ERR_TIMEOUT as u8,
-    // ezb_err_e::_ERR_ABORT as u8,
-    // ezb_err_e::_ERR_BUSY as u8,
-    // ezb_err_e::_ERR_NOT_FINISHED as u8,
-    // ezb_err_e::_ERR_NOT_ALLOWED as u8,
-    // ezb_err_e::_ERR_PARSE as u8,
-    // ezb_err_e::_ERR_EMPTY_DATA as u8,
-    // ezb_err_e::_ERR_DROP as u8,
-    // ezb_err_e::_ERR_SECURITY as u8,
-***/
 
 /**
 * Parse the match response from C structure.
@@ -316,18 +295,16 @@ Error(ezb_err_e)
 //     ///< Pointer to array of endpoint numbers (uint8_t) that match the criteria
 //     pub match_list: *mut u8,
 // }
-fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<Result<MatchInnerEvent,ezb_err_e>> {
+fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<Result<MatchInnerEvent,EzbError>> {
     let resp = unsafe { p.as_ref() }?;
 
-    let res = if resp.error != 0 {
-        let e = ezb_err_e::parse(resp.error)?;
-        Err(e)
-    } else {
+    let res = EzbError::wrap(resp.error) .map(|_| {  // success response
         let rsp = unsafe { resp.rsp.as_ref() }?;
 
-        let st = crate::ZdpError::parse(rsp.status)?;
+        let st = ZdpError::parse(rsp.status)?;
         if let Some(e) = st {
-            Ok( MatchInnerEvent::ZdpError(e) )
+            Ok(MatchInnerEvent::ZdpError(e))
+
         } else {
             let ezb_zdp_match_desc_rsp_field_s {
                 nwk_addr_of_interest,
@@ -338,14 +315,22 @@ fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<Result<MatchInnerE
 
             let short_addr = ShortAddr::from(nwk_addr_of_interest);
 
-            let eps = unsafe {
-                match_list.as_ref().map(|x| {
-                    core::slice::from_raw_parts(match_list, match_length as usize)
-                })
-            }?;
+            // tbd. Is no matches a valid use case, or should it be regarded as a corrupt message?
 
-            Ok( MatchInnerEvent::Bound(short_addr, eps.to_vec()) )
+            let eps = match match_list.as_ref() {
+                None => {
+                    (match_length == 0) .then_some()?;   // no list but length = corrupt event
+                    log::warn!("Match with no endpoints; is this normal?");
+                    &[]
+                },
+                Some(ptr) => {
+                    core::slice::from_raw_parts(ptr, match_length as usize)
+                }
+            };
+
+            Ok(MatchInnerEvent::Bound(short_addr, eps.to_vec()))
         }
-    };
+    });
+
     Some(res)
 }

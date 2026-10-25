@@ -6,9 +6,6 @@
     // enables use of '&'static str' in const generics
 
 mod config_views;
-pub use config_views::*;
-    // DeviceDescriptorView,
-    // PlatformDeviceView,
 
 mod node;
 pub use node::*;

@@ -1,7 +1,5 @@
 use std::vec::Vec;
 
-use core::ffi::c_void;
-
 // tbd. Consider moving 'PascalString' to 'config' cradle. All Zigbee strings are this way, it's not an 'esp_zigbee_lib'
 //      specific implementation detail.  (renders the '.into_leaked' method unnecessary)
 /**

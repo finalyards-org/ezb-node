@@ -6,7 +6,7 @@ use ezb_node_raw::{
 };
 
 use crate::{
-    ZclAttr,
+    //ZclAttr,
     ZclError,
     AttrId,
 };

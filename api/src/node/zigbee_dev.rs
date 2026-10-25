@@ -1,22 +1,17 @@
 //
 // Task: Zigbee task
 //
-use ezb_node_config::{
-    NodeType::*,
-};
-
 use ezb_node_raw::{
     ezb_af_device_desc_t,
     ezb_af_create_device_desc,
     ezb_af_device_desc_register,
-    ezb_aps_secur_enable_distributed_security
 };
 
 use crate::{
+    config_views::EndpointCreator,
     EzbError,
     EzbEspError,
 };
-use crate::config_views::EndpointCreator;
 
 /// Wrapper on the Zigbee device.
 ///

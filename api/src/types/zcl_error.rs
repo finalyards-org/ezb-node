@@ -1,6 +1,6 @@
 use strum;
 
-use ezb_node_raw::{ezb_zcl_status_e, ezb_zdp_status_e};
+use ezb_node_raw::ezb_zcl_status_e;
 
 // Design:
 //  instead of using C-like enums (mapping to integers), doing this as separate structs allows for additional

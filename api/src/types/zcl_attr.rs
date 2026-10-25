@@ -1,17 +1,14 @@
 
-use std::{mem, slice};
-
 use ezb_node_raw::{
     ezb_zcl_attribute_s,
-    ezb_zcl_attribute_s__bindgen_ty_1,
+    //r ezb_zcl_attribute_s__bindgen_ty_1,
     ezb_zcl_attr_type_e,
-    RspVariableEntry,
+    //RspVariableEntry,
     ezb_zcl_attr_type_t,
 };
 
 use crate::{
     AttrId,
-    utils::PascalString,
 };
 
 // ZCL attributes are defined by the protocol specification.

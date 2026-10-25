@@ -43,7 +43,7 @@ use crate::{
     Error,
     EzbError,
     IeeeAddr,
-    ZclError,
+    //ZclError,
     ZclEvent,
 };
 
