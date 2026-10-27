@@ -7,7 +7,7 @@ secondary_channels = "all"
 
 [node]
 type = "coordinator"
-allow_open_pairing = true   # = install_code_policy: false
+#allow_open_pairing = true   # = install_code_policy: false
 max_children = 10
 
 [endpoint.defaults]

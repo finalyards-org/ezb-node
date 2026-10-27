@@ -14,7 +14,6 @@ use ezb_node_raw::{
     ezb_af_device_add_endpoint_desc,
     ezb_af_device_desc_t,
     ezb_af_endpoint_get_cluster_desc,
-    //ezb_nwk_device_type_t::*,
     ezb_zcl_basic_cluster_desc_add_attr,
     ezb_zcl_cluster_desc_t,
     ezb_zcl_basic_server_attr_t::{
@@ -206,8 +205,9 @@ fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspE
 
     #[cfg(not(feature = "coordinator"))]
     {
-        discover_server_clusters;
-        unimplemented!()
+        for cls in discover_server_clusters {
+            todo!()
+        }
     }
 
     Ok(ep_desc)

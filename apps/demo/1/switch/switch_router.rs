@@ -1,6 +1,4 @@
 
-use core::sync::atomic::{AtomicU8, Ordering};
-
 use embassy_sync::channel::{
     DynamicReceiver
 };
@@ -12,7 +10,21 @@ use futures_util::{
     StreamExt
 };
 
-use ezb_node::{Accessor, AccessColorDimmableLight, AppSignal, BdbMode, BdbStatus, Config, MatchColorDimmableLights, MatchEvent, Node, ZclEvent, ZclError, NodeApi};
+use ezb_node::{
+    Accessor,
+    AccessColorDimmableLight,
+    AppSignal,
+    BdbMode,
+    BdbStatus,
+    Config,
+    MatchColorDimmableLights,
+    MatchEvent,
+    Node,
+    NodeApi,
+    ZclEvent,
+    ZclError,
+};
+use ezb_node::config::DeviceType;
 
 #[path = ".conf.rs"]
 mod cfg;
@@ -24,24 +36,36 @@ use crate::button_task::{
 
 const ONE_SEC: Duration = Duration::from_millis(1000);
 
-// #fix #hack: How does this go: 'Config' has many endpoints; we need one for the Zigbee comms...
-//const SRC_EP: u8 = 1;
-
-pub(crate) struct SwitchRouter {
-    //src_ep: u8,  // #later this will not be needed once Accessors are based on endpoint
-    //r count: AtomicU8,      // internally mutable state for steering the remote light
+pub struct SwitchRouter {
+    //src_ep: u8,  // The endpoint number associated with 'HA::color_dimmer_switch'
     count: u8,
 }
 
 impl SwitchRouter {
     pub fn new() -> Result<Self, ezb_node::Error> {
-        let () = <Self as Node>::init(cfg::get())?;
-        Ok(Self { count: 0 })
+        let c = cfg::get();
+        let () = <Self as Node>::init(c)?;
+
+        // tbd. eventually, (we could) make the 'config' generate a const entry (not using 'BTreeMap', for example).
+        //      The constness allows us to read the endpoint index corresponding to a certain device type,
+        //      into a const. Then feed it to the 'impl MatchColorDimmableLights', below.
+        //
+        // Discover the index of 'HA::color_dimmer_switch' end point
+        //
+        #[cfg(false)]
+        let src_ep = c.endpoints .iter()
+            .find_map(|(&k,&v)| {
+                if v == DeviceType::ColorDimmerSwitch {
+                    Some(k)
+                } else {
+                    None
+                }
+            })
+            .unwrap("My own endpoint is missing!");
+
+        Ok(Self { count: 0 /*, src_ep*/ })
     }
 }
-
-// tbd. move
-impl MatchColorDimmableLights for SwitchRouter {}
 
 impl Node for SwitchRouter {
     /**
@@ -89,25 +113,43 @@ impl Node for SwitchRouter {
                     self.get_short_address()
                 );
 
-                let match_stream = self.start_matching_color_dimmable_lights(self.src_ep);
-                pin_mut!(match_stream); // pins to stack
+                // #HACK. Once we have the 'Config' as 'const', this can be deduced.
+                const SRC_EP: u8 = 1;   // MUST MATCH what's in TOML
 
-                let first_light = loop {
-                    match match_stream.next() .await {
-                        Some(MatchEvent::Bound(light)) => {
-                            log::info!("Bound with color dimmable light device: 0x{:04X}:{}", light.get().dst_addr, light.get().dst_ep);
-                            break light;    // start using it
-                        },
-                        Some(MatchEvent::Error(err)) => {
-                            log::error!("Failed during color dimmable light search (from remote device): {}", err);
-                            // keep on searching
-                        },
-                        None => {
-                            log::error!("Unexpected end of binding stream!");   // what's this?
+                // Searching the remote counterpart.
+                let first_light: AccessColorDimmableLight<_> = {
+                    let matcher = Matcher<AccessColorDimmableLight::<SRC_EP>>::new();
+
+                    let match_stream = matcher.start();
+                    pin_mut!(match_stream); // pins to stack
+
+                    loop {
+                        match match_stream.next().await {
+                            Some(MatchEvent::Found(light)) => {
+                                log::info!("Found color dimmable light device: 0x{:04X}:{}", light.dst_addr, light.dst_ep);
+                                break light;    // start using it
+                            },
+                            Some(MatchEvent::Error(err)) => {
+                                log::error!("Failed during color dimmable light search (from remote device 0x{:04X}): {}", xxx_dst_addr, err);
+                                // keep on searching
+                            },
+                            None => {
+                                log::error!("Unexpected end of binding stream!");
+                                    // tbd. does this simply mean timeout?
+                            }
                         }
                     }
+                    // 'match_stream' drops; search phase is over.
                 };
-                // 'match_stream' drops; search phase is over.
+
+                {
+                    log::info!("Binding with {}:{}...", first_light.addr, first_light.ep);
+
+                    // 'first_light.bind() .await' or something else
+                    todo!()
+                    //...
+
+                }
 
                 // tbd. move to application task???  ('first_light' as a member?)
                 log::info!("Listening to button presses...");
@@ -147,7 +189,11 @@ impl Node for SwitchRouter {
             },
         }
     }
-}
+
+    fn on_zcl_event(&mut self, zcl_event: ZclEvent) {
+        todo!()
+    }
+} //
 
 /**
 * Steer the remote light, similar to the C example.

@@ -10,8 +10,6 @@ use anyhow::*;
 use std::{env, fs};
 use ezb_node_config::convert_toml;
 
-//r const TMP_DIR: &str = "tmp/";
-
 fn main() -> Result<()> {
 
     // Detect when IDE is running us, and DO NOT ENGAGE with 'esp-idf-sys' if we're under IDE.

@@ -154,6 +154,9 @@ pub struct Endpoint {
     /// @note Coordinator does not need active cluster discovery; it is sufficient for other nodes
     ///         to discover and bind to its endpoints.
     ///
+    /// @note Intentionally 'Option<Vec<..>>': discovers end points that have _all_ the stated
+    ///         clusters.
+    ///
     #[cfg(not(feature = "coordinator"))]
     pub discover_server_clusters: Option<Vec<Cluster>>,
 }

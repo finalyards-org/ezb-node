@@ -8,15 +8,14 @@
 */
 mod zigbee_task;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+//r use std::sync::atomic::{AtomicBool, Ordering};
 use zigbee_task::zigbee_task;
 
 mod zigbee_dev;
 pub(crate) use zigbee_dev::ZigbeeDev;
 
-mod access;
-#[cfg(feature = "_remote_any")]
-pub use access::*;
+mod zigbee_guard;
+pub(crate) use zigbee_guard::ZigbeeGuard;
 
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
@@ -24,8 +23,6 @@ use embassy_sync::{
 };
 
 use ezb_node_raw::{
-    esp_zigbee_lock_acquire,
-    esp_zigbee_lock_release,
     ezb_bdb_is_factory_new,
     ezb_bdb_open_network,
     ezb_bdb_start_top_level_commissioning,
@@ -252,42 +249,6 @@ pub trait NodeApi {
         let _guard = ZigbeeGuard::acquire();
         unsafe {
             esp_zb_factory_reset()
-        }
-    }
-}
-
-/// All 'Node' methods are outside of the 'esp_zigbee_lib' callbacks, since they operate in another
-/// RTOS thread and received the information via a channel. Thus, they need locks when accessing the
-/// 'esp_zigbee_lib' API.
-///
-#[must_use = "Please store the guard in a variable, e.g. '_guard = ...'"]
-struct ZigbeeGuard;
-
-// Just a safety check to see if anyone tries to guard repeatedly.
-static GUARDED: AtomicBool = AtomicBool::new(false);
-
-impl ZigbeeGuard {
-    fn acquire() -> Self {
-        let claimed = GUARDED.swap(true, Ordering::Relaxed);
-        assert!(!claimed, "INTERNAL: Guard re-entered"); // if we coded correctly, a double claim won't happen. Application cannot cause it.
-
-        unsafe {
-            let got_it = esp_zigbee_lock_acquire(99999);    // tbd. change to a tick count matching, say, 9s
-
-            // Note: 'got_it' being 'false' is technically possible: it means our huge window timed out.
-            if !got_it { panic!("Timed out waiting for Zigbee lock") };
-        };
-        Self
-    }
-}
-
-impl Drop for ZigbeeGuard {
-    fn drop(&mut self) {
-        let claimed= GUARDED.swap(false, Ordering::Relaxed);
-        assert!(claimed, "INTERNAL: Guard already dropped!");
-
-        unsafe {
-            esp_zigbee_lock_release();
         }
     }
 }

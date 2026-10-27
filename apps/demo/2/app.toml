@@ -10,12 +10,9 @@
 primary_channels = [11, 15, 20, 25]     # 11, 15, 20 or 25 are best for catching external devices
 secondary_channels = "all"
 
-[platform]
-
 [node]
 type = "coordinator"
-allow_open_pairing = true
-    # allow pairing with well known keys
+#allow_open_pairing = true
 max_children = 5
 
 [endpoint.defaults]

@@ -1,5 +1,7 @@
 #![cfg(feature = "remote_dt_color_dimmable_light")]
 
+use embassy_time::Duration;
+
 use ezb_node_raw::{
     ezb_zcl_cluster_cmd_ctrl_s,
     ezb_zcl_color_control_move_to_color_cmd_payload_t,
@@ -8,7 +10,11 @@ use ezb_node_raw::{
     ezb_zcl_level_move_to_level_cmd_payload_t,
     ezb_zcl_level_move_to_level_with_on_off_cmd_req,
     ezb_zcl_level_move_to_level_with_on_off_cmd_t,
-    ezb_err_e,
+    ezb_zcl_cluster_id_e::{self,
+        EZB_ZCL_CLUSTER_ID_ON_OFF,
+        EZB_ZCL_CLUSTER_ID_LEVEL,
+        EZB_ZCL_CLUSTER_ID_COLOR_CONTROL,
+    }
 };
 
 use crate::{
@@ -19,27 +25,35 @@ use crate::{
 
 use super::{
     Accessor,
-    AccessorCtx,
 };
 
-use embassy_time::Duration;
 const TRANSITION_TIME: Duration = Duration::from_secs(1);
-
-// Note: If there are more and more of the accessors, make the pattern into a macro.
 
 /**
 * Access to a Zigbee node (of color-dimmable-light profile) that we've bounded with.
 */
 #[derive(Copy, Clone)]
-pub struct AccessColorDimmableLight {
-    ctx: AccessorCtx,
+#[allow(non_camel_case_types)]
+pub struct AccessColorDimmableLight<const SRC_EP: u8> {}
+
+impl<const SRC_EP: u8> Accessor for AccessColorDimmableLight<SRC_EP> {
+    const SRC_EP: u8 = SRC_EP;
+
+    const IN_CLUSTERS: &[ezb_zcl_cluster_id_e] = &[
+        EZB_ZCL_CLUSTER_ID_ON_OFF,
+        EZB_ZCL_CLUSTER_ID_LEVEL,
+        EZB_ZCL_CLUSTER_ID_COLOR_CONTROL,
+    ];
+    const OUT_CLUSTERS: &[ezb_zcl_cluster_id_e] = &[];
+
+    fn new() -> Self {
+        Self {}
+    }
 }
 
-impl AccessColorDimmableLight {
-    pub(super) fn new(ctx: AccessorCtx) -> Self {
-        Self { ctx }
-    }
-
+/// Additional methods for accessing a 'color-dimmable-light' end point.
+///
+impl<const SRC_EP: u8> AccessColorDimmableLight<SRC_EP> {
     /**
     * Send a request to set color x,y.
     *
@@ -52,7 +66,7 @@ impl AccessColorDimmableLight {
         let req = ezb_zcl_color_control_move_to_color_cmd_s {
             cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {
                 dst_addr: AddrMode::None .into(),
-                src_ep: self.get().src_ep,
+                src_ep: Self::SRC_EP,
                 ..c_zeroed()    // like in C 'color_dimmer_switch' example
             },
             payload: ezb_zcl_color_control_move_to_color_cmd_payload_t {
@@ -63,15 +77,15 @@ impl AccessColorDimmableLight {
             }
         };
 
-        EzbError::wrap( self.ctx.guarded(|_node| {
+        EzbError::wrap( Self::guarded(|| {
             unsafe { ezb_zcl_color_control_move_to_color_cmd_req(&req) }
         })).unwrap_or_else(|e| {
 
-            // Note: Study how much we get these, and what's the right way to inform (or not) the application
-            //      about it. #later
+            // Study how much we get these, and what's the right way to inform (or not) the application
+            // about it. tbd.
             //
-            //      If needing to pass errors to the application, do an enum and only carry those values we've
-            //      actually met, and whose circumstances are understood.
+            // If needing to pass errors to the application, do an enum and only carry those values we've
+            // actually met, and whose circumstances are understood.
             //
             log::error!("'esp_zigbee_lib' error (ignored): {}", e);
         });
@@ -87,7 +101,7 @@ impl AccessColorDimmableLight {
         let req = ezb_zcl_level_move_to_level_with_on_off_cmd_t {
             cmd_ctrl: ezb_zcl_cluster_cmd_ctrl_s {
                 dst_addr: AddrMode::None .into(),
-                src_ep: self.get().src_ep,
+                src_ep: Self::SRC_EP,
                 ..c_zeroed()    // like in C 'color_dimmer_switch' example
             },
             payload: ezb_zcl_level_move_to_level_cmd_payload_t {
@@ -97,27 +111,13 @@ impl AccessColorDimmableLight {
             }
         };
 
-        let err = self.ctx.guarded(|_node| {
+        EzbError::wrap( Self::guarded(|| {
             unsafe { ezb_zcl_level_move_to_level_with_on_off_cmd_req(&req) }
+        })).unwrap_or_else(|e| {
+            // Note: Study how much we get these, and what's the right way to inform (or not) the application
+            //      about it. #later
+            //
+            log::error!("'esp_zigbee_lib' error (ignored): {:?}", e);
         });
-        if err != 0 {
-            match ezb_err_e::parse(err) {
-                None => {
-                    log::error!("Unexpected 'esp_zigbee_lib' error (ignored): {:?}", err);
-                },
-                Some(e) => {
-                    // Note: Study how much we get these, and what's the right way to inform (or not) the application
-                    //      about it. #later
-                    //
-                    log::error!("'esp_zigbee_lib' error (ignored): {:?}", e);
-                }
-            }
-        }
-    }
-}
-
-impl Accessor for AccessColorDimmableLight {
-    fn get(&self) -> &AccessorCtx {
-        &self.ctx
     }
 }

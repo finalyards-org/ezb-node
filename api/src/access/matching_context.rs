@@ -1,8 +1,10 @@
 #![cfg(feature = "_remote_any")]
 
-use core::ffi::c_void;
-use core::marker::PhantomPinned;
-use core::pin::Pin;
+use core::{
+    ffi::c_void,
+    marker::{PhantomData, PhantomPinned},
+    pin::Pin,
+};
 
 use embassy_sync::{
     blocking_mutex::raw::ThreadModeRawMutex,
@@ -19,37 +21,32 @@ use ezb_node_raw::{
     ezb_zdo_match_desc_req_s,
     ezb_zdp_match_desc_req_field_s,
     ezb_zdp_match_desc_rsp_field_s,
-    //ezb_err_e,
 };
 
 use super::{
     Accessor,
-    AccessorCtx,
     MatchEvent,
 };
 
 use crate::{
     error::EzbError,
-    Node,
     ShortAddr,
     ZdpError
 };
-//r #[cfg(feature = "remote_dt_color_dimmable_light")]
-//r use crate::AccessColorDimmableLight;
 
 const CHANNEL_CAPACITY: usize = 8;
 
-type ChannelT = Channel<ThreadModeRawMutex, Option<MatchInnerEvent>, CHANNEL_CAPACITY>;
+type ChannelT = Channel<ThreadModeRawMutex, Option<(ShortAddr,MatchResponse)>, CHANNEL_CAPACITY>;
 
 /**
-* Carries out a groupcast call on the Zigbee network, listing all devices (which are receiving on idle) that match
-* the provided set of 'in' and 'out' cluster id's.
+* Carries out a groupcast call on the Zigbee network, listing all devices (which are receiving on
+* idle) that match the provided set of 'in' and 'out' cluster id's.
 *
 * Lifespan:
 *   Remains valid throughout the matching mechanism. This also ensures that what we place in the
 *   fields remains available for the C API, until the matching has ended.
 */
-pub(super) struct MatchingContext {
+pub(super) struct MatchingContext<A: Accessor> {
     // For safety, keep pinned until the end of the matching process.
     //  .req.field.cluster_list -> _clusters
     //  .req.user_ctx -> self
@@ -63,30 +60,36 @@ pub(super) struct MatchingContext {
 
     // Pins 'Self' to heap, not to be moved.
     _pin: PhantomPinned,
+
+    _marker: PhantomData<A>,
 }
 
-impl MatchingContext {
+// By defining 'MatchingContextPinned', we can create methods. On 'Pin<Box<..>>', we cannot.
+//
+#[cfg(false)]   // complex
+struct MatchingContextPinned(Pin<Box<MatchingContext>>);
+
+impl<A: Accessor> MatchingContext<A> {
     /**
     * Create a pinned matcher (lives in the heap; stationary, i.e. fields can be passed to C APIs).
     */
-    pub(super) fn new_pinned(in_clusters: &[ezb_zcl_cluster_id_e], out_clusters: &[ezb_zcl_cluster_id_e]) -> Pin<Box<Self>> {
+    pub(super) fn new_pinned() -> Pin<Box<Self>> {
         use ezb_af_profile_id_e::HA_PROFILE_ID; // HA = Home Automation
 
-        // Create a channel. The sending end is placed in the '.req.useer_ctx' so we can feed it from the C callback
+        let in_cls: &[ezb_zcl_cluster_id_e] = A::IN_CLUSTERS;
+        let out_cls: &[ezb_zcl_cluster_id_e] = A::OUT_CLUSTERS;
+
+        // Create a channel. The sending end is placed in the '.req.user_ctx' so we can feed it from the C callback
         // (even if there were multiple matches going on).
         //
         let channel: ChannelT = Channel::new();
 
-        // tbd.? are these left-overs?
-        //let tx = channel.dyn_sender();
-        //let rx = channel.dyn_receiver();
-
         let clusters: Box<[u16]> = {
-            let mut vec = Vec::with_capacity(in_clusters.len() + out_clusters.len());
-            vec.extend_from_slice(&in_clusters);
-            vec.extend_from_slice(&out_clusters);
+            let mut vec = Vec::with_capacity(in_cls.len() + out_cls.len());
+            vec.extend_from_slice(&in_cls);
+            vec.extend_from_slice(&out_cls);
 
-            vec.into_iter().map(|x| x as u16).collect()
+            vec.into_iter().map(|x| x as _).collect()
         };
 
         // Make the struct in stages, writing '.field.cluster_list' at the end, once we've pinned the whole 'Self' in place,
@@ -101,16 +104,17 @@ impl MatchingContext {
                     field: ezb_zdp_match_desc_req_field_s {
                         nwk_addr_of_interest: ShortAddr::GROUPCAST.0, // 0xFFFD
                         profile_id: HA_PROFILE_ID as u16,
-                        num_in_clusters: in_clusters.len() as u8,
-                        num_out_clusters: out_clusters.len() as u8,
+                        num_in_clusters: in_cls.len() as u8,
+                        num_out_clusters: out_cls.len() as u8,
                         cluster_list: core::ptr::null_mut(), // will be set
                     },
-                    cb: Some(match_c_callback),
+                    cb: Some(match_c_callback ::<A>),
                     user_ctx: core::ptr::null_mut(), // will be set
                 },
                 _clusters: clusters,
                 channel,
                 _pin: PhantomPinned,
+                _marker: PhantomData,
             };
 
             Box::pin(o)
@@ -118,15 +122,12 @@ impl MatchingContext {
 
         // Now that the struct is pinned (i.e. stationary), we can:
         //  - write '.req.field.cluster_list' (required by the C API) to point to '._clusters' that owns the data
-        //  - write '.user_ctx' to '.channel' (allows C callback to feed the channel)
-        //
-        // Note! Why not pass just 'DynamicSender' to the C callback?
-        //      It's a "fat pointer", and does not cast to '*const c_void'. 'Channel' does.
+        //  - write '.user_ctx' to 'self' (we only need the channel, but..)
         {
             let poke = unsafe { me_pinned.as_mut().get_unchecked_mut() };
 
             poke.req.field.cluster_list = poke._clusters.as_mut_ptr();
-            poke.req.user_ctx = &poke as *const _ as *mut c_void;
+            poke.req.user_ctx = &poke as *const _ as *mut c_void;    // points to 'Self'
         }
 
         me_pinned
@@ -137,67 +138,62 @@ impl MatchingContext {
     *
     * @note: In application task.
     */
-    pub(super) fn start_matching<T,Gen>(ctx: Pin<Box<Self>>, node: &'static dyn Node, src_ep: u8, make: Gen) -> impl Stream<Item = MatchEvent<T>>
-    where
-        T: Accessor,
-        Gen: Fn(AccessorCtx) -> T + 'static,
+    pub(super) fn start_matching(self: Pin<Box<MatchingContext<A>>>) -> impl Stream<Item = (ShortAddr, MatchEvent<A>)>
     {
-        let acc_fact = move |dst_addr: ShortAddr, dst_ep: u8| {
-            make(
-                AccessorCtx::new(node, src_ep, dst_addr, dst_ep)
-            )
-        };
-
+        // Note: It matters to the lifetimes that things are done *within* the 'stream!' block. The inside lasts
+        //      longer than the function body.
+        //
         stream! {
             // This code block gets executed, in a lazy manner, only once the application reads the stream.
 
-            // Note: It matters to the lifetimes that things are done *within* the 'stream!' block. The inside lasts
-            //      longer than the function body.
-            //
-            let rx: DynamicReceiver<'_, Option<MatchInnerEvent>> = ctx.channel.dyn_receiver();
+            let rx: DynamicReceiver<'_, Option<(ShortAddr,MatchResponse)>> = self.channel.dyn_receiver();
 
             // 'None' is a marker that the channel will terminate
             //
-            while let Some(ev) = rx.receive() .await {
+            while let Some((remote_addr,ev)) = rx.receive() .await {
+
                 match ev {
-                    MatchInnerEvent::Bound(short_addr, eps) => {
-                        for ep in eps {
-                            let acc = acc_fact(short_addr, ep);
-                            yield MatchEvent::Bound(acc);
+                    MatchResponse::Matches(eps) => {
+                        // When 'eps' is empty (remote node reporting they don't have matching end points),
+                        // it gets consumed here - no yield, because no accessor generated.
+
+                        // We are at a decision, here. tbd.
+                        //
+                        //  Who does actual binding?
+                        //      Leaving it now to the application level, but - at least when we deal with
+                        //      pre-configured devices - we could (should!) simply bind automatically.
+                        //
+                        // Note: Not using the (remote) end point. The C library keeps us connected,
+                        //      application gets the 'remote_addr' mostly for debugging purposes.
+                        //      (If needed, feed it to the Accessor.)
+                        //
+                        for _ep in eps {
+                            let acc = A::new();
+                            yield (remote_addr, MatchEvent::Found(acc));
                         }
                     },
-                    MatchInnerEvent::ZdpError(v) => {
-                        yield MatchEvent::Error(v);
+                    MatchResponse::Error(v) => {
+                        yield (remote_addr, MatchEvent::Error(v));
                     }
                 }
             }
 
-            // Drop of 'ctx'.
-            {
-                const EXTRA_SAFETY: bool = false;
-                #[cfg(feature = "_extra_safety")]
-                const EXTRA_SAFETY: bool = true;
+            // Extra safety - avoids dropping.
+            //
+            //  - we let the 'MatchingContext' remain on heap (leaking memory), with its
+            //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error'
+            //      really is the final call (from C library).
+            //
+            if cfg!(feature = "_extra_safety") {
+                log::debug!("Extra caution: writing '.user_ctx' to NULL");
 
-                // Extra safety:
-                //  - we let the 'MatchingContext' remain on heap (leaking memory), with its
-                //      '.req.user_ctx' set to NULL. This will show us, whether getting '.error'
-                //      really is the final call (from C library).
-                //
-                if EXTRA_SAFETY {
-                    log::debug!("Extra caution: writing '.user_ctx' to NULL");
+                let ptr = core::ptr::addr_of!(self.req.user_ctx) as *mut *mut c_void;
+                unsafe{ ptr.write( core::ptr::null_mut() ) };
 
-                    let ptr = core::ptr::addr_of!(ctx.req.user_ctx) as *mut *mut c_void;
-                    unsafe{ ptr.write( core::ptr::null_mut() ) };
-
-                    std::mem::forget(ctx);
-                } else {
-                    // Release 'MatchingContext' from the heap.
-
-                    // WHY is this line needed?  Have forgotten.    tbd. it does not build
-                    #[cfg(false)]
-                    let _drop = unsafe{ Box::from_raw(ctx as *mut MatchingContext) };
-                }
+                core::mem::forget(self);
             }
+
+            // End of stream will also drop the channel.
         } // stream!
     }
 }
@@ -206,21 +202,25 @@ impl MatchingContext {
 * The C callback.
 *
 * @note Called within the Zigbee task.
+*
+* @note Google AI strongly suggests using the 'user_ctx' to point to the _whole_ 'MatchingContext<A>'.
+*       We only really need the channel, or a sender to it. It's reasons are aliasing based concerns.
 */
-extern "C" fn match_c_callback(
+extern "C" fn match_c_callback<A: Accessor>(
     response: *const ezb_zdo_match_desc_req_result_s,
     user_ctx: *mut c_void
 ) {
-    // if this happens, the callback gets called even after '.error' != 0 payload.
+    // If this happens, the callback gets called even after a payload carrying an error.
+    // (needs 'feature = "_extra_safety"' to be set)
     assert!( !user_ctx.is_null(), "C callback: 'user_ctx'==NULL");
 
     let Some(res) = parse(response) else {
-        log::error!("Unable to parse match response (skipped).");
+        log::error!("Unable to parse match response (skipped): {:?}", unsafe { *response });
         return;
     };
 
-    let ctx = & unsafe { &*(user_ctx as *const MatchingContext) };
-    let tx = ctx.channel.dyn_sender();
+    let ctx = & unsafe { &*(user_ctx as *const MatchingContext<A>) };
+    let tx = ctx.channel.sender();  // preferable over '.dyn_sender()' (less CPU; relatively frequent calls)
 
     match res {
         // If a local error (or timeout), terminate the whole binding process.
@@ -233,11 +233,8 @@ extern "C" fn match_c_callback(
                 match err {
                     TrySendError::Full(_) => {
                         log::error!("Channel full; cannot close!");
-                    }
-                    // above "matches all the relevant values"
-                    //_ => {
-                    //    log::error!("Unexpected error (did not close the channel): {:?}", err);
-                    //}
+                    },
+                    // exhaustive match
                 }
             }
             return;
@@ -248,10 +245,7 @@ extern "C" fn match_c_callback(
                     TrySendError::Full(_) => {
                         log::error!("Channel full; capacity ({}) reached! (event lost)", ctx.channel.capacity());
                     },
-                    // above "matches all the relevant values"
-                    //_ => {
-                    //    log::error!("Unexpected error (binding event lost): {:?}", err);
-                    //}
+                    // exhaustive match
                 }
             }
         }
@@ -259,23 +253,26 @@ extern "C" fn match_c_callback(
 }
 
 /**
-* The _inner_ delivery mechanism, from Zigbee task to application task.
+* The _inner_ delivery mechanism. This is only for the inter-task communications (Zigbee task ->
+* application task).
 */
 #[derive(Debug)]
-pub(super) enum MatchInnerEvent {
+pub(super) enum MatchResponse {
     /// Successful binding
     ///
     /// @note Same Zigbee message may carry multiple endpoints (rare, but may).
-    Bound(ShortAddr, Vec<u8>),
+    ///
+    Matches(Vec<u8>),
 
     /// Zigbee Device Profile errors; response from another node.
-    ZdpError(ZdpError),
+    Error(ZdpError),
 }
 
 /**
 * Parse the match response from C structure.
 *
-* @return None if the data is bad (NULL pointers); Some if valid.
+* @return None if the data is bad (NULL pointers)
+*       Some if valid - can still carry an error from the remote device.
 */
 //pub struct ezb_zdo_match_desc_req_result_s {
 //     ///< Error code of the match descriptor request operation
@@ -295,42 +292,57 @@ pub(super) enum MatchInnerEvent {
 //     ///< Pointer to array of endpoint numbers (uint8_t) that match the criteria
 //     pub match_list: *mut u8,
 // }
-fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<Result<MatchInnerEvent,EzbError>> {
+fn parse(p: *const ezb_zdo_match_desc_req_result_s) -> Option<Result<(ShortAddr,MatchResponse),EzbError>> {
     let resp = unsafe { p.as_ref() }?;
 
-    let res = EzbError::wrap(resp.error) .map(|_| {  // success response
+    if let Err(e) = EzbError::wrap(resp.error) {
+        Some(Err(e))
+
+    } else {
+        // Success response
         let rsp = unsafe { resp.rsp.as_ref() }?;
 
-        let st = ZdpError::parse(rsp.status)?;
-        if let Some(e) = st {
-            Ok(MatchInnerEvent::ZdpError(e))
+        let ezb_zdp_match_desc_rsp_field_s {
+            nwk_addr_of_interest,
+            match_length,
+            match_list,
+            status
+        } = *rsp;
+
+        let zdperr_opt = ZdpError::parse(status)?;
+
+        let event = if let Some(e) = zdperr_opt {
+            MatchResponse::Error(e)
 
         } else {
-            let ezb_zdp_match_desc_rsp_field_s {
-                nwk_addr_of_interest,
-                match_length,
-                match_list,
-                status: _ // ignore
-            } = *rsp;
+            let tmp = unsafe { match_list.as_ref() };
 
-            let short_addr = ShortAddr::from(nwk_addr_of_interest);
-
-            // tbd. Is no matches a valid use case, or should it be regarded as a corrupt message?
-
-            let eps = match match_list.as_ref() {
-                None => {
-                    (match_length == 0) .then_some()?;   // no list but length = corrupt event
-                    log::warn!("Match with no endpoints; is this normal?");
+            let eps = match tmp {
+                None if match_length == 0 => {
+                    // Zigbee note: NULL is perfectly okay (combined with 'match_length' == 0): the
+                    //      remote end point responds that it does not have matching clusters.
+                    //
                     &[]
                 },
-                Some(ptr) => {
-                    core::slice::from_raw_parts(ptr, match_length as usize)
+                Some(ptr) if match_length > 0 => {
+                    unsafe {
+                        core::slice::from_raw_parts(ptr, match_length as usize)
+                    }
+                },
+
+                // Rest are corrupt cases (OR 'match_list' != NULL, 'match_length' ==0 can be tolerated,
+                // taking the pointer as one that should not be used. Change the above case if it needs to.
+                //
+                _ => {
+                    return None;
                 }
             };
 
-            Ok(MatchInnerEvent::Bound(short_addr, eps.to_vec()))
-        }
-    });
+            MatchResponse::Matches(eps.to_vec())
+        };
 
-    Some(res)
+        let remote_addr = ShortAddr::from(nwk_addr_of_interest);
+
+        Some(Ok((remote_addr, event)))
+    }
 }

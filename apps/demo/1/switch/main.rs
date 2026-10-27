@@ -22,9 +22,9 @@ use esp_idf_hal::{
     peripherals::Peripherals,
 };
 use esp_idf_svc::{
+    nvs::EspDefaultNvsPartition,
     sys::{link_patches},
 };
-use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use ezb_node::{
     Config,
 };
@@ -33,6 +33,7 @@ use ezb_node_apps::{
     init_nvs,
     set_panic_hook,
 };
+
 use crate::switch_router::SwitchRouter;
 
 /**

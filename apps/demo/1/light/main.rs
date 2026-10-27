@@ -16,8 +16,6 @@ use ezb_node_apps::{
     set_panic_hook,
 };
 
-use log::LevelFilter;
-
 mod light_coordinator;
 use light_coordinator::LightCoordinator;
 
@@ -46,13 +44,15 @@ async fn main(spawner: Spawner) {
 
     // Initialize the flash.
     {
-        let part = EspDefaultNvsPartition::take()
+        let partition = EspDefaultNvsPartition::take()
             .unwrap_or_else(|e| panic!("Initialization of flash failed: {:?}", e));
 
-        core::mem::forget(part);
+        core::mem::forget(partition);
     }
 
-    spawner.spawn( node_task() .unwrap_or_else(|e| panic!("spawn failed: {:?}", e)) );
+    spawner.spawn( node_task() 
+        .unwrap_or_else(|e| panic!("spawn failed: {:?}", e)) 
+    );
 
     // Processing happens in the background.
     loop {

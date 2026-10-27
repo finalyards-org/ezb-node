@@ -7,82 +7,64 @@ use ezb_node::{
     BdbMode,
     BdbStatus,
     Node,
+    NodeApi,
     ZclEvent,
-    ZclError,
+    //ZclError,
 };
 
 #[path = ".conf.rs"]
 mod cfg;
 
-// If you want to have state, use interior mutability (e.g., 'Mutex'), as the node (a singleton)
-// is accessed via immutable references.
-pub(crate) struct IasCoordinator
-where Self: Node {}
-
-impl Node for IasCoordinator {}
+pub(crate) struct IasCoordinator;
 
 impl IasCoordinator {
     pub fn new() -> Result<Self, ezb_node::Error> {
-        const AUTO_START: bool = false;
-        // Note: This might disappear, see comment of 'Node::init()'.
-
-        let () = <Self as Node>::init(cfg::get(), AUTO_START)?;
+        let () = <Self as Node>::init(cfg::get())?;
         Ok(Self {})
     }
+}
 
-    /**
-    * Behaviour of this particular node.
-    *
-    * @note: The closures provided to 'Node::run' are run in this application task.
-    */
-    pub async fn run(self) -> ! {
-        <Self as Node>::run(self,
-|this, sig| Box::pin(this.on_app_signal(sig)),
-|this, ev| this.on_zcl_event(ev)
-        ).await
-    }
-
+impl Node for IasCoordinator {
     /**
     * Run the received signal through our logic match.
     */
-    async fn on_app_signal(&self, sig: AppSignal) {
+    async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
 
-        // tbd. bring the endpoint's number from configuration. #hack
-        //r const MY_IAS_ENDPOINT: u8 = 1;
+        let enter_commission_mode = |mode: BdbMode| {
+            self.start_top_level_commissioning(mode)
+                .expect("Unable to commit the top level commissioning state");  // tbd. does this occur?
+        };
 
         // If there is an error, all we really can is log it, and keep going.
         //
         match sig {
             ZdoSignalSkipStartup => {
                 log::info!("Initialize Zigbee stack");
-                self.start_top_level_commissioning(BdbMode::Initialization)
-                    .expect();
+                enter_commission_mode(BdbMode::Initialization)
             },
 
             BdbSignalDeviceFirstStart(BdbStatus::Success) | BdbSignalDeviceReboot(BdbStatus::Success) => {
                 let is_new = self.is_factory_new();
                 log::info!("Device started up in {} mode.", if is_new {"factory-reset"} else {"commissioned"});
                 if is_new {
-                    self.start_top_level_commissioning(BdbMode::NetworkFormation)
-                        .expect();
-                        //r .unwrap_or_else(|e| log::warn!("Failed handling '{}' (new): {}", sig, e));
+                    enter_commission_mode(BdbMode::NetworkFormation)
                 } else {
-                    log::info!("Device rebooted. Opening network for existing devices.");
+                    log::info!("Device reboot");
 
+                    /*** ? where did this come from?
                     // Open for pairing for a moment.
                     self.start_top_level_commissioning(BdbMode::NetworkSteering)
                         .expect();
                         //r .unwrap_or_else(|e| log::warn!("Failed handling '{}' (NOT new): {}", sig, e));
+                    ***/
                 }
             },
-            BdbSignalDeviceFirstStart(_st) | BdbSignalDeviceReboot(_st) => {
-                log::warn!("{} failed; retrying...", sig);
+            BdbSignalDeviceFirstStart(st) | BdbSignalDeviceReboot(st) => {
+                log::warn!("{} failed with status = {}; retrying...", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::Initialization)
-                    .expect();
-                    //r .unwrap_or_else(|e| log::warn!("Failed handling {}: {}", sig, e));
+                enter_commission_mode(BdbMode::Initialization)
             },
 
             BdbSignalFormation(BdbStatus::Success) => {
@@ -92,18 +74,13 @@ impl IasCoordinator {
                     self.get_current_channel(),
                     self.get_short_address()
                 );
-                // Allow devices to join.
-                self.start_top_level_commissioning(BdbMode::NetworkSteering)
-                    .expect();
-                    //r .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
+                enter_commission_mode(BdbMode::NetworkSteering)
             },
             BdbSignalFormation(st) => {
                 log::info!("Failed to form network: {}, st = {}", sig, st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkFormation)
-                    .expect();
-                    //.unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
+                enter_commission_mode(BdbMode::NetworkFormation)
             },
 
             BdbSignalSteering(BdbStatus::Success) => {
@@ -121,13 +98,11 @@ impl IasCoordinator {
                 log::info!("Failed the network steering: st = {}", st);
 
                 embassy_time::Timer::after_secs(1).await;
-                self.start_top_level_commissioning(BdbMode::NetworkSteering)
-                    .expect();
-                    //r .unwrap_or_else(|e| log::warn!("Failed handling '{}': {}", sig, e));
+                enter_commission_mode(BdbMode::NetworkSteering)
             }
 
             ZdoSignalDeviceAnnce { short_addr, device_addr, .. } => {
-                log::info!("New device announced joining the network: short addr {:#06x}, device addr {}", short_addr, device_addr);
+                log::info!("New device commissioned or rejoined: {}", short_addr);
 
                 let my_ieee = self.get_extended_address();
                 log::info!("Sending IAS CIE Address registration to the sensor... {}", my_ieee);
@@ -159,23 +134,17 @@ impl IasCoordinator {
     /**
     * Run the received ZCL event through our logic.
     */
-    fn on_zcl_event(&self, ev_res: Result<ZclEvent, ZclError>) {
+    fn on_zcl_event(&mut self, ev: ZclEvent) {
         use ZclEvent::*;
 
-        // Note: It may be that we need to know more about the event, when errors arise. Let's, however, keep the
-        //      'ZclEvent' for successful ones, and curry the 'ZclError' with extra information ('CommonInfo'?) if
-        //      there is a need. All this information is available in the C level, but dividing it to success/fail
-        //      will make applications easier to read.
-
-        let Ok(ev) = ev_res else {
-            log::warn!("ZCL event error: {}", ev_res.err().unwrap());
-            return;
-        };
-
+        // Obs.!
+        //
+        //      We might want to know more about failed events. If so, the C side has 'CommonInfo'.
+        //      We can pass an 'Either' here (instead of 'Result', that gives wrong vibes).
+        //
         match ev {
             SetAttrValue { .. } => {
-                todo!();
-                //set_attr_value(message);  // i.e. steer the light (color, intensity, on/off)
+                todo!();    // tbd. not sure we need this - don't have any attributes, right?
             },
             DefaultResp { err, .. } => {
                 //ezb_zcl_cmd_default_rsp_message_t *default_rsp = (ezb_zcl_cmd_default_rsp_message_t *)message;
@@ -189,7 +158,7 @@ impl IasCoordinator {
             _ => {
                 // Once the door sensor provides "Zone Enroll Request", we'll see it here. #temp
                 //
-                log::warn!("ZCL Core Action / Event received: {:?}", ev);
+                log::warn!("ZCL Core Action: {:?}", ev);
             }
         }
     }

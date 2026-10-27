@@ -1,7 +1,13 @@
 [toolchain]
-channel = "nightly"
+# 'nightly' breaks 'std' building so often, it's better to keep anchored to a certain date.
+#channel = "nightly"
+channel = "nightly-2026-10-18"
 
-#channel = "nightly-2026-10-09" # fine!
+# 2026-10-26 breaks: see: https://github.com/rust-lang/rust/issues/164555
+  #   <<
+  #       error[E0609]: no field `st_atime` on type `&libc::stat`
+  #   <<
+
 #channel = "nightly-2026-10-10" # breaks; see: https://github.com/rust-lang/rust/issues/164177
 # 18-Oct-26 good again!
 
