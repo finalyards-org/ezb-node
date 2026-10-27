@@ -11,9 +11,9 @@ use super::{
 /**
 * Event provided to the application on Zigbee match progress.
 */
-pub enum MatchEvent<T : Accessor /*r + Copy + Clone*/> {
+pub enum MatchEvent<T : Accessor> {
     /// Found a match. The application gets a typed accessor to communicate with the remote node.
-    Found(T),
+    Found(u8, T),
 
     /// Something went wrong in the other node. Can log these, or ignore.
     Error(ZdpError)

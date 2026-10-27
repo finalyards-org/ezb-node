@@ -6,12 +6,12 @@
 //r #![feature(never_type)]
 
 mod switch_router;
-use switch_router::LightSwitchRouter;
+use switch_router::SwitchRouter;
 
 mod button_task;
 use button_task::button_task;
 
-use anyhow::*;
+//use anyhow::*;
 
 use embassy_executor::{
     Spawner,
@@ -26,15 +26,13 @@ use esp_idf_svc::{
     sys::{link_patches},
 };
 use ezb_node::{
-    Config,
+    //r Config,
+    Node,
 };
 
 use ezb_node_apps::{
-    init_nvs,
     set_panic_hook,
 };
-
-use crate::switch_router::SwitchRouter;
 
 /**
 * The entry point.

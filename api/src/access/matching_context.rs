@@ -163,13 +163,9 @@ impl<A: Accessor> MatchingContext<A> {
                         //      Leaving it now to the application level, but - at least when we deal with
                         //      pre-configured devices - we could (should!) simply bind automatically.
                         //
-                        // Note: Not using the (remote) end point. The C library keeps us connected,
-                        //      application gets the 'remote_addr' mostly for debugging purposes.
-                        //      (If needed, feed it to the Accessor.)
-                        //
-                        for _ep in eps {
+                        for ep in eps {
                             let acc = A::new();
-                            yield (remote_addr, MatchEvent::Found(acc));
+                            yield (remote_addr, MatchEvent::Found(ep, acc));
                         }
                     },
                     MatchResponse::Error(v) => {

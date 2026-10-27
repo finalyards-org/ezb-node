@@ -203,9 +203,16 @@ fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspE
         }
     }
 
+    // NOT SURE if this is the place where discovery needs to take place. Also possible, we're
+    // already done (i.e. endpoint is created). tbd. compare to C switch sample.
+    //
+    // demo 1/switch:
+    // discover_server_clusters = ["HA::on_off", "HA::level_control"]
+    //
+    #[cfg(false)]
     #[cfg(not(feature = "coordinator"))]
     {
-        for cls in discover_server_clusters {
+        for _cls in discover_server_clusters {
             todo!()
         }
     }

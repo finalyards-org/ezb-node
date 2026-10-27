@@ -1,30 +1,22 @@
 
-use embassy_sync::channel::{
-    DynamicReceiver
-};
-use embassy_time::{
-    Duration
-};
+//use embassy_time::Duration;
+
 use futures_util::{
     pin_mut,
     StreamExt
 };
 
 use ezb_node::{
-    Accessor,
     AccessColorDimmableLight,
     AppSignal,
     BdbMode,
     BdbStatus,
-    Config,
-    MatchColorDimmableLights,
+    Matcher,
     MatchEvent,
     Node,
     NodeApi,
     ZclEvent,
-    ZclError,
 };
-use ezb_node::config::DeviceType;
 
 #[path = ".conf.rs"]
 mod cfg;
@@ -34,10 +26,9 @@ use crate::button_task::{
     ButtonEvent
 };
 
-const ONE_SEC: Duration = Duration::from_millis(1000);
+//const ONE_SEC: Duration = Duration::from_millis(1000);
 
 pub struct SwitchRouter {
-    //src_ep: u8,  // The endpoint number associated with 'HA::color_dimmer_switch'
     count: u8,
 }
 
@@ -63,7 +54,7 @@ impl SwitchRouter {
             })
             .unwrap("My own endpoint is missing!");
 
-        Ok(Self { count: 0 /*, src_ep*/ })
+        Ok(Self { count: 0 })
     }
 }
 
@@ -118,19 +109,19 @@ impl Node for SwitchRouter {
 
                 // Searching the remote counterpart.
                 let first_light: AccessColorDimmableLight<_> = {
-                    let matcher = Matcher<AccessColorDimmableLight::<SRC_EP>>::new();
+                    let matcher = Matcher::<AccessColorDimmableLight::<SRC_EP>>::new();
 
                     let match_stream = matcher.start();
                     pin_mut!(match_stream); // pins to stack
 
                     loop {
                         match match_stream.next().await {
-                            Some(MatchEvent::Found(light)) => {
-                                log::info!("Found color dimmable light device: 0x{:04X}:{}", light.dst_addr, light.dst_ep);
-                                break light;    // start using it
+                            Some((rem_addr, MatchEvent::Found(rem_ep, accessor))) => {
+                                log::info!("Found color dimmable light device: 0x{:04X}:{}", rem_addr, rem_ep);
+                                break accessor;    // start using it
                             },
-                            Some(MatchEvent::Error(err)) => {
-                                log::error!("Failed during color dimmable light search (from remote device 0x{:04X}): {}", xxx_dst_addr, err);
+                            Some((rem_addr, MatchEvent::Error(err))) => {
+                                log::error!("Failed during color dimmable light search (from remote device 0x{:04X}): {}", rem_addr, err);
                                 // keep on searching
                             },
                             None => {
@@ -143,12 +134,11 @@ impl Node for SwitchRouter {
                 };
 
                 {
-                    log::info!("Binding with {}:{}...", first_light.addr, first_light.ep);
+                    log::info!("Binding...");
 
                     // 'first_light.bind() .await' or something else
+                    // tbd. compare with C sources
                     todo!()
-                    //...
-
                 }
 
                 // tbd. move to application task???  ('first_light' as a member?)
@@ -156,7 +146,7 @@ impl Node for SwitchRouter {
                 loop {
                     match btn_receive().await {
                         ButtonEvent::Pressed => {
-                            handle_button_press(&first_light, &self.count);
+                            handle_button_press(&first_light, &mut self.count);
                         },
                         ButtonEvent::Depressed => {}
                     }
@@ -190,7 +180,7 @@ impl Node for SwitchRouter {
         }
     }
 
-    fn on_zcl_event(&mut self, zcl_event: ZclEvent) {
+    fn on_zcl_event(&mut self, _zcl_event: ZclEvent) {
         todo!()
     }
 } //
@@ -198,7 +188,7 @@ impl Node for SwitchRouter {
 /**
 * Steer the remote light, similar to the C example.
 */
-fn handle_button_press(light: &AccessColorDimmableLight, count_ref: &mut u8) {
+fn handle_button_press<const SRC_EP: u8>(light: &AccessColorDimmableLight<SRC_EP>, count_ref: &mut u8) {
     let count = *count_ref;
     *count_ref += 1;
 

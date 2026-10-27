@@ -1,11 +1,8 @@
 
-use core::sync::LazyLock;
-
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{
         Channel,
-        DynamicReceiver
     }
 };
 use embassy_time::{Duration, Timer};

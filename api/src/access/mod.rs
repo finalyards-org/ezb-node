@@ -9,7 +9,8 @@
 */
 
 mod matcher;
-pub(self) use matcher::Accessor;
+pub(self) use matcher::Accessor;    // enough just for us: public uses more specific accessors
+pub use matcher::Matcher;
 
 mod matching_context;
 pub(self) use matching_context::*;

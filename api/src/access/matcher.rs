@@ -14,9 +14,10 @@ use super::{
 use crate::{node::ZigbeeGuard, ShortAddr};
 
 /**
-* Matcher that can be instantiated for finding - and binding with - a remote end point.
+* Matcher for finding remote end points to bind with.
 */
-pub(crate) struct Matcher<A: Accessor> {
+// tbd. This has no fields; consider making it a function instead.
+pub struct Matcher<A: Accessor> {
     // (no fields needed)
 
     // Required to denote to Rust the type parameter matters.
@@ -33,12 +34,12 @@ impl<A: Accessor> Matcher<A> {
     /**
     * Start matching.
     *
-    * Passes matches over as a profile-specific access types, through which the user's application
-    * can access the remote node, in a typed fashion!
+    * Passes matches over as a profile specific accessor type, through which the application can
+    * access the remote node, in a typed fashion!!
     *
     * @note Accessors live longer than the matching.
     */
-    fn start(self) -> impl Stream<Item = (ShortAddr, MatchEvent<A>)> {
+    pub fn start(self) -> impl Stream<Item = (ShortAddr, MatchEvent<A>)> {
         let mcp = MatchingContext::<A>::new_pinned();
         mcp.start_matching()
     }
@@ -46,7 +47,7 @@ impl<A: Accessor> Matcher<A> {
 
 /// Base for all accessors.
 ///
-pub(crate) trait Accessor {
+pub trait Accessor {
     const SRC_EP: u8;
 
     /// The input clusters that the remote counter-part must provide, for a bind to occur.
@@ -60,11 +61,13 @@ pub(crate) trait Accessor {
 
     /// Bind to the remote. Calling this means the application wants to start using the remote end point.
     ///
+    #[cfg(false)]   // #later
     async fn bind() {
         todo!()
     }
 
     /// Ability for the specific accessor to reach 'esp_zigbee_lib' C API's, locked.
+    // tbd. move to a utility function ('pub(crate)')
     fn guarded<F,T>(f: F) -> T
     where
         F: FnOnce() -> T
