@@ -48,10 +48,7 @@ CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=y
 #   -> https://github.com/esp-rs/esp-idf/blob/master/sdkconfig.defaults.nimble
 #
 # "Go figure..."
-CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096
-
-# "Async SPI only enabled when this config is disabled (it is enabled by default)"
-#CONFIG_SPI_MASTER_ISR_IN_IRAM=n
+#CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096
 
 # Suppress deprecation warnings for legacy drivers still included in bindings
 CONFIG_I2C_SUPPRESS_DEPRECATE_WARN=y
@@ -151,16 +148,13 @@ CONFIG_MBEDTLS_SHA384_C=n
 
 #---
 # EXPERIMENTAL
-# Trim (aim: faster development builds)
+# (aim: faster development builds)
 #
-# Default is yes; we are not going to use Wifi.
-#CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+# APPLICABLE ON ESP-IDF 6.1.1
+CONFIG_LWIP_IPV6=n
+    # works 👍
+CONFIG_WS_TRANSPORT=n
+    # works 👍
 
-# Default is on. The build (ESP-IDF, or 'esp-idf-sys'?) seems to assume LWIP is always enabled.
-#CONFIG_LWIP_ENABLE=n
-
-# Is on by default (ESP-IDF 6.1)# NOTE: THIS DOES NOT STEER IT!! RESEARCH NEEDED.
-#   Is it that 'esp-idf-svc' building "std" causes these in, and we cannot counteract that? #help #esp-idf-sys
-CONFIG_ESP_WIFI_ENABLED=n
-
+# tbd. is this worth having?
 CONFIG_WPA_SUPPLICANT_ENABLED=n

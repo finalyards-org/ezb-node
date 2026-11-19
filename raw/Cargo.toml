@@ -2,7 +2,7 @@
 name = "ezb-node-raw"
     # name used in 'api' and the 'ESP_IDF_SYS_ROOT_CRATE' env.var. ('.cargo/config.toml')
 edition = "2024"
-rust-version = "1.94"
+rust-version = "1.99"
 publish = false
 
 # The '[package.metadata.esp-idf-sys]' needs to be within the Cargo crate designated as 'ESP_IDF_SYS_ROOT_CRATE'.

@@ -13,7 +13,7 @@ impl EspError {
     pub(crate) fn wrap(v: i32 /*esp_err_t*/) -> Result<(), Self> {
         match NonZeroI32::new(v) {
             None => Ok(()),
-            Some(x) => Err(EspError(x)),
+            Some(x) => Err(Self(x)),
         }
     }
 }

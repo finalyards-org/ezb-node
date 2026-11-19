@@ -22,6 +22,8 @@ nightly := ""
 
 target_dir := `cargo metadata --format-version 1 --no-deps | jq -r '.target_directory'`
 
+export RUST_LOG := "debug"
+
 # 1-light
 [group('light')]
 light-build:

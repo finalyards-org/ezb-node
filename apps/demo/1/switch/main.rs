@@ -3,16 +3,6 @@
 *   - "Color dimmer switch" example of 'esp-zigbee-sdk' v.2.0
 *       -> https://github.com/espressif/esp-zigbee-sdk/tree/main/examples/home_automation_devices/color_dimmer_switch
 */
-//r #![feature(never_type)]
-
-mod switch_router;
-use switch_router::SwitchRouter;
-
-mod button_task;
-use button_task::button_task;
-
-//use anyhow::*;
-
 use embassy_executor::{
     Spawner,
 };
@@ -23,16 +13,21 @@ use esp_idf_hal::{
 };
 use esp_idf_svc::{
     nvs::EspDefaultNvsPartition,
-    sys::{link_patches},
+    sys::link_patches,
 };
 use ezb_node::{
-    //r Config,
     Node,
 };
 
 use ezb_node_apps::{
     set_panic_hook,
 };
+
+mod switch_router;
+use switch_router::SwitchRouter;
+
+mod button_task;
+use button_task::button_task;
 
 /**
 * The entry point.

@@ -67,7 +67,7 @@ MCU = "esp32c6"
 # ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
 # Versions supported by 'esp-idf-sys', -> https://github.com/esp-rs/esp-idf-svc/blob/6292a2f9a041c6f1370c66678f360c164aef93a3/.github/workflows/ci.yml#L30-L37
 #
-ESP_IDF_VERSION = "6.1"
+ESP_IDF_VERSION = "6.1.1"
 #ESP_IDF_VERSION = "6.0.3"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
@@ -129,89 +129,33 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
 
 # Suppress some 'esp-idf-sys' warnings:
 #   <<
-#       [esp-idf-sys 0.37.2] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+#       [esp-idf-sys 0.38.1] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.38.1/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
 #   <<
 BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
-    # tbd. does it still change output, with latest versions (ESP-IDF, esp-idf-sys)?
 
-#---
-# Trim down the set of components.
+# An explicit set of components, to cut down the clear build time ('esp-idf-sys' builds ESP-IDF from sources; these
+# components provide all the support for Rust 'std').
 #
-# BRIEF:
-#   - In Oct '26 (ESP-IDF 6.1, 'esp-idf-svc' 0.53.0), one does not really seem capable of trimming a "std" build.
+# Component list maintained in: https://github.com/finalyards-org/esp-idf.embassy / branch 'skinned'
 #
-#       While certain ESP-IDF modules (at least 'heap', maybe network essentials) can be seen as belonging to "std"
-#       by nature, for example WiFi should be optional, in the long run. Currently, even if you don't list it here,
-#       you will see 'esp_wifi' (and 'wpa_supplecant') being built - presumably as part of the 'esp-idf' "std" building.
+# SUITABLE FOR ESP-IDF 6.1.1
 #
-#       i.e. we would need:
-#           - the _std itself_ to be slimmed down to essentials (so it does not need to become modular)
-#
-# THIS SECTION is kept as an EXPERIMENTAL ground, for occasionally trying, how "low can we go".
-#
-# The aim is to::
-#   - reduce the build time
-#   - reduce security footprint
-#   - remove build warnings from components we do not need (esp-wifi, wpa_supplecant)
-#   - provides understanding on what components actually get used
-#
-# To list the components (after build!):
-#   <<
-#       $ find ~/target -name project_description.json  # pick the latest based on the time stamp
-#       $ cat {above} | jq '.build_component_info | length'
-#   <<
-#
-# |         | all comp:s | bin bytes | build time (apps/ "cargo clean; time just lb"); user+sys |
-# | Default | 148        | 1,049,712 | 2m3s |
-# | Trim    | 148        | 1,046,752 | ...{about the same}... |
-#
-# Untrimmed (default) components (ESP-IDF 6.1):
-#   <<
-#   app_trace app_update bootloader bootloader_support bt cmock console cxx driver efuse esp-tls esp_adc esp_app_format
-#   esp_asrc_adapter esp_blockdev esp_blockdev_util esp_bootloader_format esp_coex esp_common esp_driver_ana_cmpr
-#   esp_driver_bitscrambler esp_driver_cam esp_driver_cordic esp_driver_dac esp_driver_dma esp_driver_gpio
-#   esp_driver_gptimer esp_driver_i2c esp_driver_i2s esp_driver_i3c esp_driver_isp esp_driver_jpeg esp_driver_ledc
-#   esp_driver_mcpwm esp_driver_parlio esp_driver_pcnt esp_driver_ppa esp_driver_rmt esp_driver_sd_intf esp_driver_sdio
-#   esp_driver_sdm esp_driver_sdmmc esp_driver_sdspi esp_driver_spi esp_driver_touch_sens esp_driver_tsens
-#   esp_driver_twai esp_driver_uart esp_driver_usb_serial_jtag esp_eth esp_event esp_gdbstub esp_hal_ana_cmpr
-#   esp_hal_ana_conv esp_hal_asrc esp_hal_cam esp_hal_clock esp_hal_cordic esp_hal_dma esp_hal_emac esp_hal_gpio
-#   esp_hal_gpspi esp_hal_i2c esp_hal_i2s esp_hal_i3c esp_hal_ieee802154 esp_hal_jpeg esp_hal_lcd esp_hal_ledc
-#   esp_hal_mcpwm esp_hal_mspi esp_hal_parlio esp_hal_pcnt esp_hal_pmu esp_hal_ppa esp_hal_regi2c esp_hal_rmt
-#   esp_hal_rtc_timer esp_hal_sd esp_hal_security esp_hal_systimer esp_hal_timg esp_hal_touch_sens esp_hal_twai
-#   esp_hal_uart esp_hal_usb esp_hal_wdt esp_hid esp_http_client esp_http_server esp_https_ota esp_https_server
-#   esp_hw_support esp_lcd esp_libc esp_local_ctrl esp_mm esp_netif esp_netif_stack esp_partition esp_phy esp_pm
-#   esp_psram esp_ringbuf esp_rom esp_security esp_stdio esp_system esp_tee esp_timer esp_trace esp_usb_cdc_rom_console
-#   esp_wifi espcoredump espressif__esp-zigbee-lib esptool_py fatfs freertos hal heap http_parser ieee802154 log lwip
-#   main mbedtls nvs_flash nvs_sec_provider openthread partition_table protobuf-c protocomm pthread riscv rt sdmmc soc
-#   spi_flash spiffs tcp_transport ulp unity vfs wear_levelling wpa_supplicant
-#   <<
-#
-# Trim _attempt_ for ESP-IDF 6.1:
-#|ESP_IDF_COMPONENTS = """\
-#|  main;freertos;log;soc;esp_common;esp_system;heap;riscv;esp_hal_ieee802154;ieee802154;vfs;nvs_flash;\
-#|  esp_hw_support;esp_driver_gpio;\
-#|  \
-#|  esp_adc;\
-#|  esp_hal_ana_conv;esp_driver_adc;\
-#|  esp_hal_i2s;esp_driver_i2s;\
-#|  esp_hal_i2c;esp_driver_i2c;\
-#|  esp_hal_twai;esp_driver_twai;\
-#|  esp_hal_pcnt;esp_driver_pcnt;\
-#|  esp_hal_rmt;esp_driver_rmt;\
-#|  esp_hal_ledc;esp_driver_ledc;\
-#|  esp_driver_gptimer;\
-#|  esp_driver_sdspi;\
-#|  esp_driver_sdmmc;\
-#|  fatfs;spiffs;\
-#|"""
-    # vfs, nvs_flash:
-    #   - 'color_dimmable_light' C sample has them as 'PRIV_REQUIRES'; needed
-    #
-    # app_update:
-    #   - once supporting OTA, add this
-    #
-    # Tail:
-    #   - these would ideally not be needed.
+ESP_IDF_COMPONENTS = """\
+    main;\
+    driver;\
+    esp_adc;\
+    esp_driver_i2c;\
+    esp_driver_i2s;\
+    esp_driver_ledc;\
+    esp_driver_rmt;\
+    esp_driver_twai;\
+    esp_driver_gptimer;\
+    esp_driver_pcnt;\
+    fatfs;\
+    spiffs;\
+    lwip;\
+    nvs_flash\
+"""
 
 # Was in ESP-IDF 5.5.x
 #ESP_IDF_COMPONENTS = """\

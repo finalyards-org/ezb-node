@@ -18,6 +18,8 @@ fn main() -> Result<()> {
     //
     //  - Rust Rover:
     //      __CFBundleIdentifier=com.jetbrains.rustrover-EAP
+    //  - Rust Rover (remote development):
+    //      - REMOTE_DEV_SERVER_IS_NATIVE_LAUNCHER=1
     {
         if env::var("__CFBundleIdentifier").is_ok() ||
             env::var("REMOTE_DEV_SERVER_IS_NATIVE_LAUNCHER").is_ok() {
@@ -49,9 +51,6 @@ fn main() -> Result<()> {
     //      (we assume it's host side) gets to see the generated contents.
     {
         let demos = [   // path
-            //r("1/light", "1-light"),
-            //r("1/switch", "1-switch"),
-            //r ("2", "2/tmp/-door")
             "1/light",
             "1/switch",
             "2",
@@ -91,16 +90,6 @@ fn main() -> Result<()> {
                 println!("cargo::warning=Created module: {fn_}");
             }
         }
-    }
-
-    // Allow steering of logging by an env.var
-    #[cfg(false)]   // tbd. unfinished; how to best steer logging level for Rust side remains undone
-    {
-        if let Some(lev) = std::env::var("RUST_LOG") .ok() {
-            // Pass it to the code
-            println!("cargo:rustc-env=RUST_LOG_LEVEL={}", lev.to_lowercase());
-        }
-        println!("cargo::rerun-if-env-changed=RUST_LOG");
     }
 
     // Needed for linking of executables to succeed.

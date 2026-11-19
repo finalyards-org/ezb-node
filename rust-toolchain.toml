@@ -14,6 +14,5 @@ channel = "nightly-2026-10-18"
 components = ["rust-src", "rustfmt"]
 
 #---
-# Would automatically install the target. However. ESP32's don't come with pre-built std libraries.
-# In fact, this causes a warning in the build output.
+# ESP32's don't come with pre-built std libraries. In fact, this causes a warning in the build output.
 #targets = [ "riscv32imac-esp-espidf" ]
