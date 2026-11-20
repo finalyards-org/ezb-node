@@ -31,6 +31,10 @@ light-build:
 		--jobs 1
 
 [group('light')]
+lbx:
+	cargo {{nightly}} build --release -vv --bin 1-light --features esp32c6,ezb-node/coordinator,ezb-node/dt_color_dimmable_light
+
+[group('light')]
 light-run:
 	cargo {{nightly}} run --release -vv --bin 1-light --features esp32c6,ezb-node/coordinator,ezb-node/dt_color_dimmable_light
 

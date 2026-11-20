@@ -1,9 +1,11 @@
 [toolchain]
 # 'nightly' breaks 'std' building so often, it's better to keep anchored to a certain date.
 #channel = "nightly"
+    # still broken: 2026-11-20
 channel = "nightly-2026-10-18"
 
 # 2026-10-26 breaks: see: https://github.com/rust-lang/rust/issues/164555
+#       - more details about the dependency chain: https://github.com/rust-lang/libc/pull/5662
   #   <<
   #       error[E0609]: no field `st_atime` on type `&libc::stat`
   #   <<

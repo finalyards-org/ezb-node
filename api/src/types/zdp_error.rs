@@ -10,43 +10,46 @@ use ezb_node_raw::ezb_zdp_status_e;
 #[derive(Debug, Clone, strum::Display)]
 #[repr(u8)]    // In C, carried by 'ezb_zdp_status_t' which is 'u8'; range is 0..=143; bindgen expands to 'u32'
 pub enum ZdpError {
-    ///< The supplied request type was invalid.
+    /// The supplied request type was invalid.
     InvalidRequestType,
-    ///< The requested device did not exist on a device following a child
-    /// descriptor request to a parent.
+    /// The requested device did not exist on a device following a child descriptor request to a parent.
     DeviceNotFound,
-    ///< The supplied endpoint was equal to 0x00 or between 0xf1 and 0xff.
+    /// The supplied endpoint was equal to 0x00 or between 0xf1 and 0xff.
     InvalidEp,
-    ///< The requested endpoint is not described by simple descriptor.
+    /// The requested endpoint is not described by simple descriptor.
     NotActive,
-    ///< The requested optional feature is not supported on the target device.
+    /// The requested optional feature is not supported on the target device.
     NotSupported,
-    ///< A timeout has occurred with the requested operation.
+    /// A timeout has occurred with the requested operation.
     Timeout,
-    ///< The end device bind request was unsuccessful due to a failure to match
-    /// any suitable clusters.
+    /// The end device bind request was unsuccessful due to a failure to match any suitable clusters.
     NoMatch,
-    ///< The unbind request was unsuccessful due to the coordinator or source
-    /// device not having an entry in its binding table to unbind.
+    /// The unbind request was unsuccessful due to the coordinator or source device not having an entry
+    /// in its binding table to unbind.
     NoEntry,
-    ///< A child descriptor was not available following a discovery request to
-    ///   a parent.
+    /// A child descriptor was not available following a discovery request to a parent.
     NoDescriptor,
-    ///< The device does not have space to support the requested operation.
+    /// The device does not have space to support the requested operation.
     InsufficientSpace,
-    ///< The device is not in the proper state to support the requested
-    /// operation.
+    /// The device is not in the proper state to support the requested operation.
     NotPermitted,
-    ///< The device does not have table space to support the operation.
+    /// The device does not have table space to support the operation.
     TableFull,
-    ///< The permissions configuration table on the target indicates that the
-    /// request is not authorized from this device.
+    /// The permissions configuration table on the target indicates that the request is not authorized
+    /// from this device.
     NotAuthorized,
-    ///< The device doesn't have binding table space to support the operation
+    /// The device doesn't have binding table space to support the operation
     BindingTableFull,
-    ///< The index in the received command is out of bounds.
+    /// The index in the received command is out of bounds.
     InvalidIndex,
-    //
+    /// The response was too large to fit in a single unfragmented message. (+ 2.1.0)
+    FrameTooLarge,
+    /// The requested Key Negotiation Method was not accepted. (+ 2.1.0)
+    BadKnMethod,
+    /// The request encountered a temporary failure but a retry at a later time should be attempted
+    /// and may succeed. (+ 2.1.0)
+    TemporaryFailure,
+
     _Other(u8)
 }
 
@@ -79,6 +82,16 @@ impl ZdpError {
             e::EZB_ZDP_STATUS_NOT_AUTHORIZED        => Some(Self::NotAuthorized),
             e::EZB_ZDP_STATUS_BINDING_TABLE_FULL    => Some(Self::BindingTableFull),
             e::EZB_ZDP_STATUS_INVALID_INDEX         => Some(Self::InvalidIndex),
+
+            // Added in 2.1.0
+            e::EZB_ZDP_STATUS_FRAME_TOO_LARGE       => Some(Self::FrameTooLarge),
+            e::EZB_ZDP_STATUS_BAD_KN_METHOD         => Some(Self::BadKnMethod),
+            e::EZB_ZDP_STATUS_TEMPORARY_FAILURE     => Some(Self::TemporaryFailure),
+
+            _ => {
+                log::warn!("Unknown ZDP error code: {} ({})", v, v as u32);
+                Some(Self::_Other(v as u8))
+            }
         }
     }
 

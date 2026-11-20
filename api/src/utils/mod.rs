@@ -8,5 +8,7 @@ pub use ieee_addr::IeeeAddr;
 mod short_addr;
 pub use short_addr::ShortAddr;
 
+#[allow(unused_imports)]
 mod c_zeroed;
 pub(crate) use c_zeroed::c_zeroed;
+    // used by: #![cfg(feature = "remote_dt_color_dimmable_light")]
