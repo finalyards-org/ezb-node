@@ -67,8 +67,8 @@ MCU = "esp32c6"
 # ESP-IDF releases, see -> https://github.com/espressif/esp-idf/releases
 # Versions supported by 'esp-idf-sys', -> https://github.com/esp-rs/esp-idf-svc/blob/6292a2f9a041c6f1370c66678f360c164aef93a3/.github/workflows/ci.yml#L30-L37
 #
-ESP_IDF_VERSION = "6.1.1"
-#ESP_IDF_VERSION = "6.0.3"
+#ESP_IDF_VERSION = "6.1.1"
+ESP_IDF_VERSION = "6.1"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
@@ -140,22 +140,22 @@ BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 #
 # SUITABLE FOR ESP-IDF 6.1.1
 #
-ESP_IDF_COMPONENTS = """\
-    main;\
-    driver;\
-    esp_adc;\
-    esp_driver_i2c;\
-    esp_driver_i2s;\
-    esp_driver_ledc;\
-    esp_driver_rmt;\
-    esp_driver_twai;\
-    esp_driver_gptimer;\
-    esp_driver_pcnt;\
-    fatfs;\
-    spiffs;\
-    lwip;\
-    nvs_flash\
-"""
+#|ESP_IDF_COMPONENTS = """\
+#|    main;\
+#|    driver;\
+#|    esp_adc;\
+#|    esp_driver_i2c;\
+#|    esp_driver_i2s;\
+#|    esp_driver_ledc;\
+#|    esp_driver_rmt;\
+#|    esp_driver_twai;\
+#|    esp_driver_gptimer;\
+#|    esp_driver_pcnt;\
+#|    fatfs;\
+#|    spiffs;\
+#|    lwip;\
+#|    nvs_flash\
+#|"""
 
 # Was in ESP-IDF 5.5.x
 #ESP_IDF_COMPONENTS = """\

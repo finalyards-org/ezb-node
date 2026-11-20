@@ -59,23 +59,17 @@ door-run:
 _clean:
     rm -i demo/**/.conf.rs
 
-# List the *last* 'sdkconfig'
-sdkconfig-path:
-	@\
-	out=$(find {{target_dir}} -name sdkconfig -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
-	if [ -z "$out" ]; then \
-		printf >&2 "Error: No 'sdkconfig' found in {{target_dir}}\n"; \
-		false; \
-	fi; \
-	echo "$out"
+#--- EXPERIMENTAL
+#
 
-# List the *last* 'project_description.json'
+# Path to the *last* 'sdkconfig' of THIS project (the target dir may be shared with other projects)
+sdkconfig-path:
+	@echo "$(tools/check-sdkconfig.sh --out-dir sdkconfig.defaults {{target_dir}})/sdkconfig"
+
+# Path to the *last* 'project_description.json' of THIS project
 project_description-path:
-	@\
-	file=project_description.json; \
-	out=$(find {{target_dir}} -name $file -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
-	if [ -z "$out" ]; then \
-		printf >&2 "Error: No '$file' found in {{target_dir}}\n"; \
-		false; \
-	fi; \
-	echo "$out"
+	@echo "$(tools/check-sdkconfig.sh --out-dir sdkconfig.defaults {{target_dir}})/build/project_description.json"
+
+# Check 'sdkconfig.defaults' keys against the ESP-IDF used by the last build (name validity + applied values)
+sdkconfig-check:
+	tools/check-sdkconfig.sh sdkconfig.defaults {{target_dir}}
