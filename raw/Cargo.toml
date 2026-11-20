@@ -9,7 +9,7 @@ publish = false
 #   👉 Please reflect any changes also in '{project}/_mc/main/idf_component.yml'
 #
 # Available versions (ESP Registry)
-#   -> https://components.espressif.com/components/espressif/esp-zigbee-lib/versions/2.0.4/readme
+#   -> https://components.espressif.com/components/espressif/esp-zigbee-lib/versions/2.1.0/readme
 #
 [[package.metadata.esp-idf-sys.extra_components]]
 remote_component = { name = "espressif/esp-zigbee-lib", version = "2.1.0" }

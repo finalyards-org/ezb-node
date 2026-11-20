@@ -165,7 +165,7 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_nwk_.+' \
 	    --allowlist-type 'ezb_secur_ic_type_.+' \
 	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|power_config|set|status)_.+' \
-	    --allowlist-type 'ezb_zcl_(?:ias_zone_cluster|ias_zone_server)_.+' \
+	    --allowlist-type 'ezb_zcl_ias_zone_.+' \
 	    --allowlist-type 'ezb_zha_device_.+' \
 	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
 	    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
@@ -275,10 +275,11 @@ $(_TMP)/libezb_wrap.a: $(_TMP)/wrap.o
 #
 #		'grep -q' for strings that should be in.
 #		'! grep -q' for those that should be omitted.
-#		- that the binding output is not outragously large (filtering failed)
+#		- that the binding output is not outrageously large (filtering failed)
 #
-SAFE_SIZE:=200000
-	# normal is: <5000 lines, ~185k
+SAFE_SIZE:=600000
+	# normal is: ~10_000 lines, ~560k (2.1.0; mostly doc comments and layout tests)
+	# tbd. @claude - we could change this to look at the line count, ignoring byte size.
 
 manual_test: $(_BIND_RS)
 	#

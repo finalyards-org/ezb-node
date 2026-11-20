@@ -151,12 +151,12 @@ impl esp_zigbee_platform_config_t {
 // For these reasons, we overwrite certain C side functions:
 //
 
-/// @brief Get the IEEE (extended) address of the device.
+/// @brief Get the extended PAN ID of the network.
 /// @anchor ezb_nwk_get_extended_panid
 ///
-/// @return 64-bit IEEE address
+/// @return 64-bit extended PAN ID
 pub unsafe fn ezb_nwk_get_extended_panid() -> u64 {
-    let mut buf: ezb_extpanid_t = empty();
+    let mut buf: ezb_extpanid_t = unsafe { empty() };
     unsafe {
         a::ezb_nwk_get_extended_panid(&mut buf)
     };
@@ -166,7 +166,7 @@ pub unsafe fn ezb_nwk_get_extended_panid() -> u64 {
 /// Get the IEEE (extended) address of the device.
 ///
 pub unsafe fn ezb_nwk_get_extended_address() -> u64 {
-    let mut buf: ezb_extaddr_t = empty();
+    let mut buf: ezb_extaddr_t = unsafe { empty() };
     unsafe {
         a::ezb_nwk_get_extended_address(&mut buf)
     };
@@ -229,7 +229,8 @@ impl From<u64> for ezb_eui64_s {
     }
 }
 
-fn empty<T>() -> T {
+/// Safety: only for C structs where an all-zeroes bit pattern is valid.
+unsafe fn empty<T>() -> T {
     let un = MaybeUninit::zeroed();
     unsafe { un.assume_init() }
 }
@@ -535,6 +536,7 @@ pub enum ezb_err_e {
     TIMEOUT       = EZB_ERR_TIMEOUT as u16,
     ABORT         = EZB_ERR_ABORT as u16,
     BUSY          = EZB_ERR_BUSY as u16,
+    EXISTED       = EZB_ERR_EXISTED as u16,
     NOT_FINISHED  = EZB_ERR_NOT_FINISHED as u16,
     NOT_ALLOWED   = EZB_ERR_NOT_ALLOWED as u16,
     PARSE         = EZB_ERR_PARSE as u16,

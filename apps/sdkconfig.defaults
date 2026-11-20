@@ -59,6 +59,17 @@ CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
 CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
 
 #---
+# Zigbee ('esp-zigbee-lib' external component)
+#
+# Note! Without 'CONFIG_ZB_ENABLED', the component's 'CMakeLists.txt' skips compiling its 'src/utils'
+# (platform crypto, mbedTLS glue, logging) and does not link the libraries.
+#
+CONFIG_ZB_ENABLED=y
+CONFIG_ZB_ZCZR=y
+    # Coordinator/Router code included
+CONFIG_ZB_RADIO_NATIVE=y
+
+#---
 # Our own
 #CONFIG_BT_ENABLED=n
     # disabled by default

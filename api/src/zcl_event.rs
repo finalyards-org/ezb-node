@@ -84,6 +84,9 @@ pub enum ZclEvent {
     // ezb_zcl_cmd_default_rsp_message_s
     DefaultResp{ info: CommonInfo, header: CommandHeader, cmd_id: u8, err: Option<ZclError> },
 
+    // Note: enum numbers below are from 2.0.x; do NOT apply to 2.1.0 any more.
+    //      Kept for later work (names should mostly remain).
+    //
     /*** tbd. todo
     /// A callback ID triggered when a ZCL command is received with
     /// Manufacturer-Specific code.
@@ -331,7 +334,7 @@ pub enum ZclEvent {
     ***/
 
     /// The end of the ZCL core action events.
-    // tbd. not sure when this actually happens
+    // tbd. not sure when this actually happens. @claude - any know-how abnout it?
     End,
 }
 

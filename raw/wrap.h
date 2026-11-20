@@ -84,7 +84,7 @@ const char *ESP_ZIGBEE_VER = \
   _TO_STR(ESP_ZIGBEE_VER_MAJOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_MINOR) "." \
   _TO_STR(ESP_ZIGBEE_VER_PATCH);
-  // "2.0.4"
+  // e.g. "2.1.0"
 
 // 'esp-zigbee-lib' (2.0.4) defines these as an anonymous enum, leading them to become unrelated constants
 // in 'bindgen'. We can give the enum a name (only using the values we need), leading to more bindable C code.
@@ -150,8 +150,4 @@ typedef enum {
     /* Custom */
     //|EZB_ZHA_CUSTOM_GATEWAY_DEVICE_ID = 0xff00,
 } ezb_zha_device_id_e;
-#endif
-
-#ifndef EZB_INVALID_AF_EP_DESC
-# error "Something's wrong"
 #endif

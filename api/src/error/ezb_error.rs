@@ -36,6 +36,7 @@ pub enum EzbError {
     //  #define EZB_ERR_TIMEOUT       EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x07) /*!< Operation timed out */
     //  #define EZB_ERR_ABORT         EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x08) /*!< Operation is aborted */
     //  #define EZB_ERR_BUSY          EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x09) /*!< Busy state */
+    //  #define EZB_ERR_EXISTED       EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0A) /*!< Resource is already existed */
     //  #define EZB_ERR_NOT_FINISHED  EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0C) /*!< Operation is not fully finished */
     //  #define EZB_ERR_NOT_ALLOWED   EZB_MAKE_ERROR(EZB_ERR_CATEGORY_GENERIC, 0x0D) /*!< Operation is not allowed */
     //
@@ -53,6 +54,7 @@ pub enum EzbError {
     TimedOut,
     Aborted,
     Busy,
+    AlreadyExists,
     NotFinished,
     NotAllowed,
     FailToParse,
@@ -93,6 +95,7 @@ impl EzbError {
                     TIMEOUT => Self::TimedOut,
                     ABORT => Self::Aborted,
                     BUSY => Self::Busy,
+                    EXISTED => Self::AlreadyExists,
                     NOT_FINISHED => Self::NotFinished,
                     NOT_ALLOWED => Self::NotAllowed,
                     PARSE => Self::FailToParse,

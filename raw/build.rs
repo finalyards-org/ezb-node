@@ -147,8 +147,18 @@ fn main() {
 
         println!("cargo:rustc-link-search=native={}", path);
 
-        let is_debug = env::var("DEBUG") .is_ok();    // Note: we never do debug builds (untested)
-        let prof = if is_debug { "debug" } else { "release" };
+        // Pick the library variant the same way the component's 'CMakeLists.txt' does: by 'CONFIG_ZB_DEBUG_MODE'
+        // in the generated 'sdkconfig'.
+        let prof = {
+            let is_debug = {
+                let fn_ = format!("{}/sdkconfig", env::var("DEP_ESP_IDF_ROOT").unwrap());
+                std::fs::read_to_string(&fn_)
+                    .unwrap_or_else(|e| panic!("❗Unable to read {fn_}: {e}"))
+                    .lines()
+                    .any(|line| line.trim() == "CONFIG_ZB_DEBUG_MODE=y")
+            };
+            if is_debug { "debug" } else { "release" }
+        };
 
         println!("cargo:rustc-link-lib=static=esp-zigbee.{prof}");
         println!("cargo:rustc-link-lib=static=esp-zigbee-core.zczr.{prof}");
@@ -162,12 +172,11 @@ fn main() {
     //
     println!("cargo:rerun-if-changed=build.rs");
     // +
-    println!("cargo:rerun-if-changed=bindings.rs");
     println!("cargo:rerun-if-changed=Makefile");
     println!("cargo:rerun-if-changed=wrap.h");
     //
     //#[cfg(false)]   // might also be harmful, causing rebuild loops (disabling for now, at least on ESP-IDF 6.0 builds)
-    println!("cargo:rerun-if-changed=tmp/bindings_0.rs");
+    //println!("cargo:rerun-if-changed=tmp/bindings_0.rs");
         //
         // This is  *output* but helps _dependent_crates_ to realize if it has been removed, and avoid a failing
         // upstream build.
