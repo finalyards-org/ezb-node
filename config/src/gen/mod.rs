@@ -30,7 +30,6 @@ use error::ConfigError::{
     self,
 };
 
-// tbd. This is SO LONG!!! Find ways to split it into a few.
 /**
 * Convert TOML input string to Rust module that can provide an 'esp_zb::Config' instance.
 */
@@ -44,6 +43,13 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     let q_primary_channels = {
         if c.network.primary_channels.is_empty() {
             Err("'network.primary_channels' is empty: please provide at least one channel to scan.")?;
+        }
+
+        // Validate the set of channels
+        const VALID: std::ops::RangeInclusive<u8> = 11..=26;
+
+        if let Some(ch) = c.network.primary_channels.iter().find(|&ch| !VALID.contains(ch)) {
+            Err( format!("'network.primary_channels': {ch} is not within {:?}", VALID) )?;
         }
 
         let q = {
@@ -71,9 +77,6 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
     let mut is_router = false;
     let mut is_coordinator = false;
 
-    // Helper functions; by default renders to nothing
-    let mut q_helpers = quote!();
-
     // Feature notes:
     //      - The 'build.rs' side (feature = "gen") DOES NOT use coordinator/router/end_device features.
     //      - by parsing all possible node types, we may allow the user to get better error messages
@@ -91,82 +94,35 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
                     .map(|o| {
                         let PreConfiguredDevice{ mac_address, install_code, _name } = o;
 
-                        // Convert the hex strings (back to) the format they were on the Zigbee device packaging.
-                        // This is to keep the generated code human-friendly.
-                        fn f(bytes: &[u8]) -> TokenStream {
-                            let s = bytes
-                                .chunks(2)
-                                .map(|chunk| {
-                                    assert_eq!(chunk.len(), 2);
-                                    format!("{:02X}{:02X}", chunk[0], chunk[1])
-                                })
-                                .collect ::<Vec<String>>()  // note: '.join()' doesn't work on iterators; must collect
-                                .join(" ");
-                            quote!(#s)
+                        // Keep the generated code human-friendly: show the strings, as they were on the
+                        // Zigbee device packaging, as a doc comment.
+                        fn printed(bytes: &[u8]) -> String {
+                            bytes.chunks(2)
+                                .map(|chunk| chunk.iter().map(|b| format!("{b:02X}")).collect::<String>())
+                                .collect::<Vec<String>>()
+                                .join(" ")
                         }
-                        let q_mac_hex = f(mac_address);
-                        let q_install_code_hex = f(install_code);
+                        let q_doc = format!("{_name}\n\nmac_address: \"{}\"\ninstall_code: \"{}\"",
+                            printed(&mac_address.to_be_bytes()), printed(install_code)
+                        );
 
-                        let q_name = quote!(#_name);
+                        let q_mac = syn::LitInt::new(&format!("0x{mac_address:016X}_u64"), proc_macro2::Span::call_site());
+
+                        let q_install_code = install_code.iter().map(|b| {
+                            syn::LitInt::new(&format!("0x{b:02X}"), proc_macro2::Span::call_site())
+                        });
 
                         // quote! note: When we want to include a comment with dynamic contents, '///'
                         //      will not cut it. Use of '#[doc = ...]' does.
                         //
                         Ok(quote! {
-                            #[doc = #q_name]
+                            #[doc = #q_doc]
                             PreConfiguredDevice {
-                                mac_address: hex_bytes( #q_mac_hex ),
-                                install_code: hex_bytes( #q_install_code_hex ),
+                                mac_address: #q_mac,
+                                install_code: [ #(#q_install_code),* ],
                             }
                         })
                     }).collect ::<Result<_,ConfigError>>()?;
-
-                // Note: Let's output helpers even when there are no pre-configured devices.
-                //      This helps catch possible generative errors, since those will show up
-                //      just having a Coordinator, not being "behind the corner" of whether we
-                //      have pre-configured-devices or not.
-                //
-                q_helpers = quote!(
-                    // Convert human-readable hex string.
-                    #[allow(dead_code)]
-                    const fn hex_bytes<const N: usize>(s: &str) -> [u8; N] {
-                        let s = s.as_bytes();   // so it's easy to iterate (it's ASCII)
-
-                        let mut buf = [0u8; N];
-                        let mut j = 0;  // position within 's' (jumps over spaces)
-
-                        // Rust note: cannot use 'for .. 0..N' in 'const fn'. Revert to 'while'
-                        //for i in 0..N {
-
-                        let mut i = 0;
-                        while i < N {
-                            while s[j] == b' ' { j += 1; }; // step over space(s)
-
-                            // Rust note: '&s[x..y]' does not work within 'const fn'
-                            //buf[i] = bite(&s[j..j+2]);
-                            buf[i] = bite(&[s[j],s[j+1]]);
-                            j += 2;
-                            i += 1;
-                        }
-                        assert!(j == s.len()); // all processed (note: 'assert_eq' not supported in 'const fn')
-                        buf
-                    }
-
-                    // Helper: two hex chars -> full byte
-                    #[allow(dead_code)]
-                    const fn bite(sl: &[u8;2]) -> u8 {
-                        const fn nibble(c: u8) -> u8 {
-                            match c as u8 {
-                                b'0'..=b'9' => c - b'0',
-                                b'A'..=b'F' => c - b'A' + 10,
-                                _ => unreachable!(),
-                            }
-                        }
-                        let hi = nibble(sl[0]);
-                        let lo = nibble(sl[1]);
-                        (hi << 4) | lo
-                    }
-                );
 
                 quote!(
                     NodeType::CoordinatorConfig {
@@ -352,8 +308,6 @@ pub fn convert_toml(toml: &str) -> Result<String,ConfigError> {
         };
 
         use ezb_node::config::*; // Config, ChannelMask, NodeType, ...
-
-        #q_helpers
 
         static CFG: OnceLock<Config> = OnceLock::new();
 

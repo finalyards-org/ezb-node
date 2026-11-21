@@ -14,5 +14,5 @@ pub(crate) trait InvariantCheck {
     ///
     /// Note: If an invariant is declared for a struct, it must *cover all* potentially invalid
     ///     conditions.
-    fn invariant_check(&self);
+    fn assert_invariants(&self);
 }

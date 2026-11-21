@@ -34,14 +34,13 @@ log = { workspace = true }
 #
 [features]
 # Default: all node types, all device types.
-#   The defaults are _only applied for "gen" builds_. For applications, the application should specifically define
-#   its needs (and 'api' level runs defaults off).
+#
+#   Note: The defaults are _only_ applied for "gen" builds. For applications, 'ezb-node' stands in the middle and
+#       imports us without defaults, and with a specific end point type, plus device types.
 #
 default = ["coordinator", "router", "_all_dts"]
 
 # When using from 'build.rs'.
-#
-# Note: We enable all node types, all device types. The
 #
 gen = [
     "humantime-serde", "quote", "prettyplease", "proc-macro2", "serde", "syn", "toml", "itertools",

@@ -16,7 +16,6 @@ use itertools::Itertools;
 
 use std::{
     collections::BTreeMap,
-    //convert::identity,
     ops::RangeInclusive,
     string::String,
     vec::Vec,
@@ -30,19 +29,15 @@ use super::error::ConfigError;
 * Value validation may be done using custom deserializers.
 */
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct RootConfig {
     pub network: NetworkSection,
     pub node: NodeSection,
     pub endpoint: EndpointConfig,
-
-    //r /// This is logically a part of 'NodeSection::Coordinator' but having it as a separate root-level
-    //r /// entry allows more freedom in how the TOML is arranged. These entries can be at the end.
-    //r ///
-    //r #[serde(rename = "pre_configured_device", default)]
-    //r pub pre_configured_devices: Vec<PreConfiguredDevice>,   // coordinator only
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct NetworkSection {
     pub primary_channels: Vec<u8>,
     pub secondary_channels: SecondaryChannels,  // want to keep it compulsory
@@ -55,14 +50,8 @@ pub enum SecondaryChannels {
     Preferred
 }
 
-//r #[derive(Deserialize, Debug)]
-//r pub struct PlatformSection {
-//r     #[serde(default)]   // optional
-//r     pub storage_partition_name: Option<String>,
-//r }
-
 #[derive(Deserialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum NodeSection {
     // Note: 'allow_open_pairing' is '!install_code_policy'.
     //      The author wanted to rename it, to:
@@ -74,7 +63,6 @@ pub enum NodeSection {
         //r allow_open_pairing: bool,
         max_children: u8,
 
-        // tbd. EXPLORE: does '[[node.pre_configured_device]]' reach us?
         #[serde(rename = "pre_configured_device", default)]
         pre_configured_devices: Vec<PreConfiguredDevice>,
     },
@@ -98,24 +86,17 @@ pub enum NodeSection {
     },
 }
 
-#[cfg(false)]  //R
-impl NodeSection {
-    #[cfg(feature = "coordinator")]
-    pub(crate) fn is_coordinator(&self) -> bool { matches!(self, Self::Coordinator{..}) }
-    #[cfg(feature = "router")]
-    pub(crate) fn is_router(&self) -> bool { matches!(self, Self::Router{..}) }
-}
-
 #[cfg(feature = "coordinator")]
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct PreConfiguredDevice {
     /// This is *only* a descriptive name; can be used for error messages, though. It is not needed
     /// by the underlying 'esp_zigbee_sdk', but might prove useful for the human managing a configuration.
     #[serde(rename = "log_name")]
     pub(crate) _name: String,
 
-    #[serde(deserialize_with = "chunked_hex")]   // "aaaa ... dddd" (8 bytes)
-    pub(crate) mac_address: [u8;8],
+    #[serde(deserialize_with = "mac_address")]   // "aaaa ... dddd" (8 bytes) -> 0xaaaa...dddd
+    pub(crate) mac_address: u64,
     #[serde(deserialize_with = "chunked_hex")]   // "aaaa bbbb ..." (18 bytes)
     pub(crate) install_code: [u8;18],
 }
@@ -136,7 +117,7 @@ impl EndpointConfig {
 
     /// Convert 'String' to 'u8' and also validate the values are valid endpoint indices.
     ///
-    #[deprecated]
+    //r? #[deprecated]
     pub(crate) fn parse(/*mut*/ self) -> Result<(EndpointDefaults, BTreeMap<u8,EndpointInstance>), ConfigError> {
         let a = self.defaults;
 
@@ -169,6 +150,7 @@ impl EndpointConfig {
 }
 
 #[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
 pub struct EndpointDefaults {
     pub manufacturer_name: Option<String>,
     pub model_identifier: Option<String>,
@@ -176,6 +158,7 @@ pub struct EndpointDefaults {
 
 #[derive(Deserialize, Debug)]
 #[allow(non_camel_case_types)]
+#[serde(deny_unknown_fields)]
 pub struct EndpointInstance {
     pub device_type: DeviceType,
 
@@ -229,6 +212,16 @@ pub enum Cluster {
     HA_IasZone,
 }
 
+/// Deserialize a MAC address "4030 59FF FE9E 7D3D" (as printed on devices; MSB first) into a 'u64'
+/// (0x4030_59FF_FE9E_7D3D). Byte order towards the C side is the 'api' level's concern.
+///
+fn mac_address<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    chunked_hex::<D, 8>(deserializer).map(u64::from_be_bytes)
+}
+
 /// Deserialize "aabb ccdd ..." (four chars hex + one space; repeat) into byte arrays.
 ///
 /// @note This is the syntax printed on Zigbee devices, for both MAC address and Install Code.
@@ -248,8 +241,6 @@ where
        //
        .map(|(is_white_space, chunk)| {
            let chunk: String = chunk.collect();
-
-           log::warn!("XXX iterating: {} '{:?}'", is_white_space, chunk);    // DEBUG
 
            if is_white_space {
                // Note: We could silently allow the extra spaces

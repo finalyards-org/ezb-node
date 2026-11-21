@@ -14,10 +14,10 @@ default:
 
 build:
 	cargo build --release --features gen,coordinator,router,_all_dts
-	cargo build --release --features coordinator,_all_dts
-	cargo build --release --features router,_all_dts
+	cargo build --release --features coordinator,_all_dts --no-default-features
+	cargo build --release --features router,_all_dts --no-default-features
 
 test:
 	cargo test --features gen,coordinator,router,_all_dts
-	cargo test --features coordinator,_all_dts
-	cargo test --features router,_all_dts
+	cargo test --features coordinator,_all_dts  --no-default-features
+	cargo test --features router,_all_dts  --no-default-features

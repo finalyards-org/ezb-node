@@ -49,8 +49,10 @@ pub struct Config {
 }
 
 #[cfg(not(feature = "gen"))]
+#[allow(dead_code)]
+/// Commentary code (not necessarily run), to define the invariants.
 impl non_gen::InvariantCheck for Config {
-    fn invariant_check(&self) {
+    fn assert_invariants(&self) {
         self.endpoints.keys().for_each(|id| {
             assert!( (1..=240).contains(id), "Invalid endpoint ID: {}", id);
         });
@@ -92,17 +94,15 @@ pub enum NodeType {
     // }
 }
 
-// 'esp_zigbee_lib' 2.0.4 has the 'ezb_extaddr_t' "packed" (aligned to 1). This might, however,
-// change. Our alignment to 8 is mere robustness. Allows a pointer to the static config to be used,
-// all the way to C level.
-//
 #[derive(Debug, Copy, Clone)]
 #[cfg(feature = "coordinator")]
-#[repr(C, align(8))]
 pub struct PreConfiguredDevice {
-    /// Address bytes, parsed from the input string
-    pub mac_address: [u8;8],
-    /// Install code + CRC
+    /// IEEE (MAC) address as a number; "4030 59FF FE9E 7D3D" -> 0x4030_59FF_FE9E_7D3D
+    ///
+    /// Note: Kept as a 'u64' so that the (little endian) byte order of the C side is handled by the
+    ///     'api' level.
+    pub mac_address: u64,
+    /// Install code + CRC, in the order printed on the device
     pub install_code: [u8;18],
 }
 

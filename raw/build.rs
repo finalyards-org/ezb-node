@@ -129,6 +129,8 @@ fn main() {
     // Take in 'esp_zigbee_lib'
     //
     // NOTE: For some reason, this started to be needed when moving from ESP-IDF 5.5.5 -> 6.1.
+    // NOTE 2: Claude says this was due to no 'CONFIG_ZB_ENABLED' - now things work again without
+    //          the block.
     //
     //  <<
     //  $ ls /home/lima/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/3bb15b1af9451e27/out/managed_components/espressif__esp-zigbee-lib/lib/esp32c6
@@ -136,6 +138,7 @@ fn main() {
     //  libesp-zigbee-core.zczr.release.a  libesp-zigbee-idf.native.debug.a    libesp-zigbee-idf.remote.release.a
     //  libesp-zigbee-core.zed.debug.a     libesp-zigbee-idf.native.release.a  libesp-zigbee.debug.a
     //  <<
+    #[cfg(false)] //r? Remove once we confirm also runs on devkit.
     {
         let path = format!("{}/managed_components/espressif__esp-zigbee-lib/lib/{}",
             env::var("DEP_ESP_IDF_ROOT").unwrap(),

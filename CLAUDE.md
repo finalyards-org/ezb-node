@@ -41,7 +41,12 @@ Dependency direction: apps → api → (raw, config). Do not use `raw` types in 
 
 - Rust target folder is common for all projects at `~/target` (not the usual `./target`).
 - Avoid `cargo clean` unless really needed; clean builds take >1min, due to `esp-idf-sys`. A clean build should be needed only after ESP-IDF version changes, and/or for build debugging.
-- `Justfile`s are only developer helpers. Do not refer to them in `README` or other such documentation - rather use the full build commands.
+- `Justfile`s are developer helpers and the source of truth for build commands, but documentation (`README`s etc.)
+  shows the full commands (not `just ...`). Keep them in sync with a marker above the command block:
+  `<!-- just: {path/to/Justfile} {recipe} -->` (path from repo root); the block lists exactly what
+  `just --dry-run {recipe}` prints (a leading `$ ` is fine). Dev flags like `-vv`, `--jobs 1` stay in (intentional).
+  - After changing a `Justfile` or documented commands, run `tools/check-docs.sh` and fix any mismatch.
+  - Markers are being introduced gradually (started with `config/README.md`); add them when touching a doc's commands.
 
 ## Commands
 
@@ -51,6 +56,7 @@ Allowed without asking (build / check only):
 - `cd apps && just lb | sb | db` (light / switch / door build). A full build is slow (minutes):
   run it in the background and tell the user.
 - `cargo check` / `cargo clippy` in sub-projects (same features as in `apps/Justfile`).
+- `tools/check-docs.sh` (read-only; only runs `just --dry-run`).
 
 ASK FIRST (or leave for the user to run):
 - `cargo clean`, `rm -rf ~/target …`, `rm -rf ~/.espressif` — rebuilding ESP-IDF takes long and
