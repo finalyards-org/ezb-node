@@ -17,6 +17,11 @@ pub(crate) use zigbee_dev::ZigbeeDev;
 mod zigbee_guard;
 pub(crate) use zigbee_guard::ZigbeeGuard;
 
+#[cfg(feature = "dt_ias_cie")]
+mod dt_ias_cie;
+#[cfg(feature = "dt_ias_cie")]
+pub use dt_ias_cie::{NodeApiIasCie, IasZoneEnrollResponse};
+
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::Channel
@@ -106,7 +111,7 @@ pub trait Node {
 
         loop {
             let x = rx.receive().await;
-            log::info!("Received: {:?}", &x);  // DEBUG
+            log::trace!("Received: {:?}", &x);
 
             match x {
                 Payload::AppSignal(x) =>  self.on_app_signal(x) .await,
@@ -221,19 +226,35 @@ pub trait NodeApi {
     /**
     * Open the network for joining.
     *
-    * @param for_how_long After this time, permit expires.
+    * @param for_how_long After this time, the permit expires. Range is 1..254 seconds.
+    *       Typical use is 180s ('esp-zigbee-sdk' samples).
     *
     * @note Since the call is synchronous (it only starts the join), error situations are not
-    *       well understood: the C side can err on "not memory" (panic might be justified?) and
-    *       "on failed" - which is inappropriately vague (again, panic).
+    *       well understood: the C side can err on "not memory" (panic might be justified) and
+    *       "on failed" (what is that, really??) - which is vague (again, panic).
     */
-    fn open_network(&self, for_how_long: embassy_time::Duration) -> () {
-        let secs: u8 = for_how_long.as_secs() as u8;
+    fn open_network(&self, mut secs: u8) -> () {
+
+        // Note: It is _possible_ -but not confirmed- that 'ezb_bdb_open_network' treats 0xff
+        //      as a special value for "open for an indefinite time". To be safe, we limit the
+        //      allowed durations to 254 (seconds).
+        //
+        //      Speculation on special role of 0xff is based on:
+        //          - esp_zigbee_lib (2.1.0) > includes/ezbee/zdo/zdo_nwk_mgmt.h:192 (Mgmt_Permit_Joining_req)
+        //          - Zigbee specification
+        #[cfg(true)]
+        {
+            const MAX_SECS: u8 = 254;
+            if secs == 0xff {
+                log::warn!("'open_network': limiting joining time: {secs} > {MAX_SECS}");
+                secs = MAX_SECS;
+            }
+        }
 
         let _guard = ZigbeeGuard::acquire();
         EzbError::wrap( unsafe {
             ezb_bdb_open_network(secs)
-                // docs don't care to mention the unit (2.0.5), but examples use seconds. #feedback
+                // docs don't care to mention the unit (2.1.0), but examples use seconds.
 
         }).unwrap_or_else(|e| {
             panic!("'ezb_bdb_open_network' failed with: {}", e);

@@ -45,6 +45,8 @@ IT WOULD HELP newcomers TREMENDOUSLY if `esp-idf-sys` terminated a build, if the
 
 ## `ezb_bdb_comm_mode_e` derives wrong doc
 
+><small>*`esp-zigbee-sdk` ..=2.1.0*</small>
+
 `esp_zigbee_lib` has this (separate docs for these two types) - `bdb.h`:
 
 ```
@@ -65,10 +67,12 @@ typedef enum ezb_bdb_comm_capability_e {
  *
  */
  typedef enum ezb_bdb_comm_mode_e {
-...
+    EZB_BDB_MODE_INITIALIZATION      = 0x01,    /*!< BDB initialization mode */
+	[...]
+} ezb_bdb_comm_mode_t;
 ```
 
-However, the bindgen-generated output has the same line: `tmp/bindings_0.rs`
+However, the bindgen-generated output has the same line for both: `tmp/bindings_0.rs`
 
 ```
 /// @brief Base Device Behavior (BDB) commissioning capability.
@@ -81,11 +85,8 @@ impl ezb_bdb_comm_mode_e {
 [...]
 ```
 
-- [ ] Check the behaviour when:
-	- removing `tmp/bindings_0.rs`
-	- rebuilding
-
-- [ ] Try to find whether `bindgen` has a bug here, and isolate/explain it.
+- [ ] Ask @claude to analyse this
+- [ ] Does `bindgen` have a bug here, and isolate/explain it.
 
 **Work-around**
 
@@ -94,12 +95,14 @@ Copying the description directly from C header.
 
 ## `UNREPORTBLE_ATTRIB`
 
-Within `zcl_type.h`, this line has two typos of the same word:
+><small>*`esp-zigbee-sdk` ..=2.1.0*</small>
 
 ```
     EZB_ZCL_STATUS_UNREPORTBLE_ATTRIB = 0x8cU,   /*!< Unreporttable attribute */
                            ^-- A missing                      ^-- excess t
 ```
+
+>Note how there are *two* typos on the same line.
 
 While some fields are obviously shortened (`UNSUP`), this seems like something to fix.
 
@@ -125,4 +128,100 @@ esp_zigbee_launch_mainloop
 This function never returns, right?  Therefore, it would never give `ESP_OK`, nor is there a "success".
 
 Or.. is that the code if the loop is terminated from outside; the comment could be improved.
+
+
+## `esp-zigbee-sdk`: more detailed doc comment for `ezb_bdb_open_network`
+
+Currently:
+
+```
+/**
+ * @brief Open Zigbee network
+ *
+ * @param[in] permit_duration Zigbee network open time
+ * @return
+ *      - EZB_ERR_NONE: on success
+ *      - EZB_ERR_NO_MEM: not memory
+ *      - EZB_ERR_FAILED: on failed
+ */
+ezb_err_t ezb_bdb_open_network(uint8_t permit_duration);
+```
+
+*From version 2.1.0*
+
+This can be improved, and *may* be missing vital information (role of `0xff`). 
+
+1. mention the delay is in seconds
+2. "Zigbee network open time" can be rephrased to be more explicit.
+
+	>Open Zigbee network for joining
+	>...
+	>`permit_duration` (in seconds): The time the network will be available.
+
+3. Is `0xff` a special value??
+
+	Elsewhere, `esp-zigbee-lib/includes/ezbee/zdo/zdo_nwk_mgmt.h` has this (no, I did not find it, an agent did!):
+
+	```
+	    uint8_t permit_duration; /*!< Duration in seconds for which joining is permitted. 0x00 = disable joining, 0xFF = enable joining indefinitely */
+	```
+
+	If this field is related, does it mean that providing `0xff` above would place the device in "joining indefinitely" state?
+	
+	If so, that deserves to be mentioned in the doc comments.
+
+	**Work-around**
+	
+	In my code, I ban `0xff` as a value.
+
+>Note:
+>
+>These are kind of marginal, because all use cases in the repo are for 180s (3 min). But, still..
+
+
+## `esp-zigbee-sdk`: note on ownership of pointer content
+
+Especially for making Rust bindings, it would be great to know when a C level API code holds onto a pointed-to memory, after the call.
+
+For example:
+
+```
+/**
+ * @brief Trust Center: Add the install code for remote device with type.
+ *
+ * @param[in] address  The pointer to the 64-bit extended address of the remote device.
+ * @param[in] ic_type  The install code type, @ref ezb_secur_ic_type_e.
+ * @param[in] ic       The pointer to the data of install code.
+ *
+ * @return - EZB_ERR_NONE: on success; failed otherwise.
+ */
+ezb_err_t ezb_secur_ic_add(const ezb_extaddr_t *address, ezb_secur_ic_type_t ic_type, const uint8_t *ic);
+```
+
+The author's *guess* is that `address` (4 bytes) gets copied, but we cannot know, for sure.
+
+The convention (covering *all* of the library APIs) could be:
+
+- If a memory is *not* used after the call, mention it to be *by value*.
+
+Another option could be to do this *per type*, defining in the declaration of `ezb_extaddr_t` that it's always going to be used by-value.
+
+>For `ezb_extaddr_t`, in particular, a third option would be to move away from the current `union` approach to only `uint64` (which would be passed by value).
+
+
+## `esp-zigbee-sdk`: more constness would be welcome
+
+Now, using the C API from Rust, we need to use `mut` pointers, when there's nothing mutable about them. For example:
+
+```
+	value: (&raw mut value).cast(),
+```
+
+Instead, the library could use C `const` pointers. This would better describe the interface to users in C, as well.
+
+**Work-around**
+
+Not really.
+
+It's all about cutting away complexity, and the right place to do the change is within the library.
 

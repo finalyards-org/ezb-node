@@ -1,6 +1,7 @@
 
 use ezb_node_raw::{
     ezb_zcl_cmd_hdr_s,
+    ezb_zcl_cluster_cmd_ctrl_s,
 };
 
 use super::{
@@ -96,5 +97,19 @@ impl CommandHeader {
             cmd_id
         };
         Some(o)
+    }
+
+    /**
+    * Command control for *replying* to the sender of this command: their address and endpoint become the
+    * destination; the endpoint the command came to becomes the source.
+    */
+    #[allow(dead_code)]     // not used in all feature combinations
+    pub(crate) fn reply_ctrl(&self) -> ezb_zcl_cluster_cmd_ctrl_s {
+        ezb_zcl_cluster_cmd_ctrl_s {
+            dst_addr: self.src_addr.clone().into(),
+            dst_ep: self.src_ep,
+            src_ep: self.dst_ep,
+            ..crate::utils::c_zeroed()     // 'dis_default_rsp: false', no confirmation context
+        }
     }
 }

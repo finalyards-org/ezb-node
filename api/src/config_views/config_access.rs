@@ -18,6 +18,7 @@ use ezb_node_raw::{
 };
 #[cfg(feature = "coordinator")]
 use ezb_node_raw::{
+    ezb_extaddr_t,
     ezb_secur_ic_add,
     ezb_secur_ic_type_e,
     ezb_secur_ic_type_e::EZB_SECUR_IC_TYPE_128,
@@ -223,7 +224,7 @@ fn set_channels(channel_masks: [ChannelMask;2]) -> Result<(), EzbError> {
 
 #[cfg(feature = "coordinator")]
 struct PreConfigurer {
-    mac_address: &'static [u8;8],     // 64-bit
+    mac_address: u64,
     install_code: &'static [u8;18],
 }
 
@@ -231,7 +232,7 @@ struct PreConfigurer {
 impl From<&'static PreConfiguredDevice> for PreConfigurer {
     fn from(o: &'static PreConfiguredDevice) -> Self {
         let PreConfiguredDevice { mac_address, install_code } = o;
-        Self { mac_address, install_code }
+        Self { mac_address: *mac_address, install_code }
     }
 }
 
@@ -241,23 +242,27 @@ impl PreConfigurer {
 
     /// Apply the pre-configured devices (if any); coordinator only.
     ///
-    /// This needs to be done after endpoint creation but before the stack is started (source: google.ai).
+    /// This needs to be done after endpoint creation but before the stack is started
+    /// (source: google.ai).
     ///
     // Rust note: nightly allows making a struct 'impl Fn<(...,)>', but it becomes verbose because also 'FnMut' and 'FnOnce'
-    //          need to be defined.
+    //          need to be defined. So the author uses just '._call()'.
     //
     pub(crate) fn _call(self) -> Result<(),EzbError>{
 
-        // These ptr's are valid forever, and safe to pass to C land; they are based on static stores.
+        let mac_address: ezb_extaddr_t = self.mac_address.into();   // u64 -> C side union
+        let install_code: *const _ = self.install_code.as_ptr();
+
+        // Note: We are >95% sure that 'esp-zigbee-sdk' does not grab the 'mac_address' pointer.
+        //      For example, there's this line in its sources (using a temporary struct, C side):
+        //      <<
+        //          EXIT_ON_ERROR(ezb_secur_ic_add(&(ezb_extaddr_t){.u64 = argtable.add_addr->addr->u.addr64},
+        //      <<
         //
-        let mac_address = self.mac_address.as_ptr() .cast();
-        let install_code = self.install_code.as_ptr();
-
-        //      #esp_zigbee_lib: It would be great if you document all the cases where pointers are
-        //          used longer than just during the call of the function.
-
+        //      It would be great if Espressif wrote such guarantees out.
+        //
         EzbError::wrap( unsafe {
-            ezb_secur_ic_add(mac_address, Self::IC_TYPE as u8, install_code)
+            ezb_secur_ic_add(&mac_address, Self::IC_TYPE as u8, install_code)
         })?;
 
         Ok(())

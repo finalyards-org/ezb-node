@@ -153,6 +153,12 @@ pub use bindings::{
     ezb_zcl_ias_zone_cluster_client_init,
     ezb_zcl_ias_zone_enroll_cmd_resp,
     ezb_zcl_ias_zone_enroll_rsp_cmd_t,
+    ezb_zcl_ias_zone_enroll_rsp_payload_t,
+    ezb_zcl_ias_zone_enroll_rsp_code_t,
+    ezb_zcl_ias_zone_server_attr_t,
+    ezb_zcl_write_attr_cmd_req,
+    ezb_zcl_write_attr_cmd_t,
+    ezb_zcl_cmd_ctrl_t,
     ezb_zcl_ias_zone_enroll_req_message_s,
     ezb_zcl_ias_zone_status_change_notif_message_s,
     ezb_af_endpoint_add_cluster_desc,
@@ -170,7 +176,6 @@ pub use bindings::{
     ezb_secur_set_ic_required,
     ezb_secur_ic_add,
     ezb_err_t,
-    //r EzbError,
 
     // tbd. Only expose the security types we plan to support (is that possible?)
     ezb_secur_ic_type_e, //::EZB_SECUR_IC_TYPE_128,

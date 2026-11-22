@@ -17,6 +17,8 @@ use ezb_node_raw::{
     ezb_zcl_message_info_s,
     ezb_zcl_cmd_read_attr_rsp_message_t,
     ezb_zcl_cmd_write_attr_rsp_message_t,
+    ezb_zcl_ias_zone_enroll_req_message_s,
+    ezb_zcl_ias_zone_status_change_notif_message_s,
 };
 
 use crate::types::{
@@ -84,7 +86,26 @@ pub enum ZclEvent {
     // ezb_zcl_cmd_default_rsp_message_s
     DefaultResp{ info: CommonInfo, header: CommandHeader, cmd_id: u8, err: Option<ZclError> },
 
-    // Note: enum numbers below are from 2.0.x; do NOT apply to 2.1.0 any more.
+    /// An IAS Zone "Zone Enroll Request" command is received (from a zone device, e.g. a door sensor).
+    ///
+    /// @note The stack does not reply on our behalf: the application is expected to send an Enroll Response.
+    ///
+    // ezb_zcl_ias_zone_enroll_req_message_s
+    IasZoneEnrollReq{ info: CommonInfo, header: CommandHeader,
+        zone_type: u16,     // e.g. 0x0015 = contact switch (door/window)
+        manuf_code: u16,
+    },
+
+    /// An IAS Zone "Zone Status Change Notification" command is received.
+    // ezb_zcl_ias_zone_status_change_notif_message_s
+    IasZoneStatusChangeNotif{ info: CommonInfo, header: CommandHeader,
+        zone_status: u16,   // bit mask; bit 0 = "alarm1" (e.g. door open)
+        extended_status: u8,
+        zone_id: u8,
+        delay: u16,         // quarter-seconds
+    },
+
+    // Note: enum numbers below are from 2.0.x; they ARE NOT THE SAME in 2.1.0 any more.
     //      Kept for later work (names should mostly remain).
     //
     /*** tbd. todo
@@ -212,16 +233,11 @@ pub enum ZclEvent {
     /// is received.
     /// see @ref ezb_zcl_ias_zone_initiate_normal_mode_message_s.
     EZB_ZCL_CORE_IAS_ZONE_INIT_NORMAL_MODE_CB_ID = 47,
-    /// A callback ID triggered when a ZCL IAS Zone EnrollRequest command is
-    /// received. see @ref ezb_zcl_ias_zone_enroll_req_message_s.
-    EZB_ZCL_CORE_IAS_ZONE_ENROLL_CB_ID = 48,
+    [...]
     /// A callback ID triggered when a ZCL IAS Zone EnrollResponse command is
     /// received. see @ref ezb_zcl_ias_zone_enroll_rsp_message_s.
     EZB_ZCL_CORE_IAS_ZONE_ENROLL_RSP_CB_ID = 49,
-    /// A callback ID triggered when a ZCL IAS Zone StatusChangeNotification
-    /// command is received.
-    /// see @ref ezb_zcl_ias_zone_status_change_notif_message_s.
-    EZB_ZCL_CORE_IAS_ZONE_STATUS_CHANGE_NOTIF_CB_ID = 50,
+    [...]
     /// A callback ID triggered when a ZCL Alarms Alarm command is received.
     /// see @ref ezb_zcl_alarms_alarm_cmd_message_s.
     EZB_ZCL_CORE_ALARMS_ALARM_CB_ID = 51,
@@ -339,6 +355,15 @@ pub enum ZclEvent {
 }
 
 
+/// Reason why a C-side ZCL core action could not be turned into a 'ZclEvent'.
+#[derive(Debug)]
+pub(crate) enum ZclParseError {
+    /// The action is not (yet) supported by us.
+    Unsupported,
+    /// The action is supported, but its data was not as expected (null pointer, unknown enum value, ...).
+    Malformed,
+}
+
 impl ZclEvent {
     /**
     * Convert from C level to Rust so that type and message are self-contained.
@@ -346,13 +371,13 @@ impl ZclEvent {
     // @note 'vp' is 'mut' though we don't change it. 'NotNull' needs it that way, but this also allows us to (later)
     //      write to '.out' field if that ever becomes necessary (that write would need to be synchronous).
     //
-    pub(crate) fn parse(e: ezb_zcl_core_action_callback_id_e, vp: *mut ::core::ffi::c_void) -> Option<Self> {
+    pub(crate) fn parse(e: ezb_zcl_core_action_callback_id_e, vp: *mut ::core::ffi::c_void) -> Result<Self, ZclParseError> {
+        use ZclParseError::*;
         use ezb_zcl_core_action_callback_id_e::*;
 
         // In C samples, the pointer is checked against 'null', and the callback returned from if it is.
         let Some(p) = NonNull::new(vp) else {
-            log::debug!("Null pointer, no data");
-            return None;
+            return Err(Malformed);
         };
 
         let happy_res = match e {
@@ -360,8 +385,8 @@ impl ZclEvent {
                 let msg = get_msg::<ezb_zcl_set_attr_value_message_t>(p);
 
                 Self::SetAttrValue{
-                    info: CommonInfo::parse(&msg.info)?,
-                    attr: ZclAttr::parse(&msg.in_.attribute)?
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    attr: ZclAttr::parse(&msg.in_.attribute).ok_or(Malformed)?
                 }
             },
 
@@ -369,9 +394,9 @@ impl ZclEvent {
                 let msg = get_msg::<ezb_zcl_cmd_read_attr_rsp_message_t>(p);
 
                 Self::ReadAttrResp{
-                    info: CommonInfo::parse(&msg.info)?,
-                    header: CommandHeader::parse(msg.in_.header)?,
-                    variables: ZclAttrReadResp::parse_list( unsafe{ msg.in_.variables.as_ref() }? )?
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
+                    variables: ZclAttrReadResp::parse_list( unsafe{ msg.in_.variables.as_ref() }.ok_or(Malformed)? ).ok_or(Malformed)?
                         // { attr_id, status, attr_type, attr_value, next }
                 }
             },
@@ -380,9 +405,9 @@ impl ZclEvent {
                 let msg = get_msg::<ezb_zcl_cmd_write_attr_rsp_message_t>(p);
 
                 Self::WriteAttrResp{
-                    info: CommonInfo::parse(&msg.info)?,
-                    header: CommandHeader::parse(msg.in_.header)?,
-                    variables: ZclAttrWriteResp::parse_list( unsafe{ msg.in_.variables.as_ref() }? )?
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
+                    variables: ZclAttrWriteResp::parse_list( unsafe{ msg.in_.variables.as_ref() }.ok_or(Malformed)? ).ok_or(Malformed)?
                         // { status, attr_id, next }
                 }
             }
@@ -401,10 +426,10 @@ impl ZclEvent {
                     // } ezb_zcl_cmd_default_rsp_message_t;
 
                 Self::DefaultResp{
-                    info: CommonInfo::parse(&msg.info)?,
-                    header: CommandHeader::parse(msg.in_.header)?,
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
                     cmd_id: msg.in_.rsp_to_cmd,
-                    err: ZclError::parse(msg.in_.status_code)?
+                    err: ZclError::parse(msg.in_.status_code).ok_or(Malformed)?
                 }
             },
 
@@ -414,11 +439,37 @@ impl ZclEvent {
             EZB_ZCL_CORE_CB_ID_END => { // 83
                 Self::End
             },
+            EZB_ZCL_CORE_IAS_ZONE_ENROLL_CB_ID => {
+                let msg = get_msg::<ezb_zcl_ias_zone_enroll_req_message_s>(p);
+                let pl = msg.in_.payload;
+
+                Self::IasZoneEnrollReq{
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
+                    zone_type: pl.zone_type,
+                    manuf_code: pl.manuf_code,
+                }
+            },
+
+            EZB_ZCL_CORE_IAS_ZONE_STATUS_CHANGE_NOTIF_CB_ID => {
+                let msg = get_msg::<ezb_zcl_ias_zone_status_change_notif_message_s>(p);
+                let pl = msg.in_.payload;
+
+                Self::IasZoneStatusChangeNotif{
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
+                    zone_status: pl.zone_status,
+                    extended_status: pl.extend_status,
+                    zone_id: pl.zone_id,
+                    delay: pl.delay,
+                }
+            },
+
             _ => {
-                return None;
+                return Err(Unsupported);
             }
         };
-        Some(happy_res)
+        Ok(happy_res)
     }
 }
 

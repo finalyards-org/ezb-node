@@ -1,19 +1,28 @@
-use embassy_time::{
-    Duration
-};
-
 use ezb_node::{
     AppSignal,
     BdbMode,
     BdbStatus,
+    IasZoneEnrollResponse,
     Node,
     NodeApi,
+    NodeApiIasCie,
     ZclEvent,
-    //ZclError,
 };
 
 #[path = ".conf.rs"]
 mod cfg;
+
+/// Our IAS CIE endpoint (see '[endpoint.1]' in 'app.toml').
+const MY_EP: u8 = 1;
+    // tbd. consider being able to deduce it from config. #later
+
+/// Endpoint of the door/window sensor's IAS Zone (server) cluster.
+///
+/// Assumed; endpoint 1 is the most common for single-function sensors. Not verified for Wiser CCT591011. tbd.
+const SENSOR_EP: u8 = 1;
+
+/// Zone ID we give to the (only) enrolled sensor.
+const ZONE_ID: u8 = 0;
 
 pub(crate) struct IasCoordinator;
 
@@ -89,10 +98,10 @@ impl Node for IasCoordinator {
                 // For the sensor to join, the coordinator must send "Permit Join" to the network.
 
                 // 180 s (3 min) is the Zigbee recommendation for a pairing window.
-                const HOW_LONG: Duration = Duration::from_secs(3*60);
-                let () = self.open_network( HOW_LONG );
+                const SECS: u8 = 180;
+                let () = self.open_network(SECS);
 
-                log::info!("Network is now open for pairing for {} seconds.", HOW_LONG.as_secs());
+                log::info!("Network is now open for pairing for {} seconds.", SECS);
             },
             BdbSignalSteering(st) => {
                 log::info!("Failed the network steering: st = {}", st);
@@ -102,13 +111,17 @@ impl Node for IasCoordinator {
             }
 
             ZdoSignalDeviceAnnce { short_addr, device_addr, .. } => {
-                log::info!("New device commissioned or rejoined: {}", short_addr);
+                log::info!("New device commissioned or rejoined: {:#06x} ({})", short_addr, device_addr);
 
-                let my_ieee = self.get_extended_address();
-                log::info!("Sending IAS CIE Address registration to the sensor... {}", my_ieee);
+                // Tell the sensor who its CIE is. Many zone devices send "Zone Enroll Request" only after this.
+                //
+                // Note: Done for any announcing device; the only one we expect is the door/window sensor.
+                //
+                log::info!("Writing our IEEE address ({}) as IAS CIE address to {:#06x}, ep {}",
+                    self.get_extended_address(), short_addr, SENSOR_EP);
 
-                todo!();    // should we???
-                //let x: ! = write_ieee_to_remote(short_addr, my_ieee);
+                self.write_ias_cie_address(short_addr, SENSOR_EP, MY_EP)
+                    .unwrap_or_else(|e| log::error!("Failed to write IAS CIE address: {}", e));
             },
 
             NwkSignalPermitJoinStatus { is_opened_for } => {
@@ -144,8 +157,37 @@ impl Node for IasCoordinator {
         //
         match ev {
             SetAttrValue { .. } => {
-                todo!();    // tbd. not sure we need this - don't have any attributes, right?
+                // Not expected: we don't have application attributes. tbd. remove, once confirmed in practice.
+                log::warn!("Unexpected: {:?}", ev);
             },
+
+            WriteAttrResp { .. } => {
+                // Expected as a response to 'write_ias_cie_address'.
+                log::info!("Write Attributes response: {:?}", ev);
+            },
+
+            IasZoneEnrollReq { ref header, zone_type, manuf_code, .. } => {
+                log::info!("Zone Enroll Request: zone type {:#06x}, manufacturer {:#06x}; accepting as zone {}",
+                    zone_type, manuf_code, ZONE_ID);
+
+                self.ias_zone_enroll_response(header, ZONE_ID, IasZoneEnrollResponse::Success)
+                    .unwrap_or_else(|e| log::error!("Failed to send Zone Enroll Response: {}", e));
+            },
+
+            IasZoneStatusChangeNotif { zone_status, zone_id, .. } => {
+                // Bits (ZCL spec): 0 = alarm1 (e.g. open), 2 = tamper, 3 = battery low
+                let open = zone_status & 0x0001 != 0;
+                let tamper = zone_status & 0x0004 != 0;
+                let battery_low = zone_status & 0x0008 != 0;
+
+                log::info!("Zone {}: {}{}{} (zone status {:#06x})", zone_id,
+                    if open {"OPEN"} else {"closed"},
+                    if tamper {", TAMPER"} else {""},
+                    if battery_low {", battery low"} else {""},
+                    zone_status
+                );
+            },
+
             DefaultResp { err, .. } => {
                 //ezb_zcl_cmd_default_rsp_message_t *default_rsp = (ezb_zcl_cmd_default_rsp_message_t *)message;
                 log::info!("Received ZCL Default Response, status: {}",
@@ -156,9 +198,7 @@ impl Node for IasCoordinator {
                 );
             },
             _ => {
-                // Once the door sensor provides "Zone Enroll Request", we'll see it here. #temp
-                //
-                log::warn!("ZCL Core Action: {:?}", ev);
+                log::warn!("ZCL Core Action (not handled): {:?}", ev);
             }
         }
     }
@@ -167,7 +207,7 @@ impl Node for IasCoordinator {
 /// Write our IEEE address to the sensor's:
 ///  - "IAS Zone" (0x0500) cluster
 ///  - IAS_CIE_ADDRESS attribute (0x0010)
-#[cfg(false)]   // may NOT be needed???
+#[cfg(false)]   //R: lukaise läpi, voi poistaa
 fn write_ieee_to_remote(this: &Node, short_addr: &str, remote_addr: u128) {
 
     todo!()

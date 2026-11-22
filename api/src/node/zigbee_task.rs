@@ -39,6 +39,7 @@ use crate::{
     EzbError,
     //r IeeeAddr,
     ZclEvent,
+    zcl_event::ZclParseError,
     //r utils::PascalString,
     ZigbeeDev,
 };
@@ -177,9 +178,16 @@ extern "C" fn zcl_action_handler(action_id: ezb_zcl_core_action_callback_id_t /*
         return;
     };
 
-    let Some(ev) = ZclEvent::parse(action_e, msg) else {
-        log::error!("Failed to parse ZCL core action (skipped; bad data?): {}", action_e);
-        return;
+    let ev = match ZclEvent::parse(action_e, msg) {
+        Ok(ev) => ev,
+        Err(ZclParseError::Unsupported) => {
+            log::info!("ZCL core action not supported (skipped): {}", action_e);
+            return;
+        },
+        Err(ZclParseError::Malformed) => {
+            log::error!("Failed to parse ZCL core action (skipped; bad data?): {}", action_e);
+            return;
+        },
     };
 
     let tx = super::CHANNEL.sender();

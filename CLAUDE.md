@@ -87,3 +87,9 @@ questions, in Finnish), `apps/README.md`, `apps/demo/2/README.md`, `DEVS/`.
 
 - `DEVS/` has more informal (casual) notes to other developers. It shall not be referenced from the rest of the repo.
 
+- `docs/Zigbee_<topic>.md`
+
+	- A protocol note for each non-trivial Zigbee use case, so that a developer gets the protocol without reading the Zigbee spec. (e.g. `docs/Zigbee_ias_cie.md`).
+	- Map each step to the `ezb-node` API; mark unverified assumptions as *(unverified)*. Write/update one when implementing such a use case.
+
+	- There does not need to be a link to such `.md` file. Human developers (who it's for) are expected to find it on their own.

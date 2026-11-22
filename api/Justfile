@@ -18,7 +18,7 @@ build: build-coordinator
 # Note: To check that "code builds", please use this. Because of conditional compilation,
 #	all node types need to be addressed.
 build-all: build-coordinator build-router \
-	build-coordinator-bare
+	build-router-bare
 
 build-coordinator:
 	cargo {{nightly}} build --release -vv \
@@ -31,7 +31,8 @@ build-router:
 		--jobs 1 \
 		--features router,_dt_all,_remote_all
 
-# It is possible to also make a coordinator without any endpoint profiles.
-build-coordinator-bare:
+# A router may be without any endpoints (pure network extender). Coordinators need a device type
+# ('config' enforces this).
+build-router-bare:
 	cargo {{nightly}} build --release -vv \
-		--features coordinator
+		--features router

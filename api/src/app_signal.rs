@@ -529,37 +529,37 @@ impl AppSignal {
             EZB_BDB_SIGNAL_DEVICE_FIRST_START => { // 256
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalDeviceFirstStart(
-                    BdbStatus::from_repr(x.status).unwrap()
+                    BdbStatus::from_repr(x.status)?
                 )
             },
             EZB_BDB_SIGNAL_DEVICE_REBOOT => { // 257
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalDeviceReboot (
-                    BdbStatus::from_repr(x.status).unwrap()
+                    BdbStatus::from_repr(x.status)?
                 )
             },
             EZB_BDB_SIGNAL_STEERING => { // 258
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalSteering (
-                    BdbStatus::from_repr(x.status).unwrap()
+                    BdbStatus::from_repr(x.status)?
                 )
             },
             EZB_BDB_SIGNAL_FORMATION => { // 259
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalFormation (
-                    BdbStatus::from_repr(x.status).unwrap()
+                    BdbStatus::from_repr(x.status)?
                 )
             },
             EZB_BDB_SIGNAL_FINDING_AND_BINDING_INITIATOR_FINISHED => { // 0x0d
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalFindingAndBindingInitiatorFinished (
-                    BdbStatus::from_repr(x.status).unwrap()
+                    BdbStatus::from_repr(x.status)?
                 )
             },
             EZB_BDB_SIGNAL_FINDING_AND_BINDING_TARGET_FINISHED => { // 260
                 let x = get_param::<ezb_bdb_signal_simple_params_t>(p_params);
                 Self::BdbSignalFindingAndBindingTargetFinished (
-                    BdbStatus::from_repr(x.status).unwrap()
+                    BdbStatus::from_repr(x.status)?
                 )
             },
             #[cfg(false)]   // feature = "touchlink"
@@ -592,10 +592,10 @@ impl AppSignal {
                 //      On the other hand, such a case would not arise from unexpected wire(less) traffic, but be a bug
                 //      in 'esp-zigbee-lib'. Which means, probably we can panic? >:)
                 //
-                let status = ezb_nwk_network_status_t::parse(x.status)
-                    .unwrap_or_else(|| {
-                        panic!("EZB_NWK_SIGNAL_NETWORK_STATUS: unexpected '.status': {}", x.status);
-                    });
+                let Some(status) = ezb_nwk_network_status_t::parse(x.status) else {
+                    log::error!("EZB_NWK_SIGNAL_NETWORK_STATUS: unexpected '.status': {}", x.status);
+                    return None;
+                };
 
                 Self::NwkSignalNetworkStatus {
                     status,
@@ -691,11 +691,3 @@ pub enum BdbStatus {
     /// haven't acked by parent router).
     DevAnnceSendFailure = EZB_BDB_STATUS_DEV_ANNCE_SEND_FAILURE as _,
 }
-
-/***r
-pub(crate) impl From<ezb_bdb_comm_status_e> for BdbStatus {
-    fn from(value: ezb_bdb_comm_status_e) -> Self {
-        Self(value as _)
-    }
-}
-***/

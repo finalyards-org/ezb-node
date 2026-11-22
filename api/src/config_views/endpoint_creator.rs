@@ -302,10 +302,10 @@ fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
     ];
     assert!( !clusters.iter().any(|c| c.is_null()), "Failed to create some cluster(s): IAS_CIE");
 
-    for cl in clusters {
+    for (i, cl) in clusters.into_iter().enumerate() {
         EzbError::wrap( unsafe {
             ezb_af_endpoint_add_cluster_desc(desc, cl)
-        }).expect("Failed to add cluster: IAS_ACE");
+        }).unwrap_or_else(|e| panic!("Failed to add cluster #{i} to IAS_CIE: {e}"));
     }
 
     desc
