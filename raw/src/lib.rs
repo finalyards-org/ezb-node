@@ -72,6 +72,7 @@ pub use bindings::{
     ezb_zcl_cluster_desc_t,
     ezb_af_endpoint_get_cluster_desc,
     ezb_zcl_basic_cluster_desc_add_attr,
+    ezb_zcl_basic_create_cluster_desc,
     ezb_zcl_basic_server_attr_t,
     ezb_af_device_add_endpoint_desc,
     ezb_af_device_desc_register,

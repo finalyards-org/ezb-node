@@ -3,6 +3,7 @@ use ezb_node::{
     BdbMode,
     BdbStatus,
     IasZoneEnrollResponse,
+    JoinWindowSecs,
     Node,
     NodeApi,
     NodeApiIasCie,
@@ -96,12 +97,12 @@ impl Node for IasCoordinator {
                 log::info!("Network steering completed.");
 
                 // For the sensor to join, the coordinator must send "Permit Join" to the network.
+                //
+                // Note: Since we have the device pre-configured, no need for a long join window.
+                //
+                let () = self.open_network(JoinWindowSecs::_1MIN);
 
-                // 180 s (3 min) is the Zigbee recommendation for a pairing window.
-                const SECS: u8 = 180;
-                let () = self.open_network(SECS);
-
-                log::info!("Network is now open for pairing for {} seconds.", SECS);
+                log::info!("Network is now open for pairing for {} minute(s).", 1);
             },
             BdbSignalSteering(st) => {
                 log::info!("Failed the network steering: st = {}", st);

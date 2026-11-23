@@ -101,10 +101,7 @@ impl From<&'static Config> for EndpointCreator {
 }
 
 /// Create an end point, in the C library level.
-///
-/// Add it to the device descriptor 'dev'.
-fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspError> {
-    //r use DeviceType::*;
+fn create_one_c(ep_id: u8, entry: &'static Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspError> {
     use core::ffi::c_void;
 
     let Endpoint {
@@ -117,15 +114,15 @@ fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspE
 
     // Note: It is possible to build 'config' with no 'DeviceType' support (not intended for any
     //      endpoints; router only). This would provide us with an "empty enum" (that cannot exist,
-    //      and cannot be matched against, even if the code were never to get run, anyways)...
+    //      and cannot be matched against, even if the code were never to get run)...
     //
     //      There are ways around this (helpful feature as it otherwise is!):
-    //          - add a '_Dummy' clause to the enum in question.   WE DO THIS
+    //          - add a '_Dummy' clause to the enum in question.
     //          - conditionally compile the whole function (based on all 'dt_...' features)
-    //          - using 'device_type.clone()' in the match; this tricks the Rust compiler to
-    //            allow such matches to exist.
+    //          - using '.clone()' to avoid a reference in the match; this tricks the Rust compiler to
+    //            allow such match to exist.
     //
-    //      The '.clone()' is arguably the easiest, cleanest, is it..? Note we only need it for router!
+    //      The '.clone()' is arguably the easiest, cleanest. Note we only need it for router!
     //
     #[cfg(feature = "router")]
     let device_type = device_type.clone();
@@ -148,6 +145,7 @@ fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspE
     let basic_desc: ezb_zcl_cluster_desc_t = unsafe {
         ezb_af_endpoint_get_cluster_desc(ep_desc, EZB_ZCL_CLUSTER_ID_BASIC, CLUSTER_SERVER)
     };
+    assert!(!basic_desc.is_null(), "No basic server cluster for endpoint {ep_id}");
 
     // Add common fields.
     //
@@ -203,6 +201,8 @@ fn create_one_c(ep_id: u8, entry: &Endpoint) -> Result<ezb_af_ep_desc_t, EzbEspE
         }
     }
 
+    // @claude: Do you suggest to work on this, or remove it?
+    //
     // NOT SURE if this is the place where discovery needs to take place. Also possible, we're
     // already done (i.e. endpoint is created). tbd. compare to C switch sample.
     //
@@ -273,6 +273,7 @@ fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
         ezb_af_create_endpoint_desc,
         ezb_af_ep_config_t,
         ezb_af_profile_id_e::HA_PROFILE_ID,
+        ezb_zcl_basic_create_cluster_desc,
         ezb_zcl_ias_ace_create_cluster_desc,
         ezb_zcl_identify_create_cluster_desc,
         ezb_zcl_ias_zone_create_cluster_desc,
@@ -290,11 +291,20 @@ fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
     let desc: ezb_af_ep_desc_t = unsafe {
         ezb_af_create_endpoint_desc(&cfg)
     };
-    assert!( !desc.is_null(), "Creating a generic endpoint descriptor failed");    // bad config?
+    assert!( !desc.is_null(), "Creating a generic endpoint descriptor failed");
 
     const NULL: *const c_void = core::ptr::null();
 
-    let clusters: [ezb_zcl_cluster_desc_t;4] = [
+    // 'NULL' config: the stack's defaults (for the given role).
+    //
+    let clusters: [ezb_zcl_cluster_desc_t;6] = [
+        // Basic: mandatory for every device (and 'create_one_c' needs it, for the common fields).
+        unsafe { ezb_zcl_basic_create_cluster_desc(NULL, CLUSTER_SERVER as u8) },
+
+        // Identify server: mandatory for IAS CIE per the Zigbee Home Automation (ZHA) device definition;
+        // also used by Zigbee 3.0 "Finding & Binding". Included for _standard compliance only_.
+        unsafe { ezb_zcl_identify_create_cluster_desc(NULL, CLUSTER_SERVER as u8) },
+
         unsafe { ezb_zcl_ias_ace_create_cluster_desc(NULL, CLUSTER_SERVER as u8) },
         unsafe { ezb_zcl_identify_create_cluster_desc(NULL, CLUSTER_CLIENT as u8) },
         unsafe { ezb_zcl_ias_zone_create_cluster_desc(NULL, CLUSTER_CLIENT as u8) },
@@ -309,58 +319,4 @@ fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
     }
 
     desc
-}
-
-//r This variant is what GOOGLE.AI suggested - building on top of a harmless device type.
-#[cfg(false)]
-#[cfg(feature = "dt_ias_cie")]
-fn create_ias_cie(ep_id: u8) -> ezb_af_ep_desc_t {
-    use ezb_node_raw::{
-        ezb_zha_configuration_tool_config_t,
-        ezb_zha_create_configuration_tool,
-        ezb_zcl_ias_zone_create_cluster_desc,
-        ezb_zcl_role_e::CLUSTER_CLIENT,
-        ezb_zcl_ias_zone_cluster_client_init,
-        ezb_af_endpoint_add_cluster_desc,
-    };
-
-    // Once (if!) 'esp-zigbee-sdk' starts supporting 'ias-cie', we can revert to similar setup as
-    // with the other device types.
-    #[cfg(false)]
-    {
-        let mut cfg = ezb_zha_color_ias_cie_config_t::default();
-        unsafe { ezb_zha_create_ias_cie(ep_id, &cfg) }
-    }
-
-    // Until then..
-    {
-        // Create *some* endpoint that we can piggy-pack on.
-        //
-        let cfg = ezb_zha_configuration_tool_config_t::default();
-        let ep_desc = unsafe { ezb_zha_create_configuration_tool(ep_id, &cfg) };
-
-        let cl_desc = unsafe {
-            ezb_zcl_ias_zone_create_cluster_desc(
-                std::ptr::null(),       // NULL uses defaults for a client
-                CLUSTER_CLIENT as u8
-            )
-        };
-
-        // Attach the cluster to the end point description.
-        let err = unsafe {
-            ezb_af_endpoint_add_cluster_desc(ep_desc, cl_desc)
-        };
-        // IF we start getting these, consider what should be done. This only occurs during node
-        // initialization, so panic is good-enough-for-now.
-        //
-        if err != 0 /*EZB_ERR_NONE*/ {
-            panic!("ezb_af_endpoint_add_cluster_desc failed: {}", err);
-        }
-
-        // tbd. Q: should this be here? Ask around.
-        unsafe {
-            ezb_zcl_ias_zone_cluster_client_init(ep_id);
-        }
-        ep_desc
-    }
 }

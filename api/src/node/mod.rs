@@ -227,33 +227,17 @@ pub trait NodeApi {
     * Open the network for joining.
     *
     * @param for_how_long After this time, the permit expires. Range is 1..254 seconds.
-    *       Typical use is 180s ('esp-zigbee-sdk' samples).
+    *       Typical use in examples involving manual feeding of install codes is 180s.
     *
     * @note Since the call is synchronous (it only starts the join), error situations are not
     *       well understood: the C side can err on "not memory" (panic might be justified) and
     *       "on failed" (what is that, really??) - which is vague (again, panic).
     */
-    fn open_network(&self, mut secs: u8) -> () {
-
-        // Note: It is _possible_ -but not confirmed- that 'ezb_bdb_open_network' treats 0xff
-        //      as a special value for "open for an indefinite time". To be safe, we limit the
-        //      allowed durations to 254 (seconds).
-        //
-        //      Speculation on special role of 0xff is based on:
-        //          - esp_zigbee_lib (2.1.0) > includes/ezbee/zdo/zdo_nwk_mgmt.h:192 (Mgmt_Permit_Joining_req)
-        //          - Zigbee specification
-        #[cfg(true)]
-        {
-            const MAX_SECS: u8 = 254;
-            if secs == 0xff {
-                log::warn!("'open_network': limiting joining time: {secs} > {MAX_SECS}");
-                secs = MAX_SECS;
-            }
-        }
+    fn open_network(&self, secs: JoinWindowSecs) -> () {
 
         let _guard = ZigbeeGuard::acquire();
         EzbError::wrap( unsafe {
-            ezb_bdb_open_network(secs)
+            ezb_bdb_open_network(secs.0)
                 // docs don't care to mention the unit (2.1.0), but examples use seconds.
 
         }).unwrap_or_else(|e| {
@@ -271,5 +255,29 @@ pub trait NodeApi {
         unsafe {
             esp_zb_factory_reset()
         }
+    }
+}
+
+/// Traditionally, a join window of 3 min is common and suggested (e.g. 'esp-zigbee-sdk' all examples
+/// use it). However, this must be partly due to human delay in typing in codes, via e.g. an app.
+///
+/// If you provide pre-configured devices (see e.g. 'apps/demo/2/app.toml'), a window of 10s or 1min
+/// should be quite enough.
+///
+#[derive(Debug, Clone)]
+pub struct JoinWindowSecs(u8);
+
+impl JoinWindowSecs {
+    pub const _1MIN: Self = Self(60);
+    /// Conventional 3 min window (e.g. all 'esp-zigbee-sdk' samples use this).
+    pub const _3MIN: Self = Self(180);
+
+    /// Allow non-default joining windows to be given. Note that 0xff is banned - as "joining forever".
+    fn custom_secs(mut secs: u8) -> Self {
+        if secs == 0xff {
+            log::warn!("Changing {} -> {} (former would mean \"open forever\")", secs, 254);
+            secs = 254;
+        }
+        Self(secs)
     }
 }

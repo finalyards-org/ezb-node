@@ -473,6 +473,8 @@ impl ezb_zcl_cluster_id_e {
 /// @param[in] cluster_id The identifier of the cluster to get the cluster descriptor for.
 /// @param[in] role       The role of the cluster to get the cluster descriptor for.
 /// @return The pointer to the cluster descriptor. See @ref ezb_zcl_cluster_desc_t, or EZB_INVALID_ZCL_CLUSTER_DESC if not found.
+//
+// The function _may_ return 'NULL' (i.e. 'EZB_INVALID_ZCL_CLUSTER_DESC'); caller _must_ check against it.
 pub unsafe fn ezb_af_endpoint_get_cluster_desc(ep_desc: ezb_af_ep_desc_t, cluster_id: ezb_zcl_cluster_id_e, role: ezb_zcl_role_e) -> ezb_zcl_cluster_desc_t {
     unsafe {
         a::ezb_af_endpoint_get_cluster_desc(ep_desc, cluster_id as u16, role as u8)

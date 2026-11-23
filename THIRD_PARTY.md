@@ -225,3 +225,55 @@ Not really.
 
 It's all about cutting away complexity, and the right place to do the change is within the library.
 
+
+## `esp-zigbee-sdk`: How to say `ezb_zcl_cluster_desc_t` may be `NULL`?
+
+><small>*`esp-zigbee-sdk` ..=2.1.0*</small>
+
+```
+/**
+ * @brief Get a cluster descriptor from an endpoint descriptor.
+ *
+ * @param[in] ep_desc    The endpoint descriptor to get the cluster descriptor from.
+ * @param[in] cluster_id The identifier of the cluster to get the cluster descriptor for.
+ * @param[in] role       The role of the cluster to get the cluster descriptor for.
+ * @return The pointer to the cluster descriptor. See @ref ezb_zcl_cluster_desc_t, or EZB_INVALID_ZCL_CLUSTER_DESC if not found.
+ */
+ezb_zcl_cluster_desc_t ezb_af_endpoint_get_cluster_desc(const ezb_af_ep_desc_t ep_desc, uint16_t cluster_id, uint8_t role);
+```
+
+It's not very clear that the return code needs to be checked for null-ness. 
+
+I checked:
+
+```
+#define EZB_INVALID_ZCL_CLUSTER_DESC EZB_INVALID_DESC
+```
+
+..and:
+
+```
+#define EZB_INVALID_DESC NULL /*!< Invalid descriptor. */
+```
+
+Now I know that a `NULL` must be checked againts.
+
+As a programmer, I wonder what added value the indirection gains.
+
+**Suggestions:**
+
+- consider the `EZB_INVALID[_...]_DESC` usefulness.
+- for this function:
+
+	```
+	@return The pointer to the cluster descriptor; `NULL` if not found.
+	```
+
+>**Addendum**
+>
+>In addition, `esp-zigbee-sdk` already itself compares to `NULL` (`cli_cmd_zcl.c`):
+>
+>```
+>    if (cluster == NULL) {
+>```
+

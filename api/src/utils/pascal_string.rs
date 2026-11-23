@@ -25,11 +25,11 @@ impl From<&str> for PascalString {
 }
 
 fn encode_pascal(s: &str) -> Vec<u8> {
-    assert!(s.len() <= 255, "Zigbee Pascal string max length is 255 bytes");
-    let len: u8 = s.len() as _;
+    let len = s.len();
+    assert!(len <= 255, "Zigbee Pascal string max length is 255 bytes");
 
-    let mut v = Vec::with_capacity(len as usize + 1);
-    v.push(len);  // length as first byte
+    let mut v = Vec::with_capacity(len + 1);
+    v.push(len as u8);  // length as first byte
     v.extend_from_slice(s.as_bytes());
     v
 }
