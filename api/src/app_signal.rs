@@ -25,6 +25,8 @@ use ezb_node_raw::{
     ezb_app_signal_type_e,
     //ezb_app_signal_t,
     ezb_bdb_comm_status_e,
+    ezb_zdo_auth_type_e,
+    ezb_zdo_auth_status_e,
 };
 
 #[cfg(false)]   // feature = "touchlink"
@@ -196,8 +198,8 @@ pub enum AppSignal {
     ZdoSignalDeviceAuthorized{
         device_addr: IeeeAddr,
         short_addr: u16,
-        type_X: u8,    // tbd. enum? ezb_zdo_auth_type_t
-        status_X: u8,  // tbd. enum? ezb_zdo_auth_status_t
+        auth_type: AuthType,
+        status: AuthStatus,
     },
 
     /**
@@ -522,8 +524,8 @@ impl AppSignal {
                 Self::ZdoSignalDeviceAuthorized {
                     device_addr: x.device_addr.into(),
                     short_addr: x.short_addr,
-                    type_X: x.type_,
-                    status_X: x.status
+                    auth_type: AuthType::from_repr(x.type_)?,
+                    status: AuthStatus::from_repr(x.status)?
                 }
             },
             EZB_BDB_SIGNAL_DEVICE_FIRST_START => { // 256
@@ -690,4 +692,31 @@ pub enum BdbStatus {
     ///< A device announce sending has been failed (e.g. device announce
     /// haven't acked by parent router).
     DevAnnceSendFailure = EZB_BDB_STATUS_DEV_ANNCE_SEND_FAILURE as _,
+}
+
+/// How a joining device was authorized by the Trust Center (see 'AppSignal::ZdoSignalDeviceAuthorized').
+///
+/// Replication of 'ezb_zdo_auth_type_e'.
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, strum::FromRepr, strum::Display)]
+pub enum AuthType {
+    /// Legacy (pre-R21) device; no link key exchange.
+    Legacy = ezb_zdo_auth_type_e::EZB_ZDO_AUTH_TYPE_LEGACY as _,
+    /// Trust Center Link Key exchange (Zigbee 3.0).
+    Tclk = ezb_zdo_auth_type_e::EZB_ZDO_AUTH_TYPE_TCLK as _,
+    /// Dynamic Link Key exchange.
+    Dlk = ezb_zdo_auth_type_e::EZB_ZDO_AUTH_TYPE_DLK as _,
+}
+
+/// Result of a joining device's authorization (see 'AppSignal::ZdoSignalDeviceAuthorized').
+///
+/// On 'Timeout' / 'Failed', the device leaves the network.
+///
+/// Replication of 'ezb_zdo_auth_status_e'.
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, strum::FromRepr, strum::Display)]
+pub enum AuthStatus {
+    Success = ezb_zdo_auth_status_e::EZB_ZDO_AUTH_STATUS_SUCCESS as _,
+    Timeout = ezb_zdo_auth_status_e::EZB_ZDO_AUTH_STATUS_TIMEOUT as _,
+    Failed = ezb_zdo_auth_status_e::EZB_ZDO_AUTH_STATUS_FAILED as _,
 }

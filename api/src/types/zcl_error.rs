@@ -109,4 +109,11 @@ impl ZclError {
         ezb_zcl_status_e::from_repr(v as u32)
             .map(Self::new)
     }
+
+    /// Parsing when you don't want to panic, even for unexpected values. They are passed as
+    /// 'ZclError::_other(u8)'.
+    ///
+    pub(crate) fn parse_tolerant(v: u8) -> Option<Self> {
+        Self::parse(v).unwrap_or_else(|| { Some(Self::_Other(v)) })
+    }
 }

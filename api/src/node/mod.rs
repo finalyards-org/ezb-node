@@ -39,13 +39,15 @@ use ezb_node_raw::{
 };
 
 use crate::{
+    AddrMode,
     AppSignal,
     BdbMode,
+    ClusterId,
+    ReportConfig,
     Config,
     Error,
     EzbError,
     IeeeAddr,
-    //ZclError,
     ZclEvent,
 };
 
@@ -243,6 +245,150 @@ pub trait NodeApi {
         }).unwrap_or_else(|e| {
             panic!("'ezb_bdb_open_network' failed with: {}", e);
         });
+    }
+
+    /**
+    * Read attributes of a remote device's cluster (ZCL "Read Attributes").
+    *
+    * @param dst_addr   Short (network) address of the remote device.
+    * @param dst_ep     Remote endpoint hosting the cluster (server).
+    * @param src_ep     Our endpoint.
+    * @param attr_ids   Attribute IDs (cluster specific).
+    *
+    * @note The values arrive later, as a 'ZclEvent::ReadAttrResp'. With a sleepy end device, this happens when it
+    *       next polls its parent (seconds; or longer).
+    */
+    fn read_attributes(&self, dst_addr: u16, dst_ep: u8, src_ep: u8, cluster: ClusterId, attr_ids: &[u16]) -> Result<(),EzbError> {
+        use ezb_node_raw::{
+            ezb_zcl_cmd_ctrl_t,
+            ezb_zcl_read_attr_cmd_req,
+            ezb_zcl_read_attr_cmd_t,
+        };
+
+        let mut ids: Vec<u16> = attr_ids.to_vec();     // C wants '*mut'
+
+        let mut cmd: ezb_zcl_read_attr_cmd_t = crate::utils::c_zeroed();
+        cmd.cmd_ctrl = ezb_zcl_cmd_ctrl_t {
+            dst_addr: AddrMode::Short(dst_addr).into(),
+            dst_ep,
+            src_ep,
+            cluster_id: cluster as u16,
+            ..crate::utils::c_zeroed()  // standard command, direction "to server", default response enabled
+        };
+        cmd.payload.attr_number = ids.len() as u8;
+        cmd.payload.attr_field = ids.as_mut_ptr();
+
+        let _guard = ZigbeeGuard::acquire();
+
+        // STRONG ASSUMPTION: the command is serialized during the call (i.e. 'ids' need not outlive it). #feedback
+        EzbError::wrap(unsafe {
+            ezb_zcl_read_attr_cmd_req(&cmd)
+        })
+    }
+
+    /**
+    * Configure a remote device to report attributes of one of its clusters to us (ZCL "Configure Reporting").
+    *
+    * The reports are sent to the destinations in the remote device's *binding table*, so normally you'd first
+    * call 'bind_to_us' (for the same cluster).
+    *
+    * @note The result arrives as a 'ZclEvent::ConfigReportResp'; the reports themselves as 'ZclEvent::ReportAttr'.
+    */
+    fn configure_reporting(&self, dst_addr: u16, dst_ep: u8, src_ep: u8, cluster: ClusterId, records: &[ReportConfig]) -> Result<(),EzbError> {
+        use ezb_node_raw::{
+            ezb_zcl_cmd_ctrl_t,
+            ezb_zcl_config_report_cmd_req,
+            ezb_zcl_config_report_cmd_t,
+            ezb_zcl_config_report_record_t,
+        };
+
+        let mut recs: Vec<ezb_zcl_config_report_record_t> = records.iter().map(|r| {
+            let mut c: ezb_zcl_config_report_record_t = crate::utils::c_zeroed();
+            c.direction = 0;    // EZB_ZCL_REPORTING_SEND: the remote (server) sends reports
+            c.attr_id = r.attr_id;
+            c.__bindgen_anon_1.client.attr_type = r.change.attr_type();
+            c.__bindgen_anon_1.client.min_interval = r.min_secs;
+            c.__bindgen_anon_1.client.max_interval = r.max_secs;
+            c.__bindgen_anon_1.client.reportable_change = r.change.to_c();
+            c
+        }).collect();
+
+        let mut cmd: ezb_zcl_config_report_cmd_t = crate::utils::c_zeroed();
+        cmd.cmd_ctrl = ezb_zcl_cmd_ctrl_t {
+            dst_addr: AddrMode::Short(dst_addr).into(),
+            dst_ep,
+            src_ep,
+            cluster_id: cluster as u16,
+            ..crate::utils::c_zeroed()
+        };
+        cmd.payload.record_number = recs.len() as u16;
+        cmd.payload.record_field = recs.as_mut_ptr();
+
+        let _guard = ZigbeeGuard::acquire();
+
+        // STRONG ASSUMPTION: as in 'read_attributes'. #feedback
+        EzbError::wrap(unsafe {
+            ezb_zcl_config_report_cmd_req(&cmd)
+        })
+    }
+
+    /**
+    * Ask a remote device to bind one of its clusters to our endpoint (ZDO "Bind Request").
+    *
+    * Binding tells the remote where to send e.g. attribute reports. The binding is stored in the remote's
+    * non-volatile memory.
+    *
+    * @param dst_addr   Short address of the remote device (the one whose binding table is changed).
+    * @param src_ieee   IEEE address of the remote device (the source of the binding; i.e. the same device).
+    * @param src_ep     Remote endpoint hosting the cluster.
+    * @param our_ep     Our endpoint (the destination of the binding).
+    *
+    * @note The result is only logged (by the Zigbee task), for now.
+    */
+    fn bind_to_us(&self, dst_addr: u16, src_ieee: IeeeAddr, src_ep: u8, cluster: ClusterId, our_ep: u8) -> Result<(),EzbError> {
+        use ezb_node_raw::{
+            ezb_addr_t,
+            ezb_zdo_bind_req,
+            ezb_zdo_bind_req_t,
+            ezb_zdp_bind_req_field_t,
+            ezb_zdp_bind_req_result_t,
+        };
+
+        // Called in the Zigbee task. Must not block.
+        unsafe extern "C" fn on_bind_result(result: *const ezb_zdp_bind_req_result_t, _user_ctx: *mut core::ffi::c_void) {
+            let Some(r) = (unsafe { result.as_ref() }) else {
+                log::error!("Bind result: (null)");
+                return;
+            };
+            match unsafe { r.rsp.as_ref() } {
+                Some(rsp) if r.error == 0 && rsp.status == 0 => log::info!("Bind: success"),
+                Some(rsp) => log::warn!("Bind failed: error {}, ZDP status {:#04x}", r.error, rsp.status),
+                None => log::warn!("Bind failed: error {} (no response)", r.error),
+            }
+        }
+
+        let _guard = ZigbeeGuard::acquire();
+
+        let our_ieee = unsafe { ezb_nwk_get_extended_address() };
+
+        let req = ezb_zdo_bind_req_t {
+            dst_nwk_addr: dst_addr,
+            field: ezb_zdp_bind_req_field_t {
+                src_addr: src_ieee.into(),
+                src_ep,
+                cluster_id: cluster as u16,
+                dst_addr_mode: 0x03,    // 64-bit extended address (+ endpoint)
+                dst_addr: ezb_addr_t { extended_addr: IeeeAddr(our_ieee).into() },
+                dst_ep: our_ep,
+            },
+            cb: Some(on_bind_result),
+            user_ctx: core::ptr::null_mut(),
+        };
+
+        // STRONG ASSUMPTION: as in 'read_attributes'. #feedback
+        EzbError::wrap(unsafe {
+            ezb_zdo_bind_req(&req)
+        })
     }
 
     /**

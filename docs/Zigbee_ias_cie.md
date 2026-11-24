@@ -5,7 +5,8 @@ motion sensor or water leak sensor. The aim is to give you a working mental mode
 the Zigbee Cluster Library (ZCL) specification.
 
 >Status: The protocol description follows the ZCL specification (chapter 8, "Security and Safety"). The ezb-node
->side (`apps/demo/2`) has **not yet been confirmed on real hardware**. Items marked *(unverified)* are assumptions.
+>side (`apps/demo/2`) has been confirmed on real hardware with the Wiser CCT591011 (Nov 2026): joining, enrollment,
+>open/closed notifications, and reboots of either side. Items marked *(unverified)* are assumptions.
 
 
 ## Vocabulary
@@ -135,11 +136,11 @@ A Zigbee 3.0 device isn't done yet after the announce. It still asks the trust c
 link key (*Request Key*), and confirms it (*Verify Key*). The stack handles this; the application only sees the result
 as `AppSignal::ZdoSignalDeviceAuthorized`:
 
-| `status` | Meaning |
+| `status` (`AuthStatus`) | Meaning |
 |---|---|
-| 0 | Success |
-| 1 | Timeout |
-| 2 | Failed |
+| `Success` (0) | Link key exchange done |
+| `Timeout` (1) | The device did not complete the exchange in time |
+| `Failed` (2) | The exchange failed |
 
 On timeout / failure, **the device leaves the network** (you'll see `ZdoSignalDeviceUpdate` with status 2 =
 "device left", and `ZdoSignalLeaveIndication`).
@@ -277,7 +278,12 @@ adds `HA::power_config` as a *client* cluster on our endpoint.
 | 0x0020 | BatteryVoltage | 100 mV (e.g. 30 = 3.0 V) |
 | 0x0021 | BatteryPercentageRemaining | 0.5 % (e.g. 200 = 100 %) |
 
-Sensors usually report these periodically, once reporting has been configured (or by vendor default).
+Sensors usually report these periodically, once reporting has been configured (or by vendor default). The reports
+arrive as `ZclEvent::ReportAttr { info, variables, .. }` (`info.cluster_id == ClusterId::PowerConfig`). The Wiser sensor
+sends one right after the `IAS_CIE_Address` write, without us configuring reporting; which attributes it contains is *(unverified)*.
+
+To get regular reports, the CIE binds the sensor's Power Configuration cluster to itself and configures reporting.
+See `docs/Zigbee_attribute_reporting.md`.
 
 
 ## Practical notes
@@ -302,7 +308,7 @@ Sensors usually report these periodically, once reporting has been configured (o
 |---|---|
 | Open network | `NodeApi::open_network(secs)` |
 | Device Announce | `AppSignal::ZdoSignalDeviceAnnce { short_addr, device_addr, .. }` |
-| Authorization (TCLK exchange) | `AppSignal::ZdoSignalDeviceAuthorized { short_addr, status_X, .. }` |
+| Authorization (TCLK exchange) | `AppSignal::ZdoSignalDeviceAuthorized { short_addr, status: AuthStatus::Success, .. }` |
 | Write `IAS_CIE_Address` | `NodeApiIasCie::write_ias_cie_address(dst_addr, dst_ep, src_ep)` |
 | Write response | `ZclEvent::WriteAttrResp { .. }` |
 | Zone Enroll Request | `ZclEvent::IasZoneEnrollReq { header, zone_type, manuf_code, .. }` |
@@ -324,7 +330,9 @@ When things go as described, the log of `apps/demo/2` shows, in order:
 4. `Write Attributes response: ...`
 5. `Zone Enroll Request: zone type 0x0015, manufacturer 0x....; accepting as zone 0`
 6. `Zone 0: OPEN (zone status 0x0031)` / `Zone 0: closed (zone status 0x0030)`
-   (the Wiser sensor sets bits 4-5, "supervision" and "restore" reports; the "closed" value is *(unverified)*)
+   (the Wiser sensor sets bits 4-5, "supervision" and "restore" reports)
+
+After a reboot of either the coordinator or the sensor, the notifications continue without a new enrollment.
 
 If the chain stops, the last line tells you which step to look at.
 

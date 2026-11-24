@@ -38,6 +38,9 @@ pub use zcl_attr_write_resp::ZclAttrWriteResp;
 mod zdp_error;
 pub use zdp_error::ZdpError;
 
+mod zcl_report_config;
+pub use zcl_report_config::{ReportConfig, ReportableChange};
+
 /**
 * @brief Base Device Behavior (BDB) operation mode.
 */

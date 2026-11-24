@@ -42,11 +42,13 @@ Dependency direction: apps → api → (raw, config). Do not use `raw` types in 
 - Rust target folder is common for all projects at `~/target` (not the usual `./target`).
 - Avoid `cargo clean` unless really needed; clean builds take >1min, due to `esp-idf-sys`. A clean build should be needed only after ESP-IDF version changes, and/or for build debugging.
 - `Justfile`s are developer helpers and the source of truth for build commands, but documentation (`README`s etc.)
-  shows the full commands (not `just ...`). Keep them in sync with a marker above the command block:
-  `<!-- just: {path/to/Justfile} {recipe} -->` (path from repo root); the block lists exactly what
-  `just --dry-run {recipe}` prints (a leading `$ ` is fine). Dev flags like `-vv`, `--jobs 1` stay in (intentional).
-  - After changing a `Justfile` or documented commands, run `tools/check-docs.sh` and fix any mismatch.
-  - Markers are being introduced gradually (started with `config/README.md`); add them when touching a doc's commands.
+  shows the full commands (not `just ...`). Dev flags like `-vv`, `--jobs 1` stay in (intentional).
+  - Keeping docs and `Justfile`s in sync is NOT an enforced process. `tools/check-docs.sh` and the
+    `<!-- just: {path/to/Justfile} {recipe} -->` markers remain in the repo, but are not in active use: don't run
+    the script as a routine step, and don't add markers on your own.
+  - The developer may leave HTML comments in `.md` files explaining the intent of a section/command. Use them to
+    tell a real documentation error from an intentional difference; point out real errors, don't fix
+    doc/Justfile drift unasked.
 
 ## Commands
 

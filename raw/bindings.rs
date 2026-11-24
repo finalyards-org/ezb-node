@@ -53,6 +53,8 @@ unsafe impl Sync for esp_zigbee_config_s {}
 // Larger constructs are grouped together, but they are still within this module.
 include!("bindings_iter_read.rs");
 include!("bindings_iter_write.rs");
+include!("bindings_iter_cmd_report_attr.rs");
+include!("bindings_iter_cmd_config_report_rsp.rs");
 
 /*
 * Default for a device configuration.

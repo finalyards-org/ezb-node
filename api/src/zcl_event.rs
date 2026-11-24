@@ -4,24 +4,10 @@ use core::{
     ptr::NonNull,
 };
 
-use ezb_node_raw::{
-    ezb_zcl_core_action_callback_id_e,
-    //ezb_zcl_status_e,
-    //ezb_zcl_attribute_s,
-    //ezb_zcl_cmd_hdr_t,
-    //ezb_zcl_core_action_callback_id_e::EZB_ZCL_CORE_SET_ATTR_VALUE_CB_ID,
-    //ezb_zcl_read_attr_rsp_variable_t,
-    //ezb_app_signal_type_e,
-    ezb_zcl_set_attr_value_message_t,
-    ezb_zcl_cmd_default_rsp_message_t,
-    ezb_zcl_message_info_s,
-    ezb_zcl_cmd_read_attr_rsp_message_t,
-    ezb_zcl_cmd_write_attr_rsp_message_t,
-    ezb_zcl_ias_zone_enroll_req_message_s,
-    ezb_zcl_ias_zone_status_change_notif_message_s,
-};
+use ezb_node_raw::{ezb_zcl_core_action_callback_id_e, ezb_zcl_set_attr_value_message_t, ezb_zcl_cmd_default_rsp_message_t, ezb_zcl_message_info_s, ezb_zcl_cmd_read_attr_rsp_message_t, ezb_zcl_cmd_write_attr_rsp_message_t, ezb_zcl_cmd_report_attr_message_t, ezb_zcl_cmd_config_report_rsp_message_t, ezb_zcl_ias_zone_enroll_req_message_s, ezb_zcl_ias_zone_status_change_notif_message_s, ConfigReportRspVariableEntry};
 
 use crate::types::{
+    AttrId,
     ClusterRole,
     CommandHeader,
     ClusterId,
@@ -54,19 +40,20 @@ pub enum ZclEvent {
     WriteAttrResp{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttrWriteResp> },
 
     /// A ZCL general ConfigureReporting response is received.
+    ///
+    /// 'failures' is empty if all the records were configured successfully.
     // ezb_zcl_cmd_config_report_rsp_message_s
-    #[cfg(false)]
-    ConfigReportResp(HeaderAndVariables),
+    ConfigReportResp{ info: CommonInfo, header: CommandHeader, failures: Vec<(AttrId, ZclError)> },
 
     /// A ZCL general ReadReportingConfiguration response is received.
     // ezb_zcl_cmd_read_report_config_rsp_message_s
     #[cfg(false)]
     ReadReportConfigResp(HeaderAndVariables),
 
-    /// A ZCL General ReportAttribute command is received.
+    /// A ZCL General ReportAttribute command is received; i.e. a remote device reports attribute values
+    /// (e.g. battery level), either based on configured reporting or by its own (vendor) default.
     // ezb_zcl_cmd_report_attr_message_s
-    #[cfg(false)]
-    ReportAttr(HeaderAndVariables),
+    ReportAttr{ info: CommonInfo, header: CommandHeader, variables: Vec<ZclAttr> },
 
     /// A ZCL general DiscoverAttributes response is received.
     // ezb_zcl_cmd_discover_attributes_rsp_message_s
@@ -413,6 +400,75 @@ impl ZclEvent {
                         // { status, attr_id, next }
                 }
             }
+
+            EZB_ZCL_CORE_CONFIG_REPORT_RSP_CB_ID => {
+                let msg = get_msg::<ezb_zcl_cmd_config_report_rsp_message_t>(p);
+
+                // tbd. Make the 'raw' level handle much of this, providing
+                //      Option<Vec<{failure type}>>, where:
+                //          - None is a parsing error
+                //          - Some({empty}) is no failures
+                //          - Some({failures}) is listing the failures
+
+                // All success: one entry, with SUCCESS status.
+                // Otherwise, each failure is listed.
+                //
+                // Note: Anything other than that is reported as a malformed message.
+                //
+                let first = unsafe{ msg.in_.variables.as_ref() }
+                    .ok_or(Malformed)?;
+
+                let (success, fails): (Vec<ConfigReportRspVariableEntry>, Vec<ConfigReportRspVariableEntry>) = {
+                    first.iter()
+                        .partition(|x| matches!(x, ConfigReportRspVariableEntry::Success))
+                };
+
+                if success.len() == 1 && fails.is_empty() {
+                    // proceed with empty 'fails'
+                } else if success.is_empty() && !fails.is_empty() {
+                    // proceed with 'fails'
+                } else {
+                    // Various unexpected (malformed?) data:
+                    //  - multiple success?
+                    //  - all empty?
+                    //  - one success, but also fails?
+                }
+
+                let mut failures: Vec<(AttrId, ZclError)> = fails.into_iter().map(|x| {
+                    match x {
+                        ConfigReportRspVariableEntry::Success => unreachable!(),
+                        ConfigReportRspVariableEntry::Failure{attr_id, status} => {
+                            let status = ZclError::parse_tolerant(status) .unwrap();    // never a success ('None')
+                            (AttrId(attr_id), status)
+                        }
+                    }
+                }).collect();
+
+                Self::ConfigReportResp{
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
+                    failures
+                }
+            },
+
+            EZB_ZCL_CORE_REPORT_ATTR_CB_ID => {
+                let msg = get_msg::<ezb_zcl_cmd_report_attr_message_t>(p);
+
+                // Empty list (null) is not an error, as such.
+                let variables = match unsafe{ msg.in_.variables.as_ref() } {
+                    None => Vec::new(),
+                    Some(first) => first.iter()
+                        .map(|x| ZclAttr::parse2(x.attr_id, x.attr_type, x.attr_value))
+                        .collect::<Option<Vec<_>>>()    // any entry failing to parse fails the whole list
+                        .ok_or(Malformed)?
+                };
+
+                Self::ReportAttr{
+                    info: CommonInfo::parse(&msg.info).ok_or(Malformed)?,
+                    header: CommandHeader::parse(msg.in_.header).ok_or(Malformed)?,
+                    variables
+                }
+            },
 
             // ...
 

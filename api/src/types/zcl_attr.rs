@@ -36,6 +36,12 @@ pub struct ZclAttr {
 }
 
 impl ZclAttr {
+    /// Attribute ID; its meaning depends on the cluster (e.g. 0x0020 = 'BatteryVoltage' in Power Configuration).
+    pub fn id(&self) -> AttrId { self.id }
+    pub fn value(&self) -> &ZclValue { &self.data }
+}
+
+impl ZclAttr {
     /**
     * Convert input data to a rustified struct.
     *
@@ -78,6 +84,9 @@ pub enum ZclValue {
     NoData,
     Data8(u8),
     Data16(u16),
+    Map16(u16),
+    U8(u8),
+    U16(u16),
     //...
     String(String),
     //...
@@ -115,17 +124,16 @@ impl ZclValue {
             return None;
         };
 
+        #[allow(non_camel_case_types)]
+        type e = ezb_zcl_attr_type_e;   // trick to enforce 'match' cases are enums (not catches)
         let happy_x = match tmp_e {
-            ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_NO_DATA => Self::NoData,
-            ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA8 => {
-                let v = read_ptr::<u8>(p);
-                Self::Data8(v)
-            },
-            ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_DATA16 => {
-                let v = read_ptr::<u16>(p);
-                Self::Data16(v)
-            }
-            ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_STRING => {
+            e::EZB_ZCL_ATTR_TYPE_NO_DATA => Self::NoData,
+            e::EZB_ZCL_ATTR_TYPE_DATA8 => Self::Data8( read_ptr::<u8>(p) ),
+            e::EZB_ZCL_ATTR_TYPE_DATA16 => Self::Data16( read_ptr::<u16>(p) ),
+            e::EZB_ZCL_ATTR_TYPE_MAP16 => Self::Map16( read_ptr::<u16>(p) ),
+            e::EZB_ZCL_ATTR_TYPE_UINT8 => Self::U8( read_ptr::<u8>(p) ),
+            e::EZB_ZCL_ATTR_TYPE_UINT16 => Self::U16( read_ptr::<u16>(p) ),
+            e::EZB_ZCL_ATTR_TYPE_STRING => {
                 Self::String( read_pascal_string(p) )
             },
 
@@ -188,7 +196,7 @@ impl ZclValue {
             //     EZB_ZCL_ATTR_TYPE_INTERNAL     = 0xfeU, /*!< Internal attribute type */
 
             // note: not sure if this would ever occur in data. Likely it's there so we can internally use such.
-            ezb_zcl_attr_type_e::EZB_ZCL_ATTR_TYPE_UNK => Self::Unk,
+            e::EZB_ZCL_ATTR_TYPE_UNK => Self::Unk,
 
             x => {
                 log::warn!("ZCL attribute type NOT YET IMPLEMENTED (skipped): {}", x);

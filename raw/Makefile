@@ -153,6 +153,9 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 			--allowlist-function 'ezb_secur_.+' \
 			--allowlist-function 'ezb_zcl_(?:basic_cluster|color|core|ias_ace|ias_wd|ias_zone|identify|level|ota_upgrade|power_config)_.+' \
 			--allowlist-function 'ezb_zcl_write_attr_cmd_req' \
+			--allowlist-function 'ezb_zcl_read_attr_cmd_req' \
+			--allowlist-function 'ezb_zcl_config_report_cmd_req' \
+			--allowlist-function 'ezb_zdo_bind_req' \
 			--allowlist-function 'ezb_zcl_basic_create_cluster_desc' \
 	  	--allowlist-function 'ezb_zdo_(?:match|xxx)_.+' \
 			--allowlist-function 'ezb_zha_create_(?:color_dimmable_light|color_dimmer_switch|configuration_tool)' \
@@ -169,7 +172,7 @@ $(_BIND_RS) $(_TMP)/wrap.c &: wrap.h $(addsuffix /*.h, $(_ESP_ZIGBEE_LIB_INCLUDE
 	    --allowlist-type 'ezb_zcl_(?:attr|attribute|basic|cluster|color|core|cmd|level|power_config|set|status)_.+' \
 	    --allowlist-type 'ezb_zcl_ias_zone_.+' \
 	    --allowlist-type 'ezb_zha_device_.+' \
-	    --allowlist-type 'ezb_zdo_(?:signal|match)_.+' \
+	    --allowlist-type 'ezb_zdo_(?:signal|match|auth)_.+' \
 	    --allowlist-type 'ezb_zdp_(?:bind|match|status)_.+' \
 	    \
 	    --allowlist-var 'EZB_ERR_.+' \
