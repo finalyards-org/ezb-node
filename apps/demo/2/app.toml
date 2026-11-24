@@ -12,7 +12,6 @@ secondary_channels = "all"
 
 [node]
 type = "coordinator"
-#allow_open_pairing = true
 max_children = 5
 
 [endpoint.defaults]

@@ -9,13 +9,10 @@ use ezb_node::{
     NodeApiIasCie,
     ZclEvent,
 };
+use ezb_node::config::DeviceType;
 
 #[path = ".conf.rs"]
 mod cfg;
-
-/// Our IAS CIE endpoint (see '[endpoint.1]' in 'app.toml').
-const MY_EP: u8 = 1;
-    // tbd. consider being able to deduce it from config. #later
 
 /// Endpoint of the door/window sensor's IAS Zone (server) cluster.
 ///
@@ -40,6 +37,10 @@ impl Node for IasCoordinator {
     */
     async fn on_app_signal(&mut self, sig: AppSignal) {
         use AppSignal::*;
+
+        // Note: Changes to 'config' can make this be 'const fn'
+        let my_ias_cie_ep = cfg::get().my_ep_for(DeviceType::IasCie)
+            .expect("No 'IasCie' endpoint in the TOML");
 
         let enter_commission_mode = |mode: BdbMode| {
             self.start_top_level_commissioning(mode)
@@ -121,7 +122,7 @@ impl Node for IasCoordinator {
                 log::info!("Writing our IEEE address ({}) as IAS CIE address to {:#06x}, ep {}",
                     self.get_extended_address(), short_addr, SENSOR_EP);
 
-                self.write_ias_cie_address(short_addr, SENSOR_EP, MY_EP)
+                self.write_ias_cie_address(short_addr, SENSOR_EP, my_ias_cie_ep)
                     .unwrap_or_else(|e| log::error!("Failed to write IAS CIE address: {}", e));
             },
 
@@ -203,40 +204,4 @@ impl Node for IasCoordinator {
             }
         }
     }
-}
-
-/// Write our IEEE address to the sensor's:
-///  - "IAS Zone" (0x0500) cluster
-///  - IAS_CIE_ADDRESS attribute (0x0010)
-#[cfg(false)]   //R: lukaise läpi, voi poistaa
-fn write_ieee_to_remote(this: &Node, short_addr: &str, remote_addr: u128) {
-
-    todo!()
-
-    /*** TRASH??!!
-    let mut write_req = esp_zb_zcl_write_attr_cmd_t {
-        zcl_basic_cmd: esp_zb_zcl_basic_cmd_t {
-            dst_addr_u: esp_zb_zcl_addr_u_t {
-                // v2.x vaatii usein short_addr:n asettamisen oikeaan kenttään unionissa
-                addr_short: short_addr,
-            },
-            // Määritetään, että osoite on 16-bittinen short address (Direct unicast)
-            dst_addr_mode: esp_zb_zcl_address_mode_t_ESP_ZB_ZCL_ADDR_MODE_16_BIT,
-            // Oletetaan, että anturin oletus-endpoint on 1 (yleisin antureilla).
-            dst_endpoint: 1,
-            src_endpoint: crate::ias_coordinator::MY_IAS_ENDPOINT,
-            cluster_id: ESP_ZB_ZCL_CLUSTER_ID_IAS_ZONE as u16, // 0x0500
-        },
-        attr_number: 1, // Kirjoitetaan 1 attribuutti kerrallaan
-        attr_field: [esp_zb_zcl_attribute_field_t {
-            attr_id: ESP_ZB_ZCL_ATTR_IAS_ZONE_IAS_CIE_ADDRESS_ID as u16, // 0x0010
-            attr_type: esp_zb_zcl_attr_type_t_ESP_ZB_ZCL_ATTR_TYPE_IEEE_ADDR, // 64-bit IEEE tyyppi
-            attr_value: &mut attr_val as *mut u64 as *mut std::ffi::c_void,
-        }; 1].as_mut_ptr(), // Työnnetään pointteri taulukkoon
-    };
-
-    self.esp_zb_zcl_write_attr_cmd_req(&mut write_req);
-
-    log::info!("CIE Address packet dispatched to {:#06x}. Waiting for Zone Enroll Request from the sensor...", short_addr);
-    ***/
 }

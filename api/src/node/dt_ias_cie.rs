@@ -27,7 +27,7 @@ impl<T: Node> NodeApiIasCie for T {}
 ///
 pub trait NodeApiIasCie {
     /**
-    * Write our own IEEE address to a zone device's IAS Zone 'IAS_CIE_Address' attribute (0x0010).
+    * Write our own IEEE address to a zone device's IAS Zone 'IAS_CIE_ADDRESS' attribute (0x0010).
     *
     * Many zone devices (e.g. door/window sensors) only send a "Zone Enroll Request" once a CIE has written its
     * address there.
@@ -78,6 +78,7 @@ pub trait NodeApiIasCie {
 
         // STRONG ASSUMPTION: the command is serialized during the call (i.e. 'attr', 'value' need not outlive it).
         // Not documented, though. #feedback
+        //
         EzbError::wrap(unsafe {
             ezb_zcl_write_attr_cmd_req(&cmd)
         })

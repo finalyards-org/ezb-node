@@ -49,14 +49,28 @@ This demo works with **pre-configured** install codes. This means you'll edit th
 
 	>Note: You can have any number of such sections in the TOML. They form an array.
 
-
 ### 3. Launch the application
 
-First, reset the sensor to make it enter a "binding state":
+#### 3.1 Erase the devkit (needed on first time)
+
+```
+$ espflash erase-flash
+```
+
+You may skip it but if there are problems, do this. 
+
+Without it, the sensor is likely to join in a different way (since it's already joined to the network). Try both...
+
+
+#### 3.2 Reset the sensor (needed on first time)
+
+Reset the sensor to make it enter a "binding state":
 
 - **triple press** the "Setup/Reset" button (bottom side of the sensor)
 
 	- sensor's LED should start blinking orange 🟧 🟧 🟧
+
+---
 
 ```
 $ just door-run

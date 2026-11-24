@@ -65,6 +65,20 @@ impl non_gen::InvariantCheck for Config {
     }
 }
 
+impl Config {
+    /// Find the index of the local end point that implements a certain device type.
+    ///
+    // @note If we replace 'BTreeMap' with a const-friendly construct, also this can be done
+    //      as 'const fn'.
+    //
+    pub fn my_ep_for(&self, dt: DeviceType) -> Option<u8> {
+
+        self.endpoints.iter()
+            .find(|(_,entry)| entry.device_type == dt)
+            .map(|(&id, _)| id)
+    }
+}
+
 /**
 * Node type and parameters.
 */
@@ -117,7 +131,7 @@ pub struct CommonFields {
 ///
 /// |1|: https://docs.espressif.com/projects/esp-zigbee-sdk/en/latest/esp32/introduction.html#home-automation-device-types
 ///
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DeviceType {
     #[cfg(feature = "dt_color_dimmable_light")]
     ColorDimmableLight,
@@ -125,10 +139,6 @@ pub enum DeviceType {
     ColorDimmerSwitch,
     #[cfg(feature = "dt_ias_cie")]
     IasCie,
-
-    // It's possible to build a Router node with no end points (no device types). In such cases,
-    // this takes care of not creating an "empty enum" that complicates API layer coding.
-    //r: still considering the approach. _Dummy,
 }
 
 #[derive(Debug, Copy, Clone)]

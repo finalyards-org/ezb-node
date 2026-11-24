@@ -92,7 +92,9 @@ pub enum ZclEvent {
     ///
     // ezb_zcl_ias_zone_enroll_req_message_s
     IasZoneEnrollReq{ info: CommonInfo, header: CommandHeader,
-        zone_type: u16,     // e.g. 0x0015 = contact switch (door/window)
+        /// 0x0015: contact switch (door/window)
+        zone_type: u16,
+        /// 0x105e: Schneider Electric
         manuf_code: u16,
     },
 
