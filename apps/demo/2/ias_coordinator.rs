@@ -114,16 +114,34 @@ impl Node for IasCoordinator {
 
             ZdoSignalDeviceAnnce { short_addr, device_addr, .. } => {
                 log::info!("New device commissioned or rejoined: {:#06x} ({})", short_addr, device_addr);
+            },
+
+            // Authorization = the joining device has completed the Trust Center Link Key exchange (Zigbee 3.0).
+            //
+            // Talk to the device (ZCL) only after this. Starting the IAS CIE address write already at
+            // Device Announce led - repeatedly - to the key exchange timing out (status 1) and the sensor leaving
+            // the network. A sleepy end device only polls its parent now and then, so our ZCL traffic likely
+            // competed with the key exchange. (speculation)
+            //
+            // Note: A rejoining (already authorized) device may not cause this signal. That's fine: it keeps
+            //      the CIE address and enrollment from the earlier join. (unverified)
+            //
+            ZdoSignalDeviceAuthorized { short_addr, device_addr, status_X: 0 /*success*/, .. } => {
+                log::info!("Device authorized: {:#06x} ({})", short_addr, device_addr);
 
                 // Tell the sensor who its CIE is. Many zone devices send "Zone Enroll Request" only after this.
                 //
-                // Note: Done for any announcing device; the only one we expect is the door/window sensor.
+                // Note: Done for any authorized device; the only one we expect is the door/window sensor.
                 //
                 log::info!("Writing our IEEE address ({}) as IAS CIE address to {:#06x}, ep {}",
                     self.get_extended_address(), short_addr, SENSOR_EP);
 
                 self.write_ias_cie_address(short_addr, SENSOR_EP, my_ias_cie_ep)
                     .unwrap_or_else(|e| log::error!("Failed to write IAS CIE address: {}", e));
+            },
+            ZdoSignalDeviceAuthorized { short_addr, device_addr, status_X, .. } => {
+                // 1 = timeout, 2 = failed ('ezb_zdo_auth_status_e'). The device will leave the network.
+                log::warn!("Device {:#06x} ({}) failed authorization: status {}", short_addr, device_addr, status_X);
             },
 
             NwkSignalPermitJoinStatus { is_opened_for } => {

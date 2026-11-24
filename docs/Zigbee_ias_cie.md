@@ -74,6 +74,9 @@ sequenceDiagram
     S->>C: 2. Device Announce (ZDO, broadcast)
     Note right of C: AppSignal::ZdoSignalDeviceAnnce
 
+    S->>C: 2b. Request Key / Verify Key (Trust Center Link Key exchange)
+    Note right of C: AppSignal::ZdoSignalDeviceAuthorized (status 0)
+
     C->>S: 3. Write Attributes: IAS_CIE_Address = {our IEEE}
     Note right of C: NodeApiIasCie::write_ias_cie_address
     S-->>C: Write Attributes Response
@@ -125,6 +128,25 @@ Once joined, the sensor broadcasts a ZDO *Device Announce*. It carries the senso
 - capability flags (e.g. "receiver on when idle" = not set for battery sensors)
 
 All unicast ZCL traffic uses the short address.
+
+### 2b. Trust Center Link Key exchange (authorization)
+
+A Zigbee 3.0 device isn't done yet after the announce. It still asks the trust center (the coordinator) for a unique
+link key (*Request Key*), and confirms it (*Verify Key*). The stack handles this; the application only sees the result
+as `AppSignal::ZdoSignalDeviceAuthorized`:
+
+| `status` | Meaning |
+|---|---|
+| 0 | Success |
+| 1 | Timeout |
+| 2 | Failed |
+
+On timeout / failure, **the device leaves the network** (you'll see `ZdoSignalDeviceUpdate` with status 2 =
+"device left", and `ZdoSignalLeaveIndication`).
+
+**Do the ZCL steps (3-) only after a successful authorization.** With the Wiser sensor, starting the CIE address write
+already at Device Announce made the key exchange time out (on two runs out of two), and the sensor left. *(Cause
+unverified: likely the sleepy sensor's few polls got used by our ZCL traffic instead of the key exchange.)*
 
 ### 3. Telling the sensor who its CIE is
 
@@ -263,7 +285,7 @@ Sensors usually report these periodically, once reporting has been configured (o
 - **Battery sensors sleep.** They are *sleepy end devices*: radio off most of the time, waking up to poll their
   parent. Messages to them are held by the parent and delivered at the next poll, so *replies can take seconds*.
   Right after joining, sensors poll quickly for a while (typically tens of seconds). This is why the CIE address
-  write should be done **immediately after Device Announce**, not later.
+  write should be done **immediately after authorization** (step 2b) - but not before it.
 - **Wake it up manually.** If enrollment did not finish, pressing the sensor's button (or opening/closing the door)
   usually wakes it, letting queued messages through.
 - **Re-pairing.** To redo enrollment, factory-reset the sensor (vendor specific; often a long button press) and
@@ -280,6 +302,7 @@ Sensors usually report these periodically, once reporting has been configured (o
 |---|---|
 | Open network | `NodeApi::open_network(secs)` |
 | Device Announce | `AppSignal::ZdoSignalDeviceAnnce { short_addr, device_addr, .. }` |
+| Authorization (TCLK exchange) | `AppSignal::ZdoSignalDeviceAuthorized { short_addr, status_X, .. }` |
 | Write `IAS_CIE_Address` | `NodeApiIasCie::write_ias_cie_address(dst_addr, dst_ep, src_ep)` |
 | Write response | `ZclEvent::WriteAttrResp { .. }` |
 | Zone Enroll Request | `ZclEvent::IasZoneEnrollReq { header, zone_type, manuf_code, .. }` |
@@ -296,10 +319,12 @@ Sensors usually report these periodically, once reporting has been configured (o
 When things go as described, the log of `apps/demo/2` shows, in order:
 
 1. `New device commissioned or rejoined: 0x....`
-2. `Writing our IEEE address (...) as IAS CIE address to 0x...., ep 1`
-3. `Write Attributes response: ...`
-4. `Zone Enroll Request: zone type 0x0015, manufacturer 0x....; accepting as zone 0`
-5. `Zone 0: OPEN (zone status 0x0001)` / `Zone 0: closed (zone status 0x0000)`
+2. `Device authorized: 0x.... (...)` (a few seconds later)
+3. `Writing our IEEE address (...) as IAS CIE address to 0x...., ep 1`
+4. `Write Attributes response: ...`
+5. `Zone Enroll Request: zone type 0x0015, manufacturer 0x....; accepting as zone 0`
+6. `Zone 0: OPEN (zone status 0x0031)` / `Zone 0: closed (zone status 0x0030)`
+   (the Wiser sensor sets bits 4-5, "supervision" and "restore" reports; the "closed" value is *(unverified)*)
 
 If the chain stops, the last line tells you which step to look at.
 

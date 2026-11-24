@@ -81,29 +81,91 @@ Once the device joins, the LED should remain green 🟩 for a moment.
 On the coordinator log, you should see:
 
 ```
- I (475) ezb_node::node::zigbee_task: Going to set up the device and 1 endpoint(s)
-  I (509) 2_door::ias_coordinator: Initialize Zigbee stack
-  I (520) 2_door::ias_coordinator: Device started up in factory-reset mode.
-  I (1673) 2_door::ias_coordinator: Formed network successfully: Extended PAN ID: fc:01:2c:ff:fe:f9:09:b4, PAN ID: 53475, Channel:11, 
-  Short Address: 0x0000
-  I (2247) 2_door::ias_coordinator: Network steering completed.
-  I (2241) 2_door::ias_coordinator: Network 53475 is open for 180 seconds
-  ...
-  I (19678) 2_door::ias_coordinator: Zigbee APP signal: ZdoSignalDeviceUpdate { device_addr: IeeeAddr(4625295773332831549), short_addr:
-  60951, status_X: 1, tc_action_X: 0, parent_short: 0 }
-  I (20034) 2_door::ias_coordinator: New device commissioned or rejoined: 0xee17 (40:30:59:ff:fe:9e:7d:3d)
-  I (20035) 2_door::ias_coordinator: Writing our IEEE address (fc:01:2c:ff:fe:f9:09:b4) as IAS CIE address to 0xee17, ep 1
-  ...
-  I (25054) 2_door::ias_coordinator: Zigbee APP signal: ZdoSignalDeviceAuthorized { device_addr: IeeeAddr(4625295773332831549), 
-  short_addr: 60951, type_X: 1, status_X: 0 }
+I (20061) 2_door::ias_coordinator: Device authorized: 0x70cc (40:30:59:ff:fe:9e:7d:3d)
+I (20067) 2_door::ias_coordinator: Writing our IEEE address (fc:01:2c:ff:fe:f9:09:b4) as IAS CIE address to 0x70cc, ep 1
+I (20556) 2_door::ias_coordinator: Write Attributes response: WriteAttrResp { info: CommonInfo { err: None, dst_ep: 1, cluster_id: IasZone, cluster_role: Client }, header: CommandHeader { src_addr: Short(28876), dst_addr: Short(0), src_ep: 1, dst_ep: 1, cluster_id: IasZone, profile_id_X: 260, fc_X: 8, manuf_code: None, tsn: 0, rssi: -68, cmd_id: 4 }, variables: [Success] }
+I (21092) ezb_node::node::zigbee_task: ZCL core action not supported (skipped): EZB_ZCL_CORE_REPORT_ATTR_CB_ID
+I (21569) 2_door::ias_coordinator: Zone Enroll Request: zone type 0x0015, manufacturer 0x105e; accepting as zone 0
+I (22090) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)
+I (22091) 2_door::ias_coordinator: Received ZCL Default Response, status: success
+D (22350) ezb_node::node::zigbee_task: Received: NwkSignalPermitJoinStatus { is_opened_for: Some(Duration { ticks: 180000000 }) }
+I (22355) 2_door::ias_coordinator: Network 38293 is open for 180 seconds
+I (84413) 2_door::ias_coordinator: Zone 0: OPEN (zone status 0x0031)
+I (87015) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)
+I (89362) 2_door::ias_coordinator: Zone 0: OPEN (zone status 0x0031)
+I (90704) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)
+...
 ```
 
-*tbd. Still misses the actual joining.*
+Here, obviously, I've opened and closed the door/window sensor.
 
-### 4. Test the sensor
+### 4. Test the sensor manually
 
-*tbd.*
+Above, we tested that a fresh sensor
 
+- does join the network
+- does report its status
+
+Since Zigbee network joins persist over device restarts (which is great), we need to test some more cases as well.
+
+#### 4.1 Coordinator restart
+
+Tests:
+- device is able to rejoin if the coordinator powers off, momentarily
+
+**Setup:**
+- make sure the UART cable is connected (left port, from the cable's point of view)
+
+**Steps:**
+- Restart the coordinator
+
+	```
+	$ espflash monitor
+	{Ctrl-R}
+	...
+	I (509) 2_door::ias_coordinator: Device started up in commissioned mode.
+	I (514) 2_door::ias_coordinator: Device reboot
+	I (22453) 2_door::ias_coordinator: Zone 0: OPEN (zone status 0x0031)
+	I (23486) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)	
+	```
+	
+	The last lines came after opening and closing the sensor.
+	
+	✅
+
+#### 4.2 Sensor restart
+
+**Setup:**
+
+- Observe the coordinator's log
+
+**Steps:**
+
+- Remove the battery of the sensor, for a while (1..3s)
+
+	>Note! Use a **plastic** spatula to lift the battery, never a metal piece (to avoid short circuits).
+	>
+	>For the Schneider Electric / Wiser sensor, you can use the battery cover itself.
+
+- Does it rejoin; report open/close?
+
+	```
+	I (497106) 2_door::ias_coordinator: Zone 0: OPEN (zone status 0x0031)
+	I (653904) ezb_node::node::zigbee_task: ZCL core action not supported (skipped): EZB_ZCL_CORE_REPORT_ATTR_CB_ID
+	I (870252) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)	
+	```
+
+	✅
+
+
+---
+
+That looks like a pass.
+
+
+<!-- #hidden
+
+// Once we can see by lights on the devkit the status of the sensor, this kind of demo is more purposeful.
 
 ## Demo without flashing
 
@@ -111,10 +173,7 @@ As with demo `1`, also here once the flashing is done, the setup should be resil
 
 - switch off the devkit (coordinator)
 
-You can power it off a USB charger, or power bank (of course you won't see the logs this way). <!-- *..but we intend to have the multicolor LED show status and events.*-->
-
-
-<!-- tbd. jatka, kun LED:llä voi nähdä ovien aukeamisen.
+You can power it off a USB charger, or power bank (of course you won't see the logs this way). <!-- *..but we intend to have the multicolor LED show status and events.*--_>
 -->
 
 
