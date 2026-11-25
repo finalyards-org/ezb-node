@@ -5,8 +5,8 @@ This doc explains how to get a remote device to *send* attribute values to us, p
 A typical use is the battery level of a battery-powered sensor. This note describes the protocol without needing
 to read the Zigbee / ZCL specifications.
 
->Status: Implemented in `apps/demo/2` (battery of the Wiser CCT591011 door sensor). Not yet confirmed on real hardware.
->Items marked *(unverified)* are assumptions.
+>Status: Implemented in `apps/demo/2` (battery of the Wiser CCT591011 door sensor), and confirmed on real hardware
+>(Nov 2026): bind, Configure Reporting and Read Attributes all succeed. Items marked *(unverified)* are assumptions.
 
 
 ## Vocabulary
@@ -126,6 +126,8 @@ and not linear with time). The voltage is the more "raw" value.
   `AuthStatus::Success`; see `docs/Zigbee_ias_cie.md`, step 2b.
 - **Re-join redoes it.** A factory reset clears the device's binding and reporting configuration. `demo 2` sets them
   up on every fresh join.
+- **A report may come right after the bind.** The Wiser sensor sends a Report Attributes immediately after a
+  successful bind, before the Configure Reporting response. It may also contain attributes we didn't ask for.
 
 
 ## Mapping to ezb-node
@@ -146,7 +148,19 @@ See `apps/demo/2/ias_coordinator.rs` (`setup_battery_reporting`).
 
 After a fresh join and enrollment:
 
-1. `Bind: success`
-2. `Configure Reporting (PowerConfig): success`
-3. `Battery voltage: 3.0 V` and `Battery remaining: 100 %` (from the read)
-4. Later (within 12 h, or on change): `Attribute report (PowerConfig):` followed by the values.
+```
+I (32929) ezb_node::node: Bind: success
+I (32970) 2_door::ias_coordinator: Attribute report (PowerConfig):
+I (32970) 2_door::ias_coordinator: Battery remaining: 87 %
+I (32971) 2_door::ias_coordinator: Attribute report (PowerConfig):
+I (32976) 2_door::ias_coordinator: Attribute (PowerConfig): ZclAttr { id: AttrId(256), data: U8(0) }
+I (32985) 2_door::ias_coordinator: Configure Reporting (PowerConfig): success
+I (32992) 2_door::ias_coordinator: Battery remaining: 86 %
+I (32997) 2_door::ias_coordinator: Battery voltage: 2.8 V
+```
+
+- The two `Attribute report` blocks are the sensor's own, sent right after the bind.
+- The last two lines are the Read Attributes response.
+- Later (within 12 h, or on change): more `Attribute report (PowerConfig):` lines.
+
+See `docs/devices/` for what is known of specific devices.

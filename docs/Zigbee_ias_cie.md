@@ -280,7 +280,8 @@ adds `HA::power_config` as a *client* cluster on our endpoint.
 
 Sensors usually report these periodically, once reporting has been configured (or by vendor default). The reports
 arrive as `ZclEvent::ReportAttr { info, variables, .. }` (`info.cluster_id == ClusterId::PowerConfig`). The Wiser sensor
-sends one right after the `IAS_CIE_Address` write, without us configuring reporting; which attributes it contains is *(unverified)*.
+sends one right after binding (`BatteryPercentageRemaining`, plus a non-standard attribute 0x0100); see
+`docs/devices/`.
 
 To get regular reports, the CIE binds the sensor's Power Configuration cluster to itself and configures reporting.
 See `docs/Zigbee_attribute_reporting.md`.

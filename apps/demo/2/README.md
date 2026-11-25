@@ -1,8 +1,8 @@
 # Demo 2
 
-First read the `../../README.md`.
+First read the [`/apps/README`](../../README.md).
 
-Then `../README.md`.
+Then [`/docs/devices/Wiser_window_door_sensor`](../../../docs/devices/Wiser_window_door_sensor.md).
 
 Then, here.
 
@@ -12,31 +12,29 @@ Then, here.
 ## Requirements
 
 - 1 pc ESP32-C6 devkit
-- 1 pc Schneider Electric / Wiser [Door/window sensor CCT591011](https://www.zigbee2mqtt.io/devices/CCT591011_AS.html)
+- 1 pc Schneider Electric / Wiser [Window/door sensor CCT591011](../../../docs/devices/Wiser_window_door_sensor.md)
 
-	![](.images/window-door-sensor.png)
-
-- A pin (or pen) for pressing the Reset button
+	![](.images/wiser-door-sensor.png)
 
 
 ## Steps
 
-### 1. Prepare the sensor
+### 1. Prepare
 
-Bring the sensor close (~ 1m) to the devkit.
+#### 1.1 The sensor
 
-Find the Setup/Reset -button on the bottom side of it. Have a pin/pen ready.
+- Bring it close (~1m) to the devkit.
 
-### 2. Prepare the application
+	Find the Setup/Reset -button on the bottom side of the sensor. Keep a pen around for pressing the button.
+
+#### 1.2 The application
 
 Printed on the device, you should see:
-
-<!-- tbd. image -->
 
 - "MAC address"
 - "Install code"
 
-This demo works with **pre-configured** install codes. This means you'll edit the codes into the `app.toml`; they get built into the binary and the devkit *only* allows entry to its network for the device(s) it knows. 
+This demo works with **pre-configured** install codes. This means you'll copy the codes into the `app.toml`; they get built into the binary and the devkit *only* allows entry to its network for the device(s) it knows. 
 
 - Edit the `app.toml`:
 
@@ -49,34 +47,46 @@ This demo works with **pre-configured** install codes. This means you'll edit th
 
 	>Note: You can have any number of such sections in the TOML. They form an array.
 
-### 3. Launch the application
+### 2. First launch
 
-#### 3.1 Erase the devkit (needed on first time)
+You can skip these on later launches. Both the devkit and the sensor store their network binding information in non-volatile memory, i.e. it carries over restarts.
+
+If you *want* to start fresh, this is how to do it!
+
+#### 2.1 Erase the devkit
 
 ```
 $ espflash erase-flash
 ```
 
-You may skip it but if there are problems, do this. 
+>Without this, the Zigbee network is constructed in a different way, based on the information stored in the non-volatile memory.
+>
+>For debugging, it is sometimes necessary to erase the flash.
 
-Without it, the sensor is likely to join in a different way (since it's already joined to the network). Try both...
 
+#### 2.2 Reset the sensor
 
-#### 3.2 Reset the sensor (needed on first time)
-
-Reset the sensor to make it enter a "binding state":
+There are two ways to reset the sensor.
 
 - **triple press** the "Setup/Reset" button (bottom side of the sensor)
 
 	- sensor's LED should start blinking orange 🟧 🟧 🟧
 
----
+	This is a "binding mode". It lasts 30s.
+
+- **triple press** the button; then **long press** (~10s), until the LED turns RED. Release.
+
+	This is a factory reset.
+
+### 3. Launch
 
 ```
 $ just door-run
 ```
 
 Once the device joins, the LED should remain green 🟩 for a moment.
+
+>If the device did NOT join, **triple-press** the button to get it into a binding state. Wait for ~1min.
 
 On the coordinator log, you should see:
 
@@ -106,80 +116,20 @@ Above, we tested that a fresh sensor
 - does join the network
 - does report its status
 
-Since Zigbee network joins persist over device restarts (which is great), we need to test some more cases as well.
+There are more test cases to do:
 
-#### 4.1 Coordinator restart
+- restart the devkit; does the sensor re-bind and function?
+- power off the sensor (pretend to change its battery); does it re-bind and function?
 
-Tests:
-- device is able to rejoin if the coordinator powers off, momentarily
+#### 4.1 Battery reporting
 
-**Setup:**
-- make sure the UART cable is connected (left port, from the cable's point of view)
+The sensor also provides (as any battery powered Zigbee devices do) a `PowerConfig` cluster. You can occasionally see messages like:
 
-**Steps:**
-- Restart the coordinator
-
-	```
-	$ espflash monitor
-	{Ctrl-R}
-	...
-	I (509) 2_door::ias_coordinator: Device started up in commissioned mode.
-	I (514) 2_door::ias_coordinator: Device reboot
-	I (22453) 2_door::ias_coordinator: Zone 0: OPEN (zone status 0x0031)
-	I (23486) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)	
-	```
-	
-	The last lines came after opening and closing the sensor.
-	
-	✅
-
-#### 4.2 Sensor restart
-
-**Setup:**
-
-- Observe the coordinator's log
-
-**Steps:**
-
-- Remove the battery of the sensor, for a while (1..3s)
-
-	>Note! Use a **plastic** spatula to lift the battery, never a metal piece (to avoid short circuits).
-	>
-	>For the Schneider Electric / Wiser sensor, you can use the battery cover itself.
-
-- Does it rejoin; report open/close?
-
-	```
-	I (497106) 2_door::ias_coordinator: Zone 0: OPEN (zone status 0x0031)
-	I (653904) ezb_node::node::zigbee_task: ZCL core action not supported (skipped): EZB_ZCL_CORE_REPORT_ATTR_CB_ID
-	I (870252) 2_door::ias_coordinator: Zone 0: closed (zone status 0x0030)	
-	```
-
-	✅
-
-
----
-
-That looks like a pass.
-
-
-<!-- #hidden
-
-// Once we can see by lights on the devkit the status of the sensor, this kind of demo is more purposeful.
-
-## Demo without flashing
-
-As with demo `1`, also here once the flashing is done, the setup should be resilient.
-
-- switch off the devkit (coordinator)
-
-You can power it off a USB charger, or power bank (of course you won't see the logs this way). <!-- *..but we intend to have the multicolor LED show status and events.*--_>
--->
-
+```
+I (3632817) 2_door::ias_coordinator: Battery remaining: 86 %
+I (3632837) 2_door::ias_coordinator: Battery voltage: 2.8 V
+```
 
 ## References
 
 - ["Wiser Window/Door sensor"](https://productinfo.se.com/wiser_home/wiser-window-door-sensor_wiser_home_device-user-guide/English/Wiser%20Window_Door%20Sensor_Wiser_Home_Device%20user%20guide_0000802479.xml/$/WiserWindow_DoorSensor_Wiser_HomeCPT_0000802539) (Schneider Electric)
-
-	- ["Led indications"](https://productinfo.se.com/wiser_home/wiser-window-door-sensor_wiser_home_device-user-guide/English/Wiser%20Window_Door%20Sensor_Wiser_Home_Device%20user%20guide_0000802479.xml/$/LEDIndicationsCPT_0000661246#LEDIndications-C4E8250E)
-
